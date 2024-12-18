@@ -3,7 +3,6 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, export_schema_with_title, remove_schemas, schema_for};
 
-use cosmwasm_std::Empty;
 use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, NftInfoResponse,
     NumTokensResponse, OperatorsResponse, OwnerOfResponse, TokensResponse,
@@ -11,7 +10,7 @@ use cw721::{
 use cw721_base::{
     MinterResponse
 };
-use pg721_metadata_onchain::msg::{CollectionInfoResponse, InstantiateMsg, QueryMsg, ExecuteMsg};
+use pg721_metadata_onchain::msg::{CollectionInfoResponse, InstantiateMsg, QueryMsg, ExecuteMsg, Metadata};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -24,31 +23,28 @@ fn main() {
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(CollectionInfoResponse), &out_dir);
     export_schema_with_title(
-        &schema_for!(AllNftInfoResponse<Empty>),
+        &schema_for!(AllNftInfoResponse<Metadata>),
         &out_dir,
         "AllNftInfoResponse",
     );
-    export_schema_with_title(
-        &schema_for!(TokensResponse),
-        &out_dir,
-        "AllTokensResponse",
-    );
-    export_schema_with_title(
-        &schema_for!(OperatorsResponse),
-        &out_dir,
-        "AllOperatorsResponse",
-    );
-    export_schema(&schema_for!(MinterResponse), &out_dir);
     export_schema(&schema_for!(ApprovalResponse), &out_dir);
     export_schema(&schema_for!(ApprovalsResponse), &out_dir);
     export_schema(&schema_for!(OperatorsResponse), &out_dir);
     export_schema(&schema_for!(ContractInfoResponse), &out_dir);
+    export_schema(&schema_for!(MinterResponse), &out_dir);
     export_schema_with_title(
-        &schema_for!(NftInfoResponse<Empty>),
+        &schema_for!(NftInfoResponse<Metadata>),
         &out_dir,
         "NftInfoResponse",
     );
     export_schema(&schema_for!(NumTokensResponse), &out_dir);
     export_schema(&schema_for!(OwnerOfResponse), &out_dir);
     export_schema(&schema_for!(TokensResponse), &out_dir);
+    export_schema_with_title(
+        &schema_for!(OperatorsResponse),
+        &out_dir,
+        "AllOperatorsResponse",
+    );
+    export_schema_with_title(&schema_for!(TokensResponse), &out_dir, "AllTokensResponse");
+    export_schema(&schema_for!(CollectionInfoResponse), &out_dir);
 }

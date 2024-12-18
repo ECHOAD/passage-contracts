@@ -11,7 +11,7 @@ use cw721::{
 use cw721_base::{
     MinterResponse
 };
-use pg721::msg::{CollectionInfoResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use pg721::msg::{CollectionInfoResponse, InstantiateMsg, QueryMsg};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -20,7 +20,6 @@ fn main() {
     remove_schemas(&out_dir).unwrap();
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
-    export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(CollectionInfoResponse), &out_dir);
     export_schema_with_title(
@@ -28,11 +27,7 @@ fn main() {
         &out_dir,
         "AllNftInfoResponse",
     );
-    export_schema_with_title(
-        &schema_for!(TokensResponse),
-        &out_dir,
-        "AllTokensResponse",
-    );
+    export_schema_with_title(&schema_for!(TokensResponse), &out_dir, "AllTokensResponse");
     export_schema_with_title(
         &schema_for!(OperatorsResponse),
         &out_dir,
