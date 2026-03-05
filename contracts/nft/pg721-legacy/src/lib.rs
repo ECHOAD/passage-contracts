@@ -84,7 +84,7 @@ mod tests {
     use super::*;
 
     use crate::ExecuteMsg;
-    use cosmwasm_std::{to_binary, Addr, CosmosMsg, WasmMsg};
+    use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, WasmMsg};
     use cw721::NftInfoResponse;
     use cw721_base::helpers::Cw721Contract;
     use cw_multi_test::{App, BasicApp, Contract, ContractWrapper, Executor};
@@ -132,7 +132,7 @@ mod tests {
         let exec_msg = ExecuteMsg::Mint(mint_msg.clone());
         let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract.addr().to_string(),
-            msg: to_binary(&exec_msg).unwrap(),
+            msg: to_json_binary(&exec_msg).unwrap(),
             funds: vec![],
         });
         app.execute(Addr::unchecked(CREATOR), cosmos_msg).unwrap();
@@ -159,12 +159,14 @@ mod tests {
         };
         let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract.addr().to_string(),
-            msg: to_binary(&exec_msg).unwrap(),
+            msg: to_json_binary(&exec_msg).unwrap(),
             funds: vec![],
         });
         let res = app
             .execute(Addr::unchecked("john"), cosmos_msg)
             .unwrap_err();
-        assert!(res.chain().any(|cause| cause.to_string().contains("Operation not allowed")));
+        assert!(res
+            .chain()
+            .any(|cause| cause.to_string().contains("Operation not allowed")));
     }
 }

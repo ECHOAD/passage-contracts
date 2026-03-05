@@ -7,11 +7,11 @@ use crate::msg::{
 use crate::state::{Config, CONFIG, WHITELIST};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Response};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Order, Timestamp};
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
-use cw_utils::{maybe_addr};
+use cw_utils::maybe_addr;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:passage-whitelist";
@@ -95,8 +95,7 @@ pub fn instantiate(
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION)
-        .add_attribute("sender", info.sender)
-    )
+        .add_attribute("sender", info.sender))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -279,22 +278,21 @@ pub fn execute_increase_member_limit(
     CONFIG.save(deps.storage, &config)?;
     Ok(Response::new()
         .add_attribute("action", "increase_member_limit")
-        .add_attribute("member_limit", member_limit.to_string())
-    )
+        .add_attribute("member_limit", member_limit.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Members { start_after, limit } => {
-            to_binary(&query_members(deps, start_after, limit)?)
+            to_json_binary(&query_members(deps, start_after, limit)?)
         }
 
-        QueryMsg::HasStarted {} => to_binary(&query_has_started(deps, env)?),
-        QueryMsg::HasEnded {} => to_binary(&query_has_ended(deps, env)?),
-        QueryMsg::IsActive {} => to_binary(&query_is_active(deps, env)?),
-        QueryMsg::HasMember { member } => to_binary(&query_has_member(deps, member)?),
-        QueryMsg::Config {} => to_binary(&query_config(deps, env)?),
+        QueryMsg::HasStarted {} => to_json_binary(&query_has_started(deps, env)?),
+        QueryMsg::HasEnded {} => to_json_binary(&query_has_ended(deps, env)?),
+        QueryMsg::IsActive {} => to_json_binary(&query_is_active(deps, env)?),
+        QueryMsg::HasMember { member } => to_json_binary(&query_has_member(deps, member)?),
+        QueryMsg::Config {} => to_json_binary(&query_config(deps, env)?),
     }
 }
 
@@ -365,7 +363,7 @@ mod tests {
     use cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env, mock_info},
-        Attribute
+        Attribute,
     };
 
     const ADMIN: &str = "admin";
@@ -518,7 +516,7 @@ mod tests {
         let wl_config: ConfigResponse = query_config(deps.as_ref(), mock_env()).unwrap();
         assert_eq!(wl_config.per_address_limit, per_address_limit);
     }
-    
+
     #[test]
     fn query_members_pagination() {
         let mut deps = mock_dependencies();

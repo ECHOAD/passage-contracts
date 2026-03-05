@@ -8,9 +8,7 @@ use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, NftInfoResponse,
     NumTokensResponse, OperatorsResponse, OwnerOfResponse, TokensResponse,
 };
-use cw721_base::{
-    MinterResponse
-};
+use cw721_base::MinterResponse;
 use pg721::msg::{CollectionInfoResponse, InstantiateMsg, QueryMsg};
 
 fn main() {

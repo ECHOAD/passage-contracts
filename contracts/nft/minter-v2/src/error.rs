@@ -39,6 +39,9 @@ pub enum ContractError {
     #[error("Invalid token ID: {token_id}")]
     InvalidTokenId { token_id: u32 },
 
+    #[error("Invalid native asset data: {reason}")]
+    InvalidNativeAsset { reason: String },
+
     #[error("Batch mint count exceeds available tokens")]
     BatchExceedsAvailable {},
 

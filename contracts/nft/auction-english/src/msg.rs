@@ -1,4 +1,4 @@
-use crate::state::{TokenId, Config, Auction, AuctionStatus};
+use crate::state::{Auction, AuctionStatus, Config, TokenId};
 use cosmwasm_std::{Coin, Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -21,9 +21,9 @@ pub struct InstantiateMsg {
     pub min_price: Uint128,
     /// The minimum difference between incremental bids
     pub min_bid_increment: Uint128,
-    /// The minimum duration of an auction 
+    /// The minimum duration of an auction
     pub min_duration: u64,
-    /// The maximum duration of an auction 
+    /// The maximum duration of an auction
     pub max_duration: u64,
     /// The duration the Auction remains in the Closed state
     pub closed_duration: u64,
@@ -56,10 +56,7 @@ pub enum ExecuteMsg {
         funds_recipient: Option<String>,
     },
     /// Place a bid on an existing auction
-    SetAuctionBid {
-        token_id: TokenId,
-        price: Coin,
-    },
+    SetAuctionBid { token_id: TokenId, price: Coin },
     /// Sellers can close a previously created auction that has
     /// not met the reserve price
     CloseAuction {
@@ -67,14 +64,10 @@ pub enum ExecuteMsg {
         accept_highest_bid: bool,
     },
     /// Anyone can finalize an auction that has met the reserve price
-    FinalizeAuction {
-        token_id: TokenId,
-    },
+    FinalizeAuction { token_id: TokenId },
     /// The bidder can void an expired Auction that has not been determined
     /// by the seller
-    VoidAuction {
-        token_id: TokenId,
-    },
+    VoidAuction { token_id: TokenId },
 }
 
 /// Options when querying for Asks and Bids
@@ -106,35 +99,33 @@ pub enum QueryMsg {
     Config {},
     /// Get the auction for a specific NFT
     /// Return type: `AuctionResponse`
-    Auction {
-        token_id: TokenId,
-    },
+    Auction { token_id: TokenId },
     /// Get the auctions sorted by the start time
     /// Return type: `AuctionsResponse`
     AuctionsByStartTime {
-        query_options: QueryOptions<TokenTimestampOffset>
+        query_options: QueryOptions<TokenTimestampOffset>,
     },
     /// Get the auctions sorted by the end time
     /// Return type: `AuctionsResponse`
     AuctionsByEndTime {
-        query_options: QueryOptions<TokenTimestampOffset>
+        query_options: QueryOptions<TokenTimestampOffset>,
     },
     /// Get the auctions sorted by the highest bid price
     /// Return type: `AuctionsResponse`
     AuctionsByHighestBidPrice {
-        query_options: QueryOptions<TokenPriceOffset>
+        query_options: QueryOptions<TokenPriceOffset>,
     },
     /// Get all auctions sorted by seller and end time
     /// Return type: `AuctionsResponse`
     AuctionsBySellerEndTime {
         seller: String,
-        query_options: QueryOptions<TokenTimestampOffset>
+        query_options: QueryOptions<TokenTimestampOffset>,
     },
     /// Get all auctions sorted by bidder and end time
     /// Return type: `AuctionsResponse`
     AuctionsByBidderEndTime {
         bidder: String,
-        query_options: QueryOptions<TokenTimestampOffset>
+        query_options: QueryOptions<TokenTimestampOffset>,
     },
 }
 

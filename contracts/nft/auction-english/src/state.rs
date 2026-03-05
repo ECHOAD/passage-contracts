@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter, Result};
-use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Coin};
+use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter, Result};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -20,9 +20,9 @@ pub struct Config {
     pub min_price: Uint128,
     /// The minimum difference between incremental bids
     pub min_bid_increment: Uint128,
-    /// The minimum duration of an auction 
+    /// The minimum duration of an auction
     pub min_duration: u64,
-    /// The maximum duration of an auction 
+    /// The maximum duration of an auction
     pub max_duration: u64,
     /// The duration the Auction remains in the Closed state
     pub closed_duration: u64,
@@ -51,7 +51,7 @@ pub struct Auction {
     pub starting_price: Coin,
     pub reserve_price: Option<Coin>,
     pub funds_recipient: Option<Addr>,
-    pub highest_bid: Option<AuctionBid>
+    pub highest_bid: Option<AuctionBid>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -64,7 +64,7 @@ pub enum AuctionStatus {
 
 impl Display for AuctionStatus {
     fn fmt(&self, f: &mut Formatter) -> Result {
-       write!(f, "{:?}", self)
+        write!(f, "{:?}", self)
     }
 }
 
@@ -95,10 +95,11 @@ impl Auction {
     }
 
     pub fn is_reserve_price_met(&self) -> bool {
-        self.reserve_price.as_ref().map_or(
-            false,
-            |r| self.highest_bid.as_ref().map_or(false, |h| h.price.amount >= r.amount)
-        )
+        self.reserve_price.as_ref().map_or(false, |r| {
+            self.highest_bid
+                .as_ref()
+                .map_or(false, |h| h.price.amount >= r.amount)
+        })
     }
 }
 
@@ -130,27 +131,34 @@ impl<'a> IndexList<Auction> for AuctionIndices<'a> {
 pub fn auctions<'a>() -> IndexedMap<'a, AuctionKey, Auction, AuctionIndices<'a>> {
     let indexes = AuctionIndices {
         start_time: MultiIndex::new(
-            |a: &Auction|  a.start_time.seconds(),
+            |a: &Auction| a.start_time.seconds(),
             "auctions",
             "auctions__start_time",
         ),
         end_time: MultiIndex::new(
-            |a: &Auction|  a.end_time.seconds(),
+            |a: &Auction| a.end_time.seconds(),
             "auctions",
             "auctions__end_time",
         ),
         highest_bid_price: MultiIndex::new(
-            |a: &Auction|  a.highest_bid.as_ref().map_or(0, |b| b.price.amount.u128()),
+            |a: &Auction| a.highest_bid.as_ref().map_or(0, |b| b.price.amount.u128()),
             "auctions",
-            "auctions__highest_bid_price"
+            "auctions__highest_bid_price",
         ),
         seller_end_time: MultiIndex::new(
-            |a: &Auction|  (a.seller.to_string(), a.end_time.seconds()),
+            |a: &Auction| (a.seller.to_string(), a.end_time.seconds()),
             "auctions",
             "auctions__seller_end_time",
         ),
         highest_bidder_end_time: MultiIndex::new(
-            |a: &Auction|  (a.highest_bid.as_ref().map_or(String::from(""), |b| b.bidder.to_string()), a.end_time.seconds()),
+            |a: &Auction| {
+                (
+                    a.highest_bid
+                        .as_ref()
+                        .map_or(String::from(""), |b| b.bidder.to_string()),
+                    a.end_time.seconds(),
+                )
+            },
             "auctions",
             "auctions__highest_bidder_end_time",
         ),

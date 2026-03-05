@@ -10,4 +10,4 @@ pub mod query;
 pub mod state;
 
 pub use error::ContractError;
-pub use helpers::{MarketplaceContract};
+pub use helpers::MarketplaceContract;

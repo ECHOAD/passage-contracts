@@ -1,5 +1,6 @@
 use cosmwasm_std::{Addr, Coin, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
+use pg721::msg::NativeAsset;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +31,8 @@ pub struct Config {
     pub revenue_router: Option<Addr>,
     /// Whether to use Revenue Router (if false, uses legacy withdraw pattern)
     pub use_revenue_router: bool,
+    /// Default native dependents included on each minted NFT.
+    pub native_asset_template: Vec<NativeAsset>,
     /// Whether minting is paused
     pub paused: bool,
 }
@@ -41,6 +44,11 @@ pub const MINTER_ADDRS: Map<&Addr, u32> = Map::new("minter_addrs");
 
 /// Available token IDs for minting
 pub const MINTABLE_TOKEN_IDS: Map<u32, bool> = Map::new("mintable_ids");
+
+/// Optional token-specific native asset overrides.
+/// If present for a token_id, this replaces the default template at mint time.
+pub const TOKEN_NATIVE_ASSET_OVERRIDES: Map<u32, Vec<NativeAsset>> =
+    Map::new("native_asset_overrides");
 
 /// Counter for tracking total minted
 pub const MINTABLE_NUM_TOKENS: Item<u32> = Item::new("mintable_num_tokens");

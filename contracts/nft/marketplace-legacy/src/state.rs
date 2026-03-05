@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexedMap, IndexList, Item, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

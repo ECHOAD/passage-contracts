@@ -1,6 +1,7 @@
 use crate::msg::{ExecuteMsg, QueryMsg, TokenResponse};
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Empty, Querier, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
+    to_json_binary, Addr, Coin, CosmosMsg, Empty, Querier, QuerierWrapper, StdResult, WasmMsg,
+    WasmQuery,
 };
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -15,7 +16,7 @@ impl Cw721MarketplaceContract {
     }
 
     pub fn call(&self, msg: ExecuteMsg, funds: Vec<Coin>) -> StdResult<CosmosMsg> {
-        let msg = to_binary(&msg)?;
+        let msg = to_json_binary(&msg)?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,
@@ -31,7 +32,7 @@ impl Cw721MarketplaceContract {
     ) -> StdResult<T> {
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
-            msg: to_binary(&req)?,
+            msg: to_json_binary(&req)?,
         }
         .into();
         QuerierWrapper::<Empty>::new(querier).query(&query)
@@ -55,10 +56,7 @@ impl Cw721MarketplaceContract {
         start_after: Option<String>,
         limit: Option<u32>,
     ) -> StdResult<TokenResponse> {
-        let req = QueryMsg::ListTokensOnSale {
-            start_after,
-            limit
-        };
+        let req = QueryMsg::ListTokensOnSale { start_after, limit };
         self.query(querier, req)
     }
 }

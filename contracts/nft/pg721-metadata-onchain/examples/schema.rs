@@ -7,10 +7,10 @@ use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, NftInfoResponse,
     NumTokensResponse, OperatorsResponse, OwnerOfResponse, TokensResponse,
 };
-use cw721_base::{
-    MinterResponse
+use cw721_base::MinterResponse;
+use pg721_metadata_onchain::msg::{
+    CollectionInfoResponse, ExecuteMsg, InstantiateMsg, Metadata, QueryMsg,
 };
-use pg721_metadata_onchain::msg::{CollectionInfoResponse, InstantiateMsg, QueryMsg, ExecuteMsg, Metadata};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

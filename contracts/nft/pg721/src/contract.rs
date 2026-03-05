@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdResult, Response};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::ContractError;
@@ -9,7 +11,7 @@ use cw721_base::ContractError as BaseError;
 use url::Url;
 
 use crate::msg::{
-    CollectionInfoResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RoyaltyInfoResponse,
+    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, QueryMsg, RoyaltyInfoResponse,
 };
 use crate::state::{CollectionInfo, RoyaltyInfo, COLLECTION_INFO};
 
@@ -19,7 +21,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const MAX_DESCRIPTION_LENGTH: u32 = 512;
 
-pub type Pg721Contract<'a> = cw721_base::Cw721Contract<'a, Empty, Empty>;
+pub type Pg721Contract<'a> = cw721_base::Cw721Contract<'a, Extension, Empty>;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -95,7 +97,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::CollectionInfo {} => to_binary(&query_config(deps)?),
+        QueryMsg::CollectionInfo {} => to_json_binary(&query_config(deps)?),
         _ => Pg721Contract::default().query(deps, env, msg.into()),
     }
 }
@@ -126,7 +128,7 @@ mod tests {
 
     use crate::state::CollectionInfo;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Decimal, Attribute};
+    use cosmwasm_std::{coins, from_json, Attribute, Decimal};
 
     const NATIVE_DENOM: &str = "ujunox";
 
@@ -160,7 +162,7 @@ mod tests {
 
         // let's query the collection info
         let res = query(deps.as_ref(), mock_env(), QueryMsg::CollectionInfo {}).unwrap();
-        let value: CollectionInfoResponse = from_binary(&res).unwrap();
+        let value: CollectionInfoResponse = from_json(&res).unwrap();
         assert_eq!("https://example.com/image.png", value.image);
         assert_eq!("Passage Monkeys", value.description);
         assert_eq!(
@@ -174,14 +176,17 @@ mod tests {
     fn proper_initialization_with_royalties() {
         let mut deps = mock_dependencies();
         let creator: String = String::from("creator");
-        setup_contract(deps.as_mut(), Some(RoyaltyInfoResponse {
-            payment_address: creator.clone(),
-            share: Decimal::percent(10)
-        }));
+        setup_contract(
+            deps.as_mut(),
+            Some(RoyaltyInfoResponse {
+                payment_address: creator.clone(),
+                share: Decimal::percent(10),
+            }),
+        );
 
         // let's query the collection info
         let res = query(deps.as_ref(), mock_env(), QueryMsg::CollectionInfo {}).unwrap();
-        let value: CollectionInfoResponse = from_binary(&res).unwrap();
+        let value: CollectionInfoResponse = from_json(&res).unwrap();
         assert_eq!(
             Some(RoyaltyInfoResponse {
                 payment_address: creator,

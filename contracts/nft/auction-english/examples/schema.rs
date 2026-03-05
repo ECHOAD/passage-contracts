@@ -1,5 +1,5 @@
-use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use auction_english::msg;
+use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
@@ -13,8 +13,14 @@ fn main() {
     export_schema(&schema_for!(msg::ExecuteMsg), &out_dir);
     export_schema(&schema_for!(msg::QueryMsg), &out_dir);
 
-    export_schema(&schema_for!(msg::QueryOptions<msg::TokenTimestampOffset>), &out_dir);
-    export_schema(&schema_for!(msg::QueryOptions<msg::TokenPriceOffset>), &out_dir);
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::TokenTimestampOffset>),
+        &out_dir,
+    );
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::TokenPriceOffset>),
+        &out_dir,
+    );
     export_schema(&schema_for!(msg::ConfigResponse), &out_dir);
     export_schema(&schema_for!(msg::AuctionResponse), &out_dir);
     export_schema(&schema_for!(msg::AuctionsResponse), &out_dir);

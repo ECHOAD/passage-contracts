@@ -1,6 +1,7 @@
 use crate::state::{Config, MintStats, Pg721InstantiateMsg};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Timestamp};
+use pg721::msg::NativeAsset;
 
 /// Migration message from minter v1 to minter-v2
 #[cw_serde]
@@ -40,6 +41,8 @@ pub struct InstantiateMsg {
     pub revenue_router: Option<String>,
     /// Whether to use Revenue Router (default: true if revenue_router is set)
     pub use_revenue_router: Option<bool>,
+    /// Optional default native assets template for every minted token.
+    pub native_asset_template: Option<Vec<NativeAsset>>,
 }
 
 #[cw_serde]
@@ -78,6 +81,15 @@ pub enum ExecuteMsg {
     Withdraw {},
     /// Withdraw to specific address
     WithdrawTo { recipient: String },
+    /// Replace default native asset template used for mint metadata (admin only)
+    SetNativeAssetTemplate { native_assets: Vec<NativeAsset> },
+    /// Set token-specific native assets override (admin only)
+    SetTokenNativeAssetOverride {
+        token_id: u32,
+        native_assets: Vec<NativeAsset>,
+    },
+    /// Remove token-specific native assets override (admin only)
+    ClearTokenNativeAssetOverride { token_id: u32 },
 }
 
 #[cw_serde]
@@ -114,6 +126,12 @@ pub enum QueryMsg {
     /// Check if minting is active
     #[returns(IsMintingActiveResponse)]
     IsMintingActive {},
+    /// Get default native asset template used for mint metadata.
+    #[returns(NativeAssetTemplateResponse)]
+    NativeAssetTemplate {},
+    /// Get resolved native assets for a token ID (override or template).
+    #[returns(TokenNativeAssetsResponse)]
+    TokenNativeAssets { token_id: u32 },
 }
 
 // ========== Response Types ==========
@@ -132,6 +150,7 @@ pub struct ConfigResponse {
     pub registry: Option<String>,
     pub revenue_router: Option<String>,
     pub use_revenue_router: bool,
+    pub native_asset_template: Vec<NativeAsset>,
     pub paused: bool,
 }
 
@@ -150,6 +169,7 @@ impl From<Config> for ConfigResponse {
             registry: config.registry.map(|r| r.to_string()),
             revenue_router: config.revenue_router.map(|r| r.to_string()),
             use_revenue_router: config.use_revenue_router,
+            native_asset_template: config.native_asset_template,
             paused: config.paused,
         }
     }
@@ -193,6 +213,18 @@ pub struct MintStatsResponse {
 pub struct IsMintingActiveResponse {
     pub is_active: bool,
     pub reason: Option<String>,
+}
+
+#[cw_serde]
+pub struct NativeAssetTemplateResponse {
+    pub native_assets: Vec<NativeAsset>,
+}
+
+#[cw_serde]
+pub struct TokenNativeAssetsResponse {
+    pub token_id: u32,
+    pub source: String,
+    pub native_assets: Vec<NativeAsset>,
 }
 
 // ========== Revenue Router Messages ==========

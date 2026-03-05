@@ -1,5 +1,5 @@
 use crate::{state::CollectionInfo, ContractError};
-use cosmwasm_std::{Decimal, Empty};
+use cosmwasm_std::Decimal;
 use cw721_base::msg::QueryMsg as Cw721QueryMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,33 @@ impl RoyaltyInfoResponse {
     }
 }
 
-pub type ExecuteMsg = cw721_base::ExecuteMsg<Empty>;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NativeAssetShareability {
+    Exclusive,
+    Collection,
+    Ecosystem,
+    CrossEcosystem,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NativeAsset {
+    pub asset_id: String,
+    pub name: String,
+    pub image_url: String,
+    pub description: Option<String>,
+    /// Defaults to exclusive when omitted by producers.
+    pub shareability: Option<NativeAssetShareability>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+pub struct TokenMetadata {
+    /// Native dependents included with this NFT.
+    pub native_assets: Option<Vec<NativeAsset>>,
+}
+
+pub type Extension = Option<TokenMetadata>;
+pub type ExecuteMsg = cw721_base::ExecuteMsg<Extension>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

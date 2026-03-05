@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Empty, Env,
-    MessageInfo, Order, Reply, ReplyOn, StdError, StdResult, Timestamp, WasmMsg, Response, SubMsg
+    coin, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Empty, Env,
+    MessageInfo, Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Timestamp, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw721_base::{msg::ExecuteMsg as Cw721ExecuteMsg, MintMsg};
@@ -16,7 +16,7 @@ use crate::msg::{
     MintableNumTokensResponse, QueryMsg, StartTimeResponse,
 };
 use crate::state::{
-    Config, CONFIG, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, CW721_ADDRESS,
+    Config, CONFIG, CW721_ADDRESS, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS,
 };
 use whitelist::msg::{
     ConfigResponse as WhitelistConfigResponse, HasMemberResponse, QueryMsg as WhitelistQueryMsg,
@@ -39,9 +39,7 @@ pub fn instantiate(
 
     // Check the number of tokens is more than zero
     if msg.num_tokens == 0 {
-        return Err(ContractError::InvalidNumTokens {
-            min: 1,
-        });
+        return Err(ContractError::InvalidNumTokens { min: 1 });
     }
 
     // Check per address limit is valid
@@ -54,7 +52,7 @@ pub fn instantiate(
 
     // Check that base_token_uri is a valid IPFS uri
     Url::parse(&msg.base_token_uri)
-    .or_else(|_err: url::ParseError| Err(ContractError::InvalidBaseTokenURI {}))?;
+        .or_else(|_err: url::ParseError| Err(ContractError::InvalidBaseTokenURI {}))?;
 
     // If current time is beyond the provided start time return error
     if env.block.time > msg.start_time {
@@ -91,7 +89,7 @@ pub fn instantiate(
     let sub_msgs: Vec<SubMsg> = vec![SubMsg {
         msg: WasmMsg::Instantiate {
             code_id: msg.cw721_code_id,
-            msg: to_binary(&Pg721InstantiateMsg {
+            msg: to_json_binary(&Pg721InstantiateMsg {
                 name: msg.cw721_instantiate_msg.name,
                 symbol: msg.cw721_instantiate_msg.symbol,
                 minter: env.contract.address.to_string(),
@@ -308,7 +306,15 @@ pub fn execute_mint_for(
         ));
     }
 
-    _execute_mint(deps, env, info, action, true, Some(recipient), Some(token_id))
+    _execute_mint(
+        deps,
+        env,
+        info,
+        action,
+        true,
+        Some(recipient),
+        Some(token_id),
+    )
 }
 
 // Generalize checks and mint message creation
@@ -377,7 +383,7 @@ fn _execute_mint(
     });
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cw721_address.to_string(),
-        msg: to_binary(&mint_msg)?,
+        msg: to_json_binary(&mint_msg)?,
         funds: vec![],
     });
 
@@ -492,11 +498,11 @@ fn mint_count(deps: Deps, info: &MessageInfo) -> Result<u32, StdError> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::StartTime {} => to_binary(&query_start_time(deps)?),
-        QueryMsg::MintableNumTokens {} => to_binary(&query_mintable_num_tokens(deps)?),
-        QueryMsg::MintPrice {} => to_binary(&query_mint_price(deps)?),
-        QueryMsg::MintCount { address } => to_binary(&query_mint_count(deps, address)?),
+        QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
+        QueryMsg::StartTime {} => to_json_binary(&query_start_time(deps)?),
+        QueryMsg::MintableNumTokens {} => to_json_binary(&query_mintable_num_tokens(deps)?),
+        QueryMsg::MintPrice {} => to_json_binary(&query_mint_price(deps)?),
+        QueryMsg::MintCount { address } => to_json_binary(&query_mint_count(deps, address)?),
     }
 }
 

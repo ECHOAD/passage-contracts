@@ -3,7 +3,7 @@ use crate::msg::{FriendsResponse, IsFriendResponse, QueryMsg, QueryOptions};
 use crate::state::{friend_key, friends, Friend, FRIEND_HOOKS, UNFRIEND_HOOKS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_json_binary, Addr, Binary, Deps, Env, StdResult};
 use cw_storage_plus::{Bound, PrefixBound};
 
 // Query limits
@@ -16,15 +16,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
     match msg {
         QueryMsg::FriendHooks { target } => {
-            to_binary(&FRIEND_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
+            to_json_binary(&FRIEND_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
         }
         QueryMsg::UnfriendHooks { target } => {
-            to_binary(&UNFRIEND_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
+            to_json_binary(&UNFRIEND_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
         }
         QueryMsg::Friends {
             user,
             query_options,
-        } => to_binary(&query_friends(
+        } => to_json_binary(&query_friends(
             deps,
             api.addr_validate(&user)?,
             query_options,
@@ -32,7 +32,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::SentFriendRequests {
             user,
             query_options,
-        } => to_binary(&query_sent_friend_requests(
+        } => to_json_binary(&query_sent_friend_requests(
             deps,
             api.addr_validate(&user)?,
             query_options,
@@ -40,12 +40,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ReceivedFriendRequests {
             user,
             query_options,
-        } => to_binary(&query_received_friend_requests(
+        } => to_json_binary(&query_received_friend_requests(
             deps,
             api.addr_validate(&user)?,
             query_options,
         )?),
-        QueryMsg::IsFriend { origin, target } => to_binary(&query_is_friend(
+        QueryMsg::IsFriend { origin, target } => to_json_binary(&query_is_friend(
             deps,
             api.addr_validate(&origin)?,
             api.addr_validate(&target)?,

@@ -1,20 +1,16 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Decimal, DepsMut, Env, Event, MessageInfo, Uint128, Response};
+use cosmwasm_std::{Decimal, DepsMut, Env, Event, MessageInfo, Response, Uint128};
 use cw2::set_contract_version;
 use cw_utils::{maybe_addr, must_pay, nonpayable};
 
 use crate::error::ContractError;
 use crate::helpers::{
-    map_validate, finalize_sale, price_validate, only_seller, only_owner,
-    only_operator, transfer_nft, transfer_token, validate_auction_times,
-    validate_config
+    finalize_sale, map_validate, only_operator, only_owner, only_seller, price_validate,
+    transfer_nft, transfer_token, validate_auction_times, validate_config,
 };
-use crate::msg::{InstantiateMsg, ExecuteMsg};
-use crate::state::{
-    Config, CONFIG, TokenId,
-    Auction, AuctionStatus, auctions, AuctionBid,
-};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::state::{auctions, Auction, AuctionBid, AuctionStatus, Config, TokenId, CONFIG};
 
 // Version info for migration info
 const CONTRACT_NAME: &str = "crates.io:marketplace-v2";
@@ -48,7 +44,6 @@ pub fn instantiate(
 
     Ok(Response::new())
 }
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -104,13 +99,10 @@ pub fn execute(
                 starting_price,
                 reserve_price,
                 funds_recipient: maybe_addr(api, funds_recipient)?,
-                highest_bid: None
+                highest_bid: None,
             },
         ),
-        ExecuteMsg::SetAuctionBid {
-            token_id,
-            price,
-        } => execute_set_auction_bid(
+        ExecuteMsg::SetAuctionBid { token_id, price } => execute_set_auction_bid(
             deps,
             env,
             info,
@@ -123,29 +115,11 @@ pub fn execute(
         ExecuteMsg::CloseAuction {
             token_id,
             accept_highest_bid,
-        } => execute_close_auction(
-            deps,
-            env,
-            info,
-            token_id,
-            accept_highest_bid,
-        ),
-        ExecuteMsg::FinalizeAuction {
-            token_id,
-        } => execute_finalize_auction(
-            deps,
-            env,
-            info,
-            token_id,
-        ),
-        ExecuteMsg::VoidAuction {
-            token_id,
-        } => execute_void_auction(
-            deps,
-            env,
-            info,
-            token_id,
-        ),
+        } => execute_close_auction(deps, env, info, token_id, accept_highest_bid),
+        ExecuteMsg::FinalizeAuction { token_id } => {
+            execute_finalize_auction(deps, env, info, token_id)
+        }
+        ExecuteMsg::VoidAuction { token_id } => execute_void_auction(deps, env, info, token_id),
     }
 }
 
@@ -165,9 +139,9 @@ pub fn execute_update_config(
     buffer_duration: Option<u64>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
-    
+
     only_operator(&info, &config)?;
-    
+
     if let Some(_collector_address) = collector_address {
         config.collector_address = deps.api.addr_validate(&_collector_address)?;
     }
@@ -208,19 +182,27 @@ pub fn execute_set_auction(
     auction: Auction,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
-    
+
     let config = CONFIG.load(deps.storage)?;
     validate_auction_times(&auction, &config, &env.block.time)?;
-    
+
     price_validate(&auction.starting_price, &config)?;
     if let Some(_reserve_price) = &auction.reserve_price {
         price_validate(&_reserve_price, &config)?;
         if _reserve_price.amount < auction.starting_price.amount {
-            return Err(ContractError::InvalidReservePrice(_reserve_price.amount, auction.starting_price.amount));
+            return Err(ContractError::InvalidReservePrice(
+                _reserve_price.amount,
+                auction.starting_price.amount,
+            ));
         }
     }
 
-    only_owner(deps.as_ref(), &info, &config.cw721_address, &auction.token_id)?;
+    only_owner(
+        deps.as_ref(),
+        &info,
+        &config.cw721_address,
+        &auction.token_id,
+    )?;
 
     let existing_auction = auctions().may_load(deps.storage, auction.token_id.clone())?;
     if let Some(_existing_auction) = existing_auction {
@@ -231,7 +213,12 @@ pub fn execute_set_auction(
 
     let mut response = Response::new();
 
-    transfer_nft(&auction.token_id, &env.contract.address, &config.cw721_address, &mut response)?;
+    transfer_nft(
+        &auction.token_id,
+        &env.contract.address,
+        &config.cw721_address,
+        &mut response,
+    )?;
 
     let event = Event::new("set-auction")
         .add_attribute("collection", config.cw721_address.to_string())
@@ -254,13 +241,13 @@ pub fn execute_set_auction_bid(
 ) -> Result<Response, ContractError> {
     let mut response = Response::new();
 
-    let config = CONFIG.load(deps.storage)?; 
+    let config = CONFIG.load(deps.storage)?;
 
     // Validate auction exists, and is open
     let mut auction = auctions().load(deps.storage, token_id.clone())?;
     let auction_status = auction.get_auction_status(&env.block.time, config.closed_duration);
     match &auction_status {
-        AuctionStatus::Open => {},
+        AuctionStatus::Open => {}
         _ => return Err(ContractError::InvalidStatus(auction_status.to_string())),
     }
 
@@ -268,7 +255,7 @@ pub fn execute_set_auction_bid(
     if auction_bid.price.amount < auction.get_next_bid_min(config.min_bid_increment) {
         return Err(ContractError::BidTooLow {});
     }
-    
+
     // If previous bid exists, refund it
     if let Some(prev_highest_bid) = &auction.highest_bid {
         transfer_token(
@@ -281,18 +268,21 @@ pub fn execute_set_auction_bid(
 
     price_validate(&auction_bid.price, &config)?;
     let payment_amount = must_pay(&info, &config.denom)?;
-    if auction_bid.price.amount != payment_amount  {
-        return Err(ContractError::IncorrectBidPayment(auction_bid.price.amount, payment_amount));
+    if auction_bid.price.amount != payment_amount {
+        return Err(ContractError::IncorrectBidPayment(
+            auction_bid.price.amount,
+            payment_amount,
+        ));
     }
 
     auction.highest_bid = Some(auction_bid.clone());
-    
+
     // If auction end time is within buffer_duration, then update the end time
     let new_auction_end_time = env.block.time.plus_seconds(config.buffer_duration);
     if new_auction_end_time > auction.end_time {
         auction.end_time = new_auction_end_time;
     }
-    
+
     auctions().save(deps.storage, auction.token_id.clone(), &auction)?;
 
     let event = Event::new("set-auction-bid")
@@ -343,7 +333,12 @@ pub fn execute_close_auction(
         )?;
     } else {
         // if sale does not occur return NFT to seller, then refund highest_bid if it exists
-        transfer_nft(&auction.token_id, &auction.seller, &config.cw721_address, &mut response)?;
+        transfer_nft(
+            &auction.token_id,
+            &auction.seller,
+            &config.cw721_address,
+            &mut response,
+        )?;
         if auction.highest_bid.is_some() {
             let bid = auction.highest_bid.unwrap();
             transfer_token(
@@ -352,7 +347,7 @@ pub fn execute_close_auction(
                 "refund-auction-bidder",
                 &mut response,
             )?;
-        }   
+        }
     }
 
     auctions().remove(deps.storage, token_id)?;
@@ -361,7 +356,7 @@ pub fn execute_close_auction(
         .add_attribute("collection", &config.cw721_address.to_string())
         .add_attribute("token_id", &auction.token_id.to_string())
         .add_attribute("is_sale", &is_sale.to_string());
-    
+
     Ok(response.add_event(event))
 }
 
@@ -380,9 +375,11 @@ pub fn execute_finalize_auction(
     // Validate that a bid exists
     let bid = match &auction.highest_bid {
         Some(bid) => bid,
-        None => return Err(ContractError::ReservePriceRestriction(
-            "auction has no bid".to_string(),
-        )),
+        None => {
+            return Err(ContractError::ReservePriceRestriction(
+                "auction has no bid".to_string(),
+            ))
+        }
     };
 
     // Validate reserve price is met
@@ -396,7 +393,7 @@ pub fn execute_finalize_auction(
     let config = CONFIG.load(deps.storage)?;
     let auction_status = auction.get_auction_status(&env.block.time, config.closed_duration);
     match &auction_status {
-        AuctionStatus::Closed | AuctionStatus::Expired => {},
+        AuctionStatus::Closed | AuctionStatus::Expired => {}
         _ => return Err(ContractError::InvalidStatus(auction_status.to_string())),
     }
 
@@ -417,7 +414,7 @@ pub fn execute_finalize_auction(
     let event = Event::new("finalize-auction")
         .add_attribute("collection", &config.cw721_address.to_string())
         .add_attribute("token_id", &auction.token_id.to_string());
-    
+
     Ok(response.add_event(event))
 }
 
@@ -432,7 +429,7 @@ pub fn execute_void_auction(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     let auction = auctions().load(deps.storage, token_id.clone())?;
-    
+
     // If reserve price has been met, the auction must be finalized
     if auction.is_reserve_price_met() {
         return Err(ContractError::ReservePriceRestriction(
@@ -441,13 +438,13 @@ pub fn execute_void_auction(
     }
 
     // Validate the Auction is Expired
-    let config = CONFIG.load(deps.storage)?; 
+    let config = CONFIG.load(deps.storage)?;
     let auction_status = auction.get_auction_status(&env.block.time, config.closed_duration);
     match &auction_status {
-        AuctionStatus::Expired => {},
+        AuctionStatus::Expired => {}
         _ => return Err(ContractError::InvalidStatus(auction_status.to_string())),
     }
-    
+
     let mut response = Response::new();
     // Refund the bidder the bid amount, if a bid exists
     if auction.highest_bid.is_some() {
@@ -460,7 +457,12 @@ pub fn execute_void_auction(
         )?;
     }
     // Return the NFT to the seller
-    transfer_nft(&auction.token_id, &auction.seller, &config.cw721_address, &mut response)?;
+    transfer_nft(
+        &auction.token_id,
+        &auction.seller,
+        &config.cw721_address,
+        &mut response,
+    )?;
     // Remove the auction
     auctions().remove(deps.storage, token_id)?;
 

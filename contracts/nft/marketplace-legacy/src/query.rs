@@ -2,24 +2,26 @@
 use cosmwasm_std::entry_point;
 
 use crate::msg::{ConfigResponse, QueryMsg, TokenResponse, TokensResponse};
-use crate::state::{CONFIG, ON_SALE, token_map};
-use cosmwasm_std::{to_binary, Binary, Deps, Env, Order, StdResult};
+use crate::state::{token_map, CONFIG, ON_SALE};
+use cosmwasm_std::{to_json_binary, Binary, Deps, Env, Order, StdResult};
 use cw_storage_plus::Bound;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&ConfigResponse {
+        QueryMsg::Config {} => to_json_binary(&ConfigResponse {
             config: CONFIG.load(deps.storage)?,
         }),
-        QueryMsg::Token { id } => to_binary(&TokenResponse {
+        QueryMsg::Token { id } => to_json_binary(&TokenResponse {
             token: token_map().load(deps.storage, id)?,
         }),
         QueryMsg::RangeTokens { start_after, limit } => {
-            to_binary(&range_tokens(deps, start_after, limit)?)
+            to_json_binary(&range_tokens(deps, start_after, limit)?)
         }
-        QueryMsg::ListTokens { ids } => to_binary(&list_tokens(deps, ids)?),
-        QueryMsg::ListTokensOnSale { start_after, limit } => to_binary(&range_tokens_on_sale(deps, start_after, limit)?)
+        QueryMsg::ListTokens { ids } => to_json_binary(&list_tokens(deps, ids)?),
+        QueryMsg::ListTokensOnSale { start_after, limit } => {
+            to_json_binary(&range_tokens_on_sale(deps, start_after, limit)?)
+        }
     }
 }
 
@@ -71,7 +73,8 @@ pub fn range_tokens_on_sale(
     let start = start_after.map(Bound::exclusive);
 
     let records: StdResult<Vec<_>> = token_map()
-        .idx.on_sale
+        .idx
+        .on_sale
         .prefix(ON_SALE)
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)

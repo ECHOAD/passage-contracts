@@ -3,7 +3,9 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use marketplace_legacy::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, TokensResponse, TokenResponse, ConfigResponse};
+use marketplace_legacy::msg::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, TokenResponse, TokensResponse,
+};
 use marketplace_legacy::state::{Config, Token};
 
 fn main() {
@@ -20,5 +22,4 @@ fn main() {
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
     export_schema(&schema_for!(Token), &out_dir);
-
 }

@@ -1,21 +1,20 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, Addr, Decimal, DepsMut, Env, Event, MessageInfo, StdError,
-    Uint128, Response,
+    coin, Addr, Decimal, DepsMut, Env, Event, MessageInfo, Response, StdError, Uint128,
 };
 use cw2::set_contract_version;
 use cw_utils::{maybe_addr, must_pay, nonpayable};
 
 use crate::error::ContractError;
 use crate::helpers::{
-    map_validate, finalize_sale, price_validate, only_owner_or_seller, only_seller,
-    only_operator, transfer_nft, transfer_token, match_bid, match_ask, validate_config,
+    finalize_sale, map_validate, match_ask, match_bid, only_operator, only_owner_or_seller,
+    only_seller, price_validate, transfer_nft, transfer_token, validate_config,
 };
-use crate::msg::{InstantiateMsg, ExecuteMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::state::{
-    Config, CONFIG, Ask, asks, TokenId, bid_key, bids, Recipient,
-    Bid, CollectionBid, collection_bids
+    asks, bid_key, bids, collection_bids, Ask, Bid, CollectionBid, Config, Recipient, TokenId,
+    CONFIG,
 };
 use cw721_base::helpers::Cw721Contract;
 
@@ -46,7 +45,6 @@ pub fn instantiate(
 
     Ok(Response::new())
 }
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -87,13 +85,8 @@ pub fn execute(
                 funds_recipient: maybe_addr(api, funds_recipient)?,
             },
         ),
-        ExecuteMsg::RemoveAsk {
-            token_id,
-        } => execute_remove_ask(deps, info, token_id),
-        ExecuteMsg::SetBid {
-            token_id,
-            price,
-        } => execute_set_bid(
+        ExecuteMsg::RemoveAsk { token_id } => execute_remove_ask(deps, info, token_id),
+        ExecuteMsg::SetBid { token_id, price } => execute_set_bid(
             deps,
             env,
             info,
@@ -103,42 +96,23 @@ pub fn execute(
                 price,
             },
         ),
-        ExecuteMsg::RemoveBid {
-            token_id,
-        } => execute_remove_bid(deps, env, info, token_id),
-        ExecuteMsg::AcceptBid {
-            token_id,
-            bidder,
-        } => execute_accept_bid(
-            deps,
-            info,
-            token_id,
-            api.addr_validate(&bidder)?,
-        ),
-        ExecuteMsg::SetCollectionBid {
-            units,
-            price,
-        } => execute_set_collection_bid(
+        ExecuteMsg::RemoveBid { token_id } => execute_remove_bid(deps, env, info, token_id),
+        ExecuteMsg::AcceptBid { token_id, bidder } => {
+            execute_accept_bid(deps, info, token_id, api.addr_validate(&bidder)?)
+        }
+        ExecuteMsg::SetCollectionBid { units, price } => execute_set_collection_bid(
             deps,
             info,
             CollectionBid {
                 units,
                 price,
                 bidder: message_info.sender,
-            }
+            },
         ),
-        ExecuteMsg::RemoveCollectionBid { } => {
-            execute_remove_collection_bid(deps, env, info)
+        ExecuteMsg::RemoveCollectionBid {} => execute_remove_collection_bid(deps, env, info),
+        ExecuteMsg::AcceptCollectionBid { token_id, bidder } => {
+            execute_accept_collection_bid(deps, info, token_id, api.addr_validate(&bidder)?)
         }
-        ExecuteMsg::AcceptCollectionBid {
-            token_id,
-            bidder,
-        } => execute_accept_collection_bid(
-            deps,
-            info,
-            token_id,
-            api.addr_validate(&bidder)?,
-        ),
     }
 }
 
@@ -179,7 +153,7 @@ pub fn execute_set_ask(
     ask: Ask,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
-    
+
     let config = CONFIG.load(deps.storage)?;
     price_validate(&ask.price, &config)?;
 
@@ -212,17 +186,11 @@ pub fn execute_set_ask(
                 &config,
                 &mut response,
             )?;
-            bids().remove(
-                deps.storage,
-                bid_key(&bid.bidder, bid.token_id.clone())
-            )?;
-            if let Some(_existing_ask) = existing_ask  {
-                asks().remove(
-                    deps.storage,
-                    _existing_ask.token_id
-                )?;
+            bids().remove(deps.storage, bid_key(&bid.bidder, bid.token_id.clone()))?;
+            if let Some(_existing_ask) = existing_ask {
+                asks().remove(deps.storage, _existing_ask.token_id)?;
             }
-        },
+        }
         // If matching bid not found:
         // * update ask
         // * if contract is not the owner of the NFT, transfer NFT to contract
@@ -232,10 +200,18 @@ pub fn execute_set_ask(
                 ask.token_id.clone(),
                 |_| -> Result<Ask, StdError> { Ok(ask.clone()) },
             )?;
-            let res = Cw721Contract(config.cw721_address.clone())
-                .owner_of(&deps.querier, ask.token_id.clone(), false)?;
+            let res = Cw721Contract(config.cw721_address.clone()).owner_of(
+                &deps.querier,
+                ask.token_id.clone(),
+                false,
+            )?;
             if res.owner != env.contract.address {
-                transfer_nft(&ask.token_id, &env.contract.address, &config.cw721_address, &mut response)?;
+                transfer_nft(
+                    &ask.token_id,
+                    &env.contract.address,
+                    &config.cw721_address,
+                    &mut response,
+                )?;
             }
         }
     }
@@ -265,7 +241,12 @@ pub fn execute_remove_ask(
     let config = CONFIG.load(deps.storage)?;
     let mut response = Response::new();
 
-    transfer_nft(&ask.token_id, &ask.seller, &config.cw721_address, &mut response)?;
+    transfer_nft(
+        &ask.token_id,
+        &ask.seller,
+        &config.cw721_address,
+        &mut response,
+    )?;
 
     let event = Event::new("remove-ask")
         .add_attribute("collection", config.cw721_address.to_string())
@@ -284,8 +265,11 @@ pub fn execute_set_bid(
     let config = CONFIG.load(deps.storage)?;
 
     let received_amount = must_pay(&info, &config.denom)?;
-    if bid.price.amount != received_amount  {
-        return Err(ContractError::IncorrectBidPayment(bid.price.amount, received_amount));
+    if bid.price.amount != received_amount {
+        return Err(ContractError::IncorrectBidPayment(
+            bid.price.amount,
+            received_amount,
+        ));
     }
     price_validate(&bid.price, &config)?;
 
@@ -325,10 +309,10 @@ pub fn execute_set_bid(
                 &mut response,
             )?;
             asks().remove(deps.storage, ask_key.clone())?;
-        },
+        }
         // If matching ask not found:
         // * save bid
-        None => { bids().save(deps.storage, bid_key, &bid)? }
+        None => bids().save(deps.storage, bid_key, &bid)?,
     };
 
     let event = Event::new("set-bid")
@@ -355,7 +339,12 @@ pub fn execute_remove_bid(
     bids().remove(deps.storage, key)?;
 
     let mut response = Response::new();
-    transfer_token(bid.price, bid.bidder.to_string(), "refund-bidder", &mut response)?;
+    transfer_token(
+        bid.price,
+        bid.bidder.to_string(),
+        "refund-bidder",
+        &mut response,
+    )?;
 
     let event = Event::new("remove-bid")
         .add_attribute("token_id", token_id.clone())
@@ -393,7 +382,7 @@ pub fn execute_accept_bid(
         Some(ask) => {
             asks().remove(deps.storage, ask.token_id.clone())?;
             ask.get_recipient()
-        },
+        }
         None => info.sender,
     };
 
@@ -428,18 +417,18 @@ pub fn execute_accept_bid(
 pub fn execute_set_collection_bid(
     deps: DepsMut,
     info: MessageInfo,
-    collection_bid: CollectionBid
+    collection_bid: CollectionBid,
 ) -> Result<Response, ContractError> {
     if collection_bid.units == 0 {
         return Err(ContractError::InvalidCollectionBid {});
     }
 
     let config = CONFIG.load(deps.storage)?;
-    
+
     // Escrows the amount (price * units)
     let received_amount = must_pay(&info, &config.denom)?;
     price_validate(&collection_bid.price, &config)?;
-    if Uint128::from(collection_bid.total_cost()) != received_amount  {
+    if Uint128::from(collection_bid.total_cost()) != received_amount {
         return Err(ContractError::IncorrectBidPayment(
             Uint128::from(collection_bid.total_cost()),
             received_amount,
@@ -449,7 +438,9 @@ pub fn execute_set_collection_bid(
     let mut response = Response::new();
 
     // If collection bid exists, refund the escrowed tokens
-    if let Some(existing_bid) = collection_bids().may_load(deps.storage, collection_bid_key.clone())? {
+    if let Some(existing_bid) =
+        collection_bids().may_load(deps.storage, collection_bid_key.clone())?
+    {
         collection_bids().remove(deps.storage, collection_bid_key.clone())?;
         transfer_token(
             coin(existing_bid.total_cost(), existing_bid.price.denom),
@@ -477,7 +468,7 @@ pub fn execute_remove_collection_bid(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     let mut response = Response::new();
-    
+
     let collection_bid_key = info.sender.clone();
 
     let collection_bid = collection_bids().load(deps.storage, collection_bid_key.clone())?;
@@ -490,8 +481,7 @@ pub fn execute_remove_collection_bid(
         &mut response,
     )?;
 
-    let event = Event::new("remove-collection-bid")
-        .add_attribute("bidder", collection_bid.bidder);
+    let event = Event::new("remove-collection-bid").add_attribute("bidder", collection_bid.bidder);
     response.events.push(event);
 
     Ok(response)
@@ -524,7 +514,7 @@ pub fn execute_accept_collection_bid(
         Some(ask) => {
             asks().remove(deps.storage, ask.token_id.clone())?;
             ask.get_recipient()
-        },
+        }
         None => info.sender,
     };
 
@@ -532,7 +522,7 @@ pub fn execute_accept_collection_bid(
         1 => {
             // Remove accepted collection bid when no units remain
             collection_bids().remove(deps.storage, collection_bid_key)?;
-        },
+        }
         _ => {
             // Decrement the number of units on the collection bid by 1
             collection_bid.units -= 1;

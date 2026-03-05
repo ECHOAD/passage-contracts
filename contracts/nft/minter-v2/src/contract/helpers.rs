@@ -1,4 +1,16 @@
 use super::*;
+use serde::Serialize;
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Pg721ExecuteMsg {
+    Mint {
+        token_id: String,
+        owner: String,
+        token_uri: Option<String>,
+        extension: pg721::msg::Extension,
+    },
+}
 
 // ========== Helpers ==========
 
@@ -109,19 +121,30 @@ pub(super) fn get_random_token_id(
 }
 
 pub(super) fn create_mint_msg(
+    storage: &dyn cosmwasm_std::Storage,
     config: &Config,
     token_id: u32,
     owner: String,
 ) -> Result<CosmosMsg, ContractError> {
     let token_uri = format!("{}/{}", config.base_token_uri, token_id);
+    let native_assets = TOKEN_NATIVE_ASSET_OVERRIDES
+        .may_load(storage, token_id)?
+        .unwrap_or_else(|| config.native_asset_template.clone());
 
-    let exec_msg: cw721_base::ExecuteMsg<cosmwasm_std::Empty, cosmwasm_std::Empty> =
-        cw721_base::ExecuteMsg::Mint {
-            token_id: token_id.to_string(),
-            owner,
-            token_uri: Some(token_uri),
-            extension: cosmwasm_std::Empty {},
-        };
+    let extension = if native_assets.is_empty() {
+        None
+    } else {
+        Some(pg721::msg::TokenMetadata {
+            native_assets: Some(native_assets),
+        })
+    };
+
+    let exec_msg = Pg721ExecuteMsg::Mint {
+        token_id: token_id.to_string(),
+        owner,
+        token_uri: Some(token_uri),
+        extension,
+    };
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: config.cw721_address.to_string(),

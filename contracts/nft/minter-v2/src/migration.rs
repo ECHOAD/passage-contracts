@@ -108,6 +108,7 @@ fn migrate_from_minter_v1(
         registry,
         revenue_router: revenue_router.clone(),
         use_revenue_router,
+        native_asset_template: vec![],
         paused: false,
     };
     CONFIG.save(storage, &config_v2)?;
@@ -181,6 +182,7 @@ fn migrate_from_metadata_onchain(
         registry,
         revenue_router: revenue_router.clone(),
         use_revenue_router,
+        native_asset_template: vec![],
         paused: false,
     };
     CONFIG.save(storage, &config_v2)?;

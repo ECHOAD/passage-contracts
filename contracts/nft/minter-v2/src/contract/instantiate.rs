@@ -43,6 +43,7 @@ pub fn instantiate(
         registry,
         revenue_router,
         use_revenue_router,
+        native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,
     };
 
