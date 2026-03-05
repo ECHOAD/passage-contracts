@@ -1,0 +1,29 @@
+[package]
+name = "minter-v2"
+version = "2.0.0"
+edition.workspace = true
+description = "Passage Minter v2 - NFT minting with Revenue Router integration"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+library = []
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw2 = { workspace = true }
+cw721 = { workspace = true }
+cw721-base = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+pg721 = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }
