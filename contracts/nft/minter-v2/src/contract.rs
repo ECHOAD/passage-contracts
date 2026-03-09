@@ -13,7 +13,8 @@ pub(super) use crate::msg::{
     TokenNativeAssetsResponse,
 };
 pub(super) use crate::state::{
-    Config, MintStats, CONFIG, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
+    Config, Extension, MetadataMode, MintStats, NativeAsset, TokenMetadata, CONFIG,
+    MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
     TOKEN_NATIVE_ASSET_OVERRIDES,
 };
 

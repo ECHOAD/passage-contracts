@@ -12,6 +12,12 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 library = []
+schema = []
+
+[[bin]]
+name = "schema"
+path = "src/bin/schema.rs"
+required-features = ["schema"]
 
 [dependencies]
 cosmwasm-schema = { workspace = true }

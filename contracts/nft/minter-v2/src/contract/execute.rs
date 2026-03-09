@@ -26,6 +26,7 @@ pub fn execute(
             registry,
             revenue_router,
             use_revenue_router,
+            metadata_mode,
             paused,
         } => execute_update_config(
             deps,
@@ -37,6 +38,7 @@ pub fn execute(
             registry,
             revenue_router,
             use_revenue_router,
+            metadata_mode,
             paused,
         ),
         ExecuteMsg::UpdateStartTime { start_time } => {
@@ -288,6 +290,7 @@ fn execute_update_config(
     registry: Option<String>,
     revenue_router: Option<String>,
     use_revenue_router: Option<bool>,
+    metadata_mode: Option<MetadataMode>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
@@ -324,13 +327,19 @@ fn execute_update_config(
         config.use_revenue_router = use_router;
     }
 
+    if let Some(mode) = metadata_mode {
+        config.metadata_mode = mode;
+    }
+
     if let Some(is_paused) = paused {
         config.paused = is_paused;
     }
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attribute("action", "update_config"))
+    Ok(Response::new()
+        .add_attribute("action", "update_config")
+        .add_attribute("metadata_mode", format!("{:?}", config.metadata_mode)))
 }
 
 fn execute_update_start_time(
@@ -384,7 +393,7 @@ fn execute_remove_whitelist(deps: DepsMut, info: MessageInfo) -> Result<Response
     Ok(Response::new().add_attribute("action", "remove_whitelist"))
 }
 
-fn validate_native_assets(native_assets: &[pg721::msg::NativeAsset]) -> Result<(), ContractError> {
+fn validate_native_assets(native_assets: &[NativeAsset]) -> Result<(), ContractError> {
     for asset in native_assets {
         if asset.asset_id.trim().is_empty() {
             return Err(ContractError::InvalidNativeAsset {
@@ -408,7 +417,7 @@ fn validate_native_assets(native_assets: &[pg721::msg::NativeAsset]) -> Result<(
 fn execute_set_native_asset_template(
     deps: DepsMut,
     info: MessageInfo,
-    native_assets: Vec<pg721::msg::NativeAsset>,
+    native_assets: Vec<NativeAsset>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -429,7 +438,7 @@ fn execute_set_token_native_asset_override(
     deps: DepsMut,
     info: MessageInfo,
     token_id: u32,
-    native_assets: Vec<pg721::msg::NativeAsset>,
+    native_assets: Vec<NativeAsset>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 

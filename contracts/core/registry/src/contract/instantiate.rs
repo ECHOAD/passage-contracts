@@ -23,10 +23,15 @@ pub fn instantiate(
         .iter()
         .map(|o| deps.api.addr_validate(o))
         .collect::<StdResult<Vec<Addr>>>()?;
+    let ecosystem_factory = msg
+        .ecosystem_factory
+        .ok_or(ContractError::EcosystemFactoryRequired {})?;
+    let ecosystem_factory = Some(deps.api.addr_validate(&ecosystem_factory)?);
 
     let config = Config {
         admin,
         operators,
+        ecosystem_factory,
         paused: false,
     };
 

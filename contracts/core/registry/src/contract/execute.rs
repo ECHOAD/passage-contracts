@@ -22,8 +22,9 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             admin,
             operators,
+            ecosystem_factory,
             paused,
-        } => execute_update_config(deps, info, admin, operators, paused),
+        } => execute_update_config(deps, info, admin, operators, ecosystem_factory, paused),
         ExecuteMsg::ApproveEcosystemCreator { creator } => {
             execute_approve_ecosystem_creator(deps, info, creator)
         }
@@ -50,6 +51,30 @@ pub fn execute(
             name,
             ecosystem_type,
             collection_creation_policy,
+            collection_factory,
+            detail,
+            image_urls,
+            animation_url,
+            url,
+        ),
+        ExecuteMsg::RegisterEcosystemFromFactory {
+            id,
+            name,
+            creator,
+            ecosystem_type,
+            collection_factory,
+            detail,
+            image_urls,
+            animation_url,
+            url,
+        } => execute_register_ecosystem_from_factory(
+            deps,
+            env,
+            info,
+            id,
+            name,
+            creator,
+            ecosystem_type,
             collection_factory,
             detail,
             image_urls,
@@ -241,6 +266,7 @@ fn execute_update_config(
     info: MessageInfo,
     admin: Option<String>,
     operators: Option<Vec<String>>,
+    ecosystem_factory: Option<String>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
@@ -258,6 +284,13 @@ fn execute_update_config(
             .iter()
             .map(|o| deps.api.addr_validate(o))
             .collect::<StdResult<Vec<Addr>>>()?;
+    }
+
+    if let Some(new_factory) = ecosystem_factory {
+        if new_factory.trim().is_empty() {
+            return Err(ContractError::EcosystemFactoryRequired {});
+        }
+        config.ecosystem_factory = Some(deps.api.addr_validate(&new_factory)?);
     }
 
     if let Some(new_paused) = paused {
@@ -382,6 +415,84 @@ fn execute_register_ecosystem(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn execute_register_ecosystem_from_factory(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    id: String,
+    name: String,
+    creator: String,
+    ecosystem_type: Option<EcosystemType>,
+    collection_factory: Option<String>,
+    detail: String,
+    image_urls: Vec<String>,
+    animation_url: Option<String>,
+    url: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let authorized_factory = config
+        .ecosystem_factory
+        .clone()
+        .ok_or(ContractError::EcosystemFactoryNotConfigured {})?;
+
+    if info.sender != authorized_factory {
+        return Err(ContractError::NotEcosystemFactory {});
+    }
+
+    validate_id(&id)?;
+    if name.trim().is_empty() {
+        return Err(ContractError::EmptyName {});
+    }
+    if detail.trim().is_empty() {
+        return Err(ContractError::EmptyDescription {});
+    }
+    if image_urls.is_empty() || image_urls.iter().any(|img| img.trim().is_empty()) {
+        return Err(ContractError::EmptyImages {});
+    }
+    if ECOSYSTEMS.has(deps.storage, id.clone()) {
+        return Err(ContractError::EcosystemAlreadyExists { id });
+    }
+
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let ecosystem_type = ecosystem_type.unwrap_or_default();
+    let collection_creation_policy = CollectionCreationPolicy::default_for_type(&ecosystem_type);
+    validate_ecosystem_policy(&ecosystem_type, &collection_creation_policy)?;
+
+    let collection_factory = collection_factory
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
+
+    let ecosystem = Ecosystem {
+        id: id.clone(),
+        name,
+        admin: creator_addr.clone(),
+        ecosystem_type,
+        collection_creation_policy,
+        collection_factory,
+        detail,
+        image_urls,
+        animation_url,
+        url,
+        created_at: env.block.time.seconds(),
+        updated_at: env.block.time.seconds(),
+    };
+
+    ECOSYSTEMS.save(deps.storage, id.clone(), &ecosystem)?;
+    ECOSYSTEM_MEMBERS.save(deps.storage, (id.clone(), creator_addr.clone()), &true)?;
+
+    let count = ECOSYSTEM_COUNT.load(deps.storage)?;
+    ECOSYSTEM_COUNT.save(deps.storage, &(count + 1))?;
+    touch_creator_activity(deps.storage, &creator_addr, env.block.time.seconds())?;
+    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+
+    Ok(Response::new()
+        .add_attribute("action", "register_ecosystem_from_factory")
+        .add_attribute("ecosystem_id", id)
+        .add_attribute("creator", creator_addr)
+        .add_attribute("factory", info.sender))
+}
+
+#[allow(clippy::too_many_arguments)]
 fn execute_submit_ecosystem_creation_request(
     deps: DepsMut,
     env: Env,
@@ -397,6 +508,10 @@ fn execute_submit_ecosystem_creation_request(
     url: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+
+    if config.ecosystem_factory.is_some() {
+        return Err(ContractError::EcosystemFactoryFlowRequired {});
+    }
 
     if is_cross_ecosystem_admin(&config, &info.sender) {
         return Err(ContractError::Unauthorized {});
@@ -709,6 +824,10 @@ fn execute_submit_collection_creation_request(
             id: ecosystem_id.clone(),
         })?;
 
+    if ecosystem.collection_creation_policy != CollectionCreationPolicy::ApprovalRequired {
+        return Err(ContractError::CollectionCreationRequestNotAllowed { ecosystem_id });
+    }
+
     if can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &info.sender) {
         return Ok(Response::new()
             .add_attribute("action", "submit_collection_creation_request")
@@ -829,6 +948,10 @@ fn execute_register_collection(
         .map_err(|_| ContractError::EcosystemNotFound {
             id: ecosystem_id.clone(),
         })?;
+
+    if ecosystem.collection_factory.is_some() {
+        return Err(ContractError::CollectionFactoryRequired { ecosystem_id });
+    }
 
     if !can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &info.sender) {
         if is_cross_ecosystem_admin(&config, &info.sender)

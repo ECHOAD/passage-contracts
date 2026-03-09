@@ -43,6 +43,7 @@ pub fn instantiate(
         registry,
         revenue_router,
         use_revenue_router,
+        metadata_mode: msg.metadata_mode.unwrap_or_default(),
         native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,
     };
@@ -71,6 +72,7 @@ pub fn instantiate(
         .add_submessage(submsg)
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "minter-v2")
+        .add_attribute("metadata_mode", format!("{:?}", config.metadata_mode))
         .add_attribute("admin", info.sender))
 }
 

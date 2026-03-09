@@ -10,6 +10,8 @@ pub struct Config {
     pub admin: Addr,
     /// Optional operator addresses that can register on behalf of creators
     pub operators: Vec<Addr>,
+    /// Optional ecosystem factory contract allowed to register approved ecosystems
+    pub ecosystem_factory: Option<Addr>,
     /// Whether registration is paused
     pub paused: bool,
 }

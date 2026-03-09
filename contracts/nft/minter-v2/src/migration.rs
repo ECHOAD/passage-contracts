@@ -11,7 +11,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::state::{
-    Config, MintStats, CONFIG, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
+    Config, MetadataMode, MintStats, CONFIG, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS,
+    MINT_STATS,
 };
 
 // ============================================================================
@@ -108,6 +109,7 @@ fn migrate_from_minter_v1(
         registry,
         revenue_router: revenue_router.clone(),
         use_revenue_router,
+        metadata_mode: MetadataMode::OffChain,
         native_asset_template: vec![],
         paused: false,
     };
@@ -182,6 +184,7 @@ fn migrate_from_metadata_onchain(
         registry,
         revenue_router: revenue_router.clone(),
         use_revenue_router,
+        metadata_mode: MetadataMode::OffChain,
         native_asset_template: vec![],
         paused: false,
     };

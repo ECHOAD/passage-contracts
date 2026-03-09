@@ -34,10 +34,17 @@ pub(super) fn validate_ecosystem_policy(
     ecosystem_type: &EcosystemType,
     policy: &CollectionCreationPolicy,
 ) -> Result<(), ContractError> {
-    if matches!(ecosystem_type, EcosystemType::Private)
-        && matches!(policy, CollectionCreationPolicy::Open)
-    {
-        return Err(ContractError::InvalidEcosystemPolicyCombination {});
+    match ecosystem_type {
+        EcosystemType::Public => {
+            if !matches!(policy, CollectionCreationPolicy::ApprovalRequired) {
+                return Err(ContractError::InvalidEcosystemPolicyCombination {});
+            }
+        }
+        EcosystemType::Private => {
+            if !matches!(policy, CollectionCreationPolicy::Permissioned) {
+                return Err(ContractError::InvalidEcosystemPolicyCombination {});
+            }
+        }
     }
 
     Ok(())

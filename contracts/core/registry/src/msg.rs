@@ -12,6 +12,8 @@ pub struct InstantiateMsg {
     pub admin: Option<String>,
     /// Optional operator addresses
     pub operators: Option<Vec<String>>,
+    /// Optional ecosystem factory contract allowed to register approved ecosystems
+    pub ecosystem_factory: Option<String>,
 }
 
 #[cw_serde]
@@ -21,6 +23,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<String>,
         operators: Option<Vec<String>>,
+        ecosystem_factory: Option<String>,
         paused: Option<bool>,
     },
     /// Approve a creator to register new ecosystems
@@ -35,6 +38,18 @@ pub enum ExecuteMsg {
         name: String,
         ecosystem_type: Option<EcosystemType>,
         collection_creation_policy: Option<CollectionCreationPolicy>,
+        collection_factory: Option<String>,
+        detail: String,
+        image_urls: Vec<String>,
+        animation_url: Option<String>,
+        url: Option<String>,
+    },
+    /// Register a new ecosystem from an authorized ecosystem factory
+    RegisterEcosystemFromFactory {
+        id: String,
+        name: String,
+        creator: String,
+        ecosystem_type: Option<EcosystemType>,
         collection_factory: Option<String>,
         detail: String,
         image_urls: Vec<String>,

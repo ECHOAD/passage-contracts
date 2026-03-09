@@ -72,8 +72,14 @@ pub enum ContractError {
     #[error("Ecosystem factory is not configured")]
     EcosystemFactoryNotConfigured {},
 
+    #[error("Ecosystem factory is required")]
+    EcosystemFactoryRequired {},
+
     #[error("Only configured ecosystem factory can perform this action")]
     NotEcosystemFactory {},
+
+    #[error("Ecosystem creation must go through ecosystem-factory when configured")]
+    EcosystemFactoryFlowRequired {},
 
     #[error("Collection creation request already pending for ecosystem: {ecosystem_id}")]
     CollectionCreationRequestAlreadyPending { ecosystem_id: String },
@@ -83,6 +89,14 @@ pub enum ContractError {
 
     #[error("Collection creation request already resolved for ecosystem: {ecosystem_id}")]
     CollectionCreationRequestAlreadyResolved { ecosystem_id: String },
+
+    #[error("Collection creation requests are not allowed for ecosystem: {ecosystem_id}")]
+    CollectionCreationRequestNotAllowed { ecosystem_id: String },
+
+    #[error(
+        "Collection registration must go through configured collection-factory for ecosystem: {ecosystem_id}"
+    )]
+    CollectionFactoryRequired { ecosystem_id: String },
 
     #[error("Only collection creator can perform this action")]
     NotCollectionCreator {},

@@ -1309,6 +1309,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecosystem-factory"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema 2.1.3",
+ "cosmwasm-std 2.1.3",
+ "cw-multi-test 2.1.1",
+ "cw-storage-plus 2.0.0",
+ "cw2 2.0.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1887,7 +1901,22 @@ dependencies = [
  "cw2 2.0.0",
  "cw721 0.18.0",
  "cw721-base 0.18.0",
- "pg721",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "minter-v2-metadata-onchain"
+version = "2.0.0"
+dependencies = [
+ "cosmwasm-schema 2.1.3",
+ "cosmwasm-std 2.1.3",
+ "cw-multi-test 2.1.1",
+ "cw-storage-plus 2.0.0",
+ "cw2 2.0.0",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
  "schemars",
  "serde",
  "thiserror",

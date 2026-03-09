@@ -23,7 +23,6 @@ cw721-base = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-pg721 = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
