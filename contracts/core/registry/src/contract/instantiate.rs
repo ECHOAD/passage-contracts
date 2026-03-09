@@ -5,7 +5,7 @@ use super::*;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -32,6 +32,21 @@ pub fn instantiate(
 
     CONFIG.save(deps.storage, &config)?;
     ECOSYSTEM_COUNT.save(deps.storage, &0u64)?;
+    NEXT_ECOSYSTEM_REQUEST_ID.save(deps.storage, &1u64)?;
+    DEAD_PROJECT_CASE_COUNT.save(deps.storage, &0u64)?;
+    RECOVERY_CONFIG.save(
+        deps.storage,
+        &RecoveryConfig {
+            inactivity_period_secs: 90 * 24 * 60 * 60,
+            contest_period_secs: 30 * 24 * 60 * 60,
+        },
+    )?;
+
+    let now = env.block.time.seconds();
+    LAST_CREATOR_ACTIVITY.save(deps.storage, config.admin.clone(), &now)?;
+    for operator in config.operators {
+        LAST_CREATOR_ACTIVITY.save(deps.storage, operator, &now)?;
+    }
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")

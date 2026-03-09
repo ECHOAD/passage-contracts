@@ -1,3 +1,4 @@
+use super::helpers::{can_create_collection_in_ecosystem, is_cross_ecosystem_admin};
 use super::*;
 
 // ========== Query ==========
@@ -20,10 +21,54 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsEcosystemCreatorApproved { creator } => {
             to_json_binary(&query_is_ecosystem_creator_approved(deps, creator)?)
         }
+        QueryMsg::IsCrossEcosystemAdmin { address } => {
+            to_json_binary(&query_is_cross_ecosystem_admin(deps, address)?)
+        }
         QueryMsg::IsEcosystemMember {
             ecosystem_id,
             member,
         } => to_json_binary(&query_is_ecosystem_member(deps, ecosystem_id, member)?),
+        QueryMsg::CanCreateCollectionInEcosystem {
+            ecosystem_id,
+            creator,
+        } => to_json_binary(&query_can_create_collection_in_ecosystem(
+            deps,
+            ecosystem_id,
+            creator,
+        )?),
+        QueryMsg::CollectionCreationRequest {
+            ecosystem_id,
+            creator,
+        } => to_json_binary(&query_collection_creation_request(
+            deps,
+            ecosystem_id,
+            creator,
+        )?),
+        QueryMsg::CollectionCreationRequests {
+            ecosystem_id,
+            status,
+            start_after_creator,
+            limit,
+        } => to_json_binary(&query_collection_creation_requests(
+            deps,
+            ecosystem_id,
+            status,
+            start_after_creator,
+            limit,
+        )?),
+        QueryMsg::EcosystemCreationRequest { request_id } => {
+            to_json_binary(&query_ecosystem_creation_request(deps, request_id)?)
+        }
+        QueryMsg::EcosystemCreationRequests {
+            status,
+            start_after,
+            limit,
+        } => to_json_binary(&query_ecosystem_creation_requests(
+            deps,
+            status,
+            start_after,
+            limit,
+        )?),
 
         // Collection queries
         QueryMsg::Collection { address } => to_json_binary(&query_collection(deps, address)?),
@@ -73,6 +118,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
+
+        QueryMsg::RecoveryConfig {} => to_json_binary(&query_recovery_config(deps)?),
+        QueryMsg::DeadProjectCase { case_id } => {
+            to_json_binary(&query_dead_project_case(deps, case_id)?)
+        }
+        QueryMsg::DeadProjectCases {
+            status,
+            start_after,
+            limit,
+        } => to_json_binary(&query_dead_project_cases(deps, status, start_after, limit)?),
+        QueryMsg::LastCreatorActivity { creator } => {
+            to_json_binary(&query_last_creator_activity(deps, creator)?)
+        }
     }
 }
 
@@ -134,6 +192,16 @@ fn query_is_ecosystem_creator_approved(
     Ok(ApprovalStatusResponse { approved })
 }
 
+fn query_is_cross_ecosystem_admin(
+    deps: Deps,
+    address: String,
+) -> StdResult<ApprovalStatusResponse> {
+    let addr = deps.api.addr_validate(&address)?;
+    let config = CONFIG.load(deps.storage)?;
+    let approved = is_cross_ecosystem_admin(&config, &addr);
+    Ok(ApprovalStatusResponse { approved })
+}
+
 fn query_is_ecosystem_member(
     deps: Deps,
     ecosystem_id: String,
@@ -142,6 +210,106 @@ fn query_is_ecosystem_member(
     let member_addr = deps.api.addr_validate(&member)?;
     let approved = ECOSYSTEM_MEMBERS.has(deps.storage, (ecosystem_id, member_addr));
     Ok(ApprovalStatusResponse { approved })
+}
+
+fn query_can_create_collection_in_ecosystem(
+    deps: Deps,
+    ecosystem_id: String,
+    creator: String,
+) -> StdResult<ApprovalStatusResponse> {
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let config = CONFIG.load(deps.storage)?;
+    let ecosystem = ECOSYSTEMS
+        .may_load(deps.storage, ecosystem_id)?
+        .ok_or_else(|| cosmwasm_std::StdError::generic_err("ecosystem not found"))?;
+
+    let approved =
+        can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &creator_addr);
+    Ok(ApprovalStatusResponse { approved })
+}
+
+fn query_collection_creation_request(
+    deps: Deps,
+    ecosystem_id: String,
+    creator: String,
+) -> StdResult<CollectionCreationRequestResponse> {
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let request =
+        COLLECTION_CREATION_REQUESTS.may_load(deps.storage, (ecosystem_id, creator_addr))?;
+    Ok(CollectionCreationRequestResponse { request })
+}
+
+fn query_collection_creation_requests(
+    deps: Deps,
+    ecosystem_id: String,
+    status: Option<CollectionCreationRequestStatus>,
+    start_after_creator: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionCreationRequestsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start_creator = start_after_creator
+        .map(|s| deps.api.addr_validate(&s))
+        .transpose()?;
+
+    let requests = COLLECTION_CREATION_REQUESTS
+        .range(deps.storage, None, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok()
+                .and_then(|((request_ecosystem_id, creator_addr), request)| {
+                    if request_ecosystem_id != ecosystem_id {
+                        return None;
+                    }
+
+                    if let Some(start) = &start_creator {
+                        if creator_addr <= *start {
+                            return None;
+                        }
+                    }
+
+                    if let Some(expected_status) = &status {
+                        if &request.status != expected_status {
+                            return None;
+                        }
+                    }
+
+                    Some(request)
+                })
+        })
+        .take(limit)
+        .collect::<Vec<_>>();
+
+    Ok(CollectionCreationRequestsResponse { requests })
+}
+
+fn query_ecosystem_creation_request(
+    deps: Deps,
+    request_id: u64,
+) -> StdResult<EcosystemCreationRequestResponse> {
+    let request = ECOSYSTEM_CREATION_REQUESTS.may_load(deps.storage, request_id)?;
+    Ok(EcosystemCreationRequestResponse { request })
+}
+
+fn query_ecosystem_creation_requests(
+    deps: Deps,
+    status: Option<EcosystemCreationRequestStatus>,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<EcosystemCreationRequestsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let requests = ECOSYSTEM_CREATION_REQUESTS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, request)| match &status {
+                Some(expected_status) if request.status != *expected_status => None,
+                _ => Some(request),
+            })
+        })
+        .take(limit)
+        .collect::<Vec<_>>();
+
+    Ok(EcosystemCreationRequestsResponse { requests })
 }
 
 fn query_collection(deps: Deps, address: String) -> StdResult<CollectionResponse> {
@@ -270,4 +438,49 @@ fn query_authorized_minters(
         .collect();
 
     Ok(AuthorizedMintersResponse { minters })
+}
+
+fn query_recovery_config(deps: Deps) -> StdResult<RecoveryConfigResponse> {
+    let config = RECOVERY_CONFIG.load(deps.storage)?;
+    Ok(RecoveryConfigResponse { config })
+}
+
+fn query_dead_project_case(deps: Deps, case_id: u64) -> StdResult<DeadProjectCaseResponse> {
+    let case = DEAD_PROJECT_CASES.may_load(deps.storage, case_id)?;
+    Ok(DeadProjectCaseResponse { case })
+}
+
+fn query_dead_project_cases(
+    deps: Deps,
+    status: Option<DeadProjectStatus>,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<DeadProjectCasesResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let cases: Vec<DeadProjectCase> = DEAD_PROJECT_CASES
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, c)| match &status {
+                Some(s) if c.status != *s => None,
+                _ => Some(c),
+            })
+        })
+        .take(limit)
+        .collect();
+
+    Ok(DeadProjectCasesResponse { cases })
+}
+
+fn query_last_creator_activity(
+    deps: Deps,
+    creator: String,
+) -> StdResult<LastCreatorActivityResponse> {
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let last_activity_at = LAST_CREATOR_ACTIVITY.may_load(deps.storage, creator_addr)?;
+    Ok(LastCreatorActivityResponse {
+        creator,
+        last_activity_at,
+    })
 }

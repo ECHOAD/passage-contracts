@@ -1,6 +1,9 @@
 use crate::{state::CollectionInfo, ContractError};
-use cosmwasm_std::Decimal;
-use cw721_base::msg::QueryMsg as Cw721QueryMsg;
+use cosmwasm_std::{Binary, Decimal};
+use cw721::Expiration;
+use cw721_base::{
+    msg::QueryMsg as Cw721QueryMsg, ExecuteMsg as Cw721ExecuteMsg, MintMsg as Cw721MintMsg,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -43,11 +46,109 @@ pub struct TokenMetadata {
 }
 
 pub type Extension = Option<TokenMetadata>;
-pub type ExecuteMsg = cw721_base::ExecuteMsg<Extension>;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecuteMsg {
+    /// Freeze token metadata so creator can no longer update token URIs.
+    FreezeTokenMetadata {},
+    /// Creator can update token_uri while not frozen.
+    UpdateTokenMetadata {
+        token_id: String,
+        token_uri: Option<String>,
+    },
+    TransferNft {
+        recipient: String,
+        token_id: String,
+    },
+    SendNft {
+        contract: String,
+        token_id: String,
+        msg: Binary,
+    },
+    Approve {
+        spender: String,
+        token_id: String,
+        expires: Option<Expiration>,
+    },
+    Revoke {
+        spender: String,
+        token_id: String,
+    },
+    ApproveAll {
+        operator: String,
+        expires: Option<Expiration>,
+    },
+    RevokeAll {
+        operator: String,
+    },
+    Mint {
+        token_id: String,
+        owner: String,
+        token_uri: Option<String>,
+        extension: Extension,
+    },
+    Burn {
+        token_id: String,
+    },
+}
+
+impl From<ExecuteMsg> for Cw721ExecuteMsg<Extension> {
+    fn from(msg: ExecuteMsg) -> Cw721ExecuteMsg<Extension> {
+        match msg {
+            ExecuteMsg::TransferNft {
+                recipient,
+                token_id,
+            } => Cw721ExecuteMsg::TransferNft {
+                recipient,
+                token_id,
+            },
+            ExecuteMsg::SendNft {
+                contract,
+                token_id,
+                msg,
+            } => Cw721ExecuteMsg::SendNft {
+                contract,
+                token_id,
+                msg,
+            },
+            ExecuteMsg::Approve {
+                spender,
+                token_id,
+                expires,
+            } => Cw721ExecuteMsg::Approve {
+                spender,
+                token_id,
+                expires,
+            },
+            ExecuteMsg::Revoke { spender, token_id } => {
+                Cw721ExecuteMsg::Revoke { spender, token_id }
+            }
+            ExecuteMsg::ApproveAll { operator, expires } => {
+                Cw721ExecuteMsg::ApproveAll { operator, expires }
+            }
+            ExecuteMsg::RevokeAll { operator } => Cw721ExecuteMsg::RevokeAll { operator },
+            ExecuteMsg::Mint {
+                token_id,
+                owner,
+                token_uri,
+                extension,
+            } => Cw721ExecuteMsg::Mint(Cw721MintMsg {
+                token_id,
+                owner,
+                token_uri,
+                extension,
+            }),
+            ExecuteMsg::Burn { token_id } => Cw721ExecuteMsg::Burn { token_id },
+            _ => unreachable!("invalid ExecuteMsg conversion to Cw721ExecuteMsg"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    FrozenTokenMetadata {},
     OwnerOf {
         token_id: String,
         include_expired: Option<bool>,
@@ -161,4 +262,9 @@ pub struct CollectionInfoResponse {
     pub image: String,
     pub external_link: Option<String>,
     pub royalty_info: Option<RoyaltyInfoResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct FrozenTokenMetadataResponse {
+    pub frozen: bool,
 }

@@ -51,9 +51,60 @@ pub enum ContractError {
     #[error("Creator is not approved to register ecosystems")]
     EcosystemCreatorNotApproved {},
 
+    #[error("Ecosystem creation request already pending for ecosystem id: {id}")]
+    EcosystemCreationRequestAlreadyPending { id: String },
+
+    #[error("Ecosystem creation request not found: {request_id}")]
+    EcosystemCreationRequestNotFound { request_id: u64 },
+
+    #[error("Ecosystem creation request already resolved: {request_id}")]
+    EcosystemCreationRequestAlreadyResolved { request_id: u64 },
+
     #[error("Address is not approved as member for ecosystem: {ecosystem_id}")]
     EcosystemMemberNotApproved { ecosystem_id: String },
 
+    #[error("Cross-ecosystem admin cannot manage owner-controlled ecosystem")]
+    CrossAdminCannotManageOwnerEcosystem {},
+
+    #[error("Invalid ecosystem policy combination")]
+    InvalidEcosystemPolicyCombination {},
+
+    #[error("Ecosystem factory is not configured")]
+    EcosystemFactoryNotConfigured {},
+
+    #[error("Only configured ecosystem factory can perform this action")]
+    NotEcosystemFactory {},
+
+    #[error("Collection creation request already pending for ecosystem: {ecosystem_id}")]
+    CollectionCreationRequestAlreadyPending { ecosystem_id: String },
+
+    #[error("Collection creation request not found for ecosystem: {ecosystem_id}")]
+    CollectionCreationRequestNotFound { ecosystem_id: String },
+
+    #[error("Collection creation request already resolved for ecosystem: {ecosystem_id}")]
+    CollectionCreationRequestAlreadyResolved { ecosystem_id: String },
+
     #[error("Only collection creator can perform this action")]
     NotCollectionCreator {},
+
+    #[error("Recovery configuration is invalid")]
+    InvalidRecoveryConfig {},
+
+    #[error("Dead project reason cannot be empty")]
+    EmptyRecoveryReason {},
+
+    #[error("Dead project case not found: {case_id}")]
+    DeadProjectCaseNotFound { case_id: u64 },
+
+    #[error("There is already an open dead project case for target: {target}")]
+    DeadProjectCaseAlreadyOpen { target: String },
+
+    #[error("Dead project case already resolved: {case_id}")]
+    DeadProjectCaseAlreadyResolved { case_id: u64 },
+
+    #[error("Dead project case is not contestable: {case_id}")]
+    DeadProjectCaseNotContestable { case_id: u64 },
+
+    #[error("Only target admin can contest dead project case")]
+    OnlyTargetAdminCanContest {},
 }
