@@ -19,30 +19,27 @@ pub fn execute(
             admin,
             operators,
             registry,
+            collection_factory_code_id,
+            collection_code_id,
             paused,
-        } => execute_update_config(deps, info, admin, operators, registry, paused),
+        } => execute_update_config(
+            deps,
+            info,
+            admin,
+            operators,
+            registry,
+            collection_factory_code_id,
+            collection_code_id,
+            paused,
+        ),
         ExecuteMsg::SubmitEcosystemCreationRequest {
             id,
             name,
-            ecosystem_type,
-            collection_factory,
             detail,
             image_urls,
             animation_url,
             url,
-        } => execute_submit_request(
-            deps,
-            env,
-            info,
-            id,
-            name,
-            ecosystem_type,
-            collection_factory,
-            detail,
-            image_urls,
-            animation_url,
-            url,
-        ),
+        } => execute_submit_request(deps, env, info, id, name, detail, image_urls, animation_url, url),
         ExecuteMsg::ResolveEcosystemCreationRequest {
             request_id,
             approved,
@@ -51,12 +48,15 @@ pub fn execute(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
     admin: Option<String>,
     operators: Option<Vec<String>>,
     registry: Option<String>,
+    collection_factory_code_id: Option<u64>,
+    collection_code_id: Option<u64>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
@@ -79,6 +79,24 @@ fn execute_update_config(
         config.registry = deps.api.addr_validate(&new_registry)?;
     }
 
+    if let Some(code_id) = collection_factory_code_id {
+        if code_id == 0 {
+            return Err(ContractError::InvalidCodeId {
+                field: "collection_factory_code_id".to_string(),
+            });
+        }
+        config.collection_factory_code_id = code_id;
+    }
+
+    if let Some(code_id) = collection_code_id {
+        if code_id == 0 {
+            return Err(ContractError::InvalidCodeId {
+                field: "collection_code_id".to_string(),
+            });
+        }
+        config.collection_code_id = code_id;
+    }
+
     if let Some(new_paused) = paused {
         config.paused = new_paused;
     }
@@ -88,6 +106,11 @@ fn execute_update_config(
     Ok(Response::new()
         .add_attribute("action", "update_config")
         .add_attribute("registry", config.registry)
+        .add_attribute(
+            "collection_factory_code_id",
+            config.collection_factory_code_id.to_string(),
+        )
+        .add_attribute("collection_code_id", config.collection_code_id.to_string())
         .add_attribute("paused", config.paused.to_string()))
 }
 
@@ -98,8 +121,6 @@ fn execute_submit_request(
     info: MessageInfo,
     id: String,
     name: String,
-    ecosystem_type: Option<EcosystemType>,
-    collection_factory: Option<String>,
     detail: String,
     image_urls: Vec<String>,
     animation_url: Option<String>,
@@ -114,17 +135,11 @@ fn execute_submit_request(
     let request_id = NEXT_REQUEST_ID.load(deps.storage)?;
     NEXT_REQUEST_ID.save(deps.storage, &(request_id + 1))?;
 
-    let collection_factory = collection_factory
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
-
     let request = EcosystemCreationRequest {
         request_id,
         creator: info.sender.clone(),
         id: id.clone(),
         name,
-        ecosystem_type: ecosystem_type.unwrap_or_default(),
-        collection_factory,
         detail,
         image_urls,
         animation_url,
@@ -202,22 +217,41 @@ fn execute_resolve_request(
         .add_attribute("approved", approved.to_string());
 
     if approved {
-        let register_msg = WasmMsg::Execute {
-            contract_addr: config.registry.to_string(),
-            msg: to_json_binary(&RegistryExecuteMsg::RegisterEcosystemFromFactory {
-                id: request.id,
-                name: request.name,
-                creator: request.creator.to_string(),
-                ecosystem_type: Some(request.ecosystem_type),
-                collection_factory: request.collection_factory.map(|a| a.to_string()),
-                detail: request.detail,
-                image_urls: request.image_urls,
-                animation_url: request.animation_url,
-                url: request.url,
-            })?,
-            funds: vec![],
+        // Store pending ecosystem creation data for reply handler
+        let pending = PendingEcosystemCreation {
+            request_id,
+            ecosystem_id: request.id.clone(),
+            ecosystem_name: request.name.clone(),
+            creator: request.creator.clone(),
+            detail: request.detail.clone(),
+            image_urls: request.image_urls.clone(),
+            animation_url: request.animation_url.clone(),
+            url: request.url.clone(),
         };
-        res = res.add_message(register_msg);
+        PENDING_ECOSYSTEM_CREATIONS.save(deps.storage, request_id, &pending)?;
+
+        // Instantiate collection-factory for this ecosystem
+        let collection_factory_init_msg = CollectionFactoryInstantiateMsg {
+            admin: Some(request.creator.to_string()),
+            operators: None,
+            registry: config.registry.to_string(),
+            ecosystem_id: request.id.clone(),
+            collection_code_id: config.collection_code_id,
+            enforce_local_allowlist: Some(false),
+            approved_creators: Some(vec![request.creator.to_string()]),
+        };
+
+        let instantiate_msg = WasmMsg::Instantiate {
+            admin: Some(request.creator.to_string()),
+            code_id: config.collection_factory_code_id,
+            msg: to_json_binary(&collection_factory_init_msg)?,
+            funds: vec![],
+            label: format!("collection-factory-{}", request.id),
+        };
+
+        // Use SubMsg with reply to capture the collection-factory address
+        let submsg = SubMsg::reply_on_success(instantiate_msg, request_id);
+        res = res.add_submessage(submsg);
     }
 
     Ok(res)

@@ -12,6 +12,23 @@ pub enum ContractError {
     #[error("Marketplace is paused")]
     MarketplacePaused {},
 
+    // ========== Collection Registration Errors ==========
+    #[error("Collection not registered: {collection}")]
+    CollectionNotRegistered { collection: String },
+
+    #[error("Collection already registered: {collection}")]
+    CollectionAlreadyRegistered { collection: String },
+
+    #[error("Collection not active: {collection}")]
+    CollectionNotActive { collection: String },
+
+    #[error("Collection blacklisted: {collection}. Reason: {reason}")]
+    CollectionBlacklisted { collection: String, reason: String },
+
+    #[error("Trading fee exceeds maximum: {fee_bps} > {max_bps}")]
+    TradingFeeExceedsMax { fee_bps: u64, max_bps: u64 },
+
+    // Legacy error for backward compatibility
     #[error("Collection not supported: {collection}")]
     CollectionNotSupported { collection: String },
 

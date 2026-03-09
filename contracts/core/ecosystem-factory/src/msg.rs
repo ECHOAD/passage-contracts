@@ -1,6 +1,4 @@
-use crate::state::{
-    Config, EcosystemCreationRequest, EcosystemCreationRequestStatus, EcosystemType,
-};
+use crate::state::{Config, EcosystemCreationRequest, EcosystemCreationRequestStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
@@ -8,6 +6,10 @@ pub struct InstantiateMsg {
     pub admin: Option<String>,
     pub operators: Option<Vec<String>>,
     pub registry: String,
+    /// Code ID for collection-factory contracts
+    pub collection_factory_code_id: u64,
+    /// Code ID for pg721 collection contracts (passed to collection-factory)
+    pub collection_code_id: u64,
 }
 
 #[cw_serde]
@@ -16,13 +18,13 @@ pub enum ExecuteMsg {
         admin: Option<String>,
         operators: Option<Vec<String>>,
         registry: Option<String>,
+        collection_factory_code_id: Option<u64>,
+        collection_code_id: Option<u64>,
         paused: Option<bool>,
     },
     SubmitEcosystemCreationRequest {
         id: String,
         name: String,
-        ecosystem_type: Option<EcosystemType>,
-        collection_factory: Option<String>,
         detail: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,
@@ -85,8 +87,7 @@ pub enum RegistryExecuteMsg {
         id: String,
         name: String,
         creator: String,
-        ecosystem_type: Option<EcosystemType>,
-        collection_factory: Option<String>,
+        collection_factory: String,
         detail: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,
@@ -102,4 +103,16 @@ pub enum RegistryQueryMsg {
 #[cw_serde]
 pub struct RegistryApprovalStatusResponse {
     pub approved: bool,
+}
+
+/// InstantiateMsg for the collection-factory contract
+#[cw_serde]
+pub struct CollectionFactoryInstantiateMsg {
+    pub admin: Option<String>,
+    pub operators: Option<Vec<String>>,
+    pub registry: String,
+    pub ecosystem_id: String,
+    pub collection_code_id: u64,
+    pub enforce_local_allowlist: Option<bool>,
+    pub approved_creators: Option<Vec<String>>,
 }

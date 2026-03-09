@@ -49,8 +49,8 @@ pub enum ExecuteMsg {
         id: String,
         name: String,
         creator: String,
-        ecosystem_type: Option<EcosystemType>,
-        collection_factory: Option<String>,
+        /// Collection factory address (required - created by ecosystem-factory)
+        collection_factory: String,
         detail: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,

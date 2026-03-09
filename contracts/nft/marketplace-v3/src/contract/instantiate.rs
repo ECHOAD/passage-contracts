@@ -2,6 +2,9 @@ use super::*;
 
 // ========== Instantiate ==========
 
+/// Default maximum trading fee: 10%
+const DEFAULT_MAX_TRADING_FEE_BPS: u64 = 1000;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -18,13 +21,6 @@ pub fn instantiate(
         .unwrap_or(info.sender);
 
     let fee_collector = deps.api.addr_validate(&msg.fee_collector)?;
-
-    let supported_collections = msg
-        .supported_collections
-        .unwrap_or_default()
-        .iter()
-        .map(|c| deps.api.addr_validate(c))
-        .collect::<StdResult<Vec<Addr>>>()?;
 
     let registry = msg
         .registry
@@ -43,40 +39,36 @@ pub fn instantiate(
         .map(|o| deps.api.addr_validate(o))
         .collect::<StdResult<Vec<Addr>>>()?;
 
-    let collection_denom_overrides = msg
-        .collection_denoms
-        .unwrap_or_default()
-        .iter()
-        .map(|entry| {
-            Ok((
-                deps.api.addr_validate(&entry.collection)?,
-                entry.denom.clone(),
-            ))
-        })
-        .collect::<StdResult<Vec<(Addr, String)>>>()?;
+    let max_trading_fee_bps = msg.max_trading_fee_bps.unwrap_or(DEFAULT_MAX_TRADING_FEE_BPS);
+
+    // Validate trading fee doesn't exceed max
+    if msg.trading_fee_bps > max_trading_fee_bps {
+        return Err(ContractError::TradingFeeExceedsMax {
+            fee_bps: msg.trading_fee_bps,
+            max_bps: max_trading_fee_bps,
+        });
+    }
 
     let config = Config {
         admin,
-        supported_collections,
-        allow_any_collection: msg.allow_any_collection.unwrap_or(true),
         denom: msg.denom,
         min_price: msg.min_price,
         trading_fee_bps: msg.trading_fee_bps,
+        max_trading_fee_bps,
         fee_collector,
         registry,
         revenue_router: revenue_router.clone(),
         use_revenue_router: msg.use_revenue_router.unwrap_or(revenue_router.is_some()),
         operators,
         paused: false,
+        require_registration: msg.require_registration.unwrap_or(true),
     };
 
     CONFIG.save(deps.storage, &config)?;
-    for (collection, denom) in collection_denom_overrides {
-        COLLECTION_DENOMS.save(deps.storage, collection, &denom)?;
-    }
     MARKET_STATS.save(deps.storage, &MarketStats::default())?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
-        .add_attribute("contract", "marketplace-v3"))
+        .add_attribute("contract", "marketplace-v3")
+        .add_attribute("require_registration", config.require_registration.to_string()))
 }

@@ -7,8 +7,23 @@ use super::*;
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
+        // Collection queries
+        QueryMsg::CollectionConfig { collection } => {
+            to_json_binary(&query_collection_config(deps, collection)?)
+        }
+        QueryMsg::CollectionConfigs {
+            start_after,
+            limit,
+            active_only,
+        } => to_json_binary(&query_collection_configs(deps, start_after, limit, active_only)?),
+        QueryMsg::CanTrade { collection } => {
+            to_json_binary(&query_can_trade(deps, collection)?)
+        }
         QueryMsg::CollectionDenom { collection } => {
             to_json_binary(&query_collection_denom(deps, collection)?)
+        }
+        QueryMsg::CollectionFee { collection } => {
+            to_json_binary(&query_collection_fee(deps, collection)?)
         }
         QueryMsg::Ask {
             collection,
@@ -100,6 +115,108 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config.into())
+}
+
+fn query_collection_config(deps: Deps, collection: String) -> StdResult<CollectionConfigResponse> {
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    let config = COLLECTION_CONFIGS.may_load(deps.storage, collection_addr)?;
+    Ok(CollectionConfigResponse { config })
+}
+
+fn query_collection_configs(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+    active_only: Option<bool>,
+) -> StdResult<CollectionConfigsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|s| deps.api.addr_validate(&s))
+        .transpose()?
+        .map(Bound::exclusive);
+
+    let active_only = active_only.unwrap_or(false);
+
+    let configs: Vec<CollectionConfig> = COLLECTION_CONFIGS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, config)| {
+                if active_only && (!config.active || config.blacklisted) {
+                    None
+                } else {
+                    Some(config)
+                }
+            })
+        })
+        .take(limit)
+        .collect();
+
+    Ok(CollectionConfigsResponse { configs })
+}
+
+fn query_can_trade(deps: Deps, collection: String) -> StdResult<CanTradeResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let collection_addr = deps.api.addr_validate(&collection)?;
+
+    // If registration is not required, any collection can trade
+    if !config.require_registration {
+        return Ok(CanTradeResponse {
+            can_trade: true,
+            reason: None,
+        });
+    }
+
+    // Check if collection is registered
+    let coll_config = COLLECTION_CONFIGS.may_load(deps.storage, collection_addr)?;
+
+    match coll_config {
+        None => Ok(CanTradeResponse {
+            can_trade: false,
+            reason: Some("Collection not registered".to_string()),
+        }),
+        Some(cfg) => {
+            if cfg.blacklisted {
+                Ok(CanTradeResponse {
+                    can_trade: false,
+                    reason: Some(format!(
+                        "Collection blacklisted: {}",
+                        cfg.blacklist_reason.unwrap_or_else(|| "Unknown".to_string())
+                    )),
+                })
+            } else if !cfg.active {
+                Ok(CanTradeResponse {
+                    can_trade: false,
+                    reason: Some("Collection not active".to_string()),
+                })
+            } else {
+                Ok(CanTradeResponse {
+                    can_trade: true,
+                    reason: None,
+                })
+            }
+        }
+    }
+}
+
+fn query_collection_fee(deps: Deps, collection: String) -> StdResult<CollectionFeeResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let collection_addr = deps.api.addr_validate(&collection)?;
+
+    let coll_config = COLLECTION_CONFIGS.may_load(deps.storage, collection_addr)?;
+
+    let (trading_fee_bps, is_override) = match coll_config {
+        Some(cfg) => match cfg.trading_fee_bps {
+            Some(fee) => (fee, true),
+            None => (config.trading_fee_bps, false),
+        },
+        None => (config.trading_fee_bps, false),
+    };
+
+    Ok(CollectionFeeResponse {
+        collection,
+        trading_fee_bps,
+        is_override,
+    })
 }
 
 fn query_collection_denom(deps: Deps, collection: String) -> StdResult<CollectionDenomResponse> {
@@ -333,7 +450,10 @@ fn query_preview_sale(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    let platform_fee = price.multiply_ratio(config.trading_fee_bps as u128, 10_000u128);
+    // Get effective trading fee for this collection
+    let trading_fee_bps = resolve_collection_trading_fee(deps.storage, &config, &collection_addr)?;
+
+    let platform_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);
 
     // Query royalty from collection
     let royalty = query_royalty_amount(&deps, &collection_addr, price).unwrap_or(Uint128::zero());

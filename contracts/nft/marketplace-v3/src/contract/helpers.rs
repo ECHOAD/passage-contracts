@@ -2,23 +2,87 @@ use super::*;
 
 // ========== Helpers ==========
 
+/// Resolve the effective denom for a collection
+/// Priority: CollectionConfig.denom > Config.denom
 pub(super) fn resolve_collection_denom(
     storage: &dyn cosmwasm_std::Storage,
     config: &Config,
     collection: &Addr,
 ) -> StdResult<String> {
+    // First check new CollectionConfig
+    if let Some(coll_config) = COLLECTION_CONFIGS.may_load(storage, collection.clone())? {
+        return Ok(coll_config.get_denom(&config.denom));
+    }
+    // Fallback to legacy COLLECTION_DENOMS for migration compatibility
     Ok(COLLECTION_DENOMS
         .may_load(storage, collection.clone())?
         .unwrap_or_else(|| config.denom.clone()))
 }
 
-pub(super) fn validate_collection(config: &Config, collection: &Addr) -> Result<(), ContractError> {
-    if !config.allow_any_collection && !config.supported_collections.contains(collection) {
-        return Err(ContractError::CollectionNotSupported {
+/// Resolve the effective trading fee for a collection
+/// Priority: CollectionConfig.trading_fee_bps > Config.trading_fee_bps
+pub(super) fn resolve_collection_trading_fee(
+    storage: &dyn cosmwasm_std::Storage,
+    config: &Config,
+    collection: &Addr,
+) -> StdResult<u64> {
+    if let Some(coll_config) = COLLECTION_CONFIGS.may_load(storage, collection.clone())? {
+        return Ok(coll_config.get_trading_fee_bps(config.trading_fee_bps));
+    }
+    Ok(config.trading_fee_bps)
+}
+
+/// Validate that a collection can be traded on the marketplace
+/// Checks: registration (if required), active status, blacklist status
+pub(super) fn validate_collection(
+    storage: &dyn cosmwasm_std::Storage,
+    config: &Config,
+    collection: &Addr,
+) -> Result<(), ContractError> {
+    // If registration is required, check CollectionConfig
+    if config.require_registration {
+        let coll_config = COLLECTION_CONFIGS
+            .may_load(storage, collection.clone())?
+            .ok_or_else(|| ContractError::CollectionNotRegistered {
+                collection: collection.to_string(),
+            })?;
+
+        // Check if blacklisted
+        if coll_config.blacklisted {
+            return Err(ContractError::CollectionBlacklisted {
+                collection: collection.to_string(),
+                reason: coll_config
+                    .blacklist_reason
+                    .unwrap_or_else(|| "Unknown".to_string()),
+            });
+        }
+
+        // Check if active
+        if !coll_config.active {
+            return Err(ContractError::CollectionNotActive {
+                collection: collection.to_string(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+/// Get collection config, returning error if not found (when registration required)
+pub(super) fn get_collection_config(
+    storage: &dyn cosmwasm_std::Storage,
+    config: &Config,
+    collection: &Addr,
+) -> Result<Option<CollectionConfig>, ContractError> {
+    let coll_config = COLLECTION_CONFIGS.may_load(storage, collection.clone())?;
+
+    if config.require_registration && coll_config.is_none() {
+        return Err(ContractError::CollectionNotRegistered {
             collection: collection.to_string(),
         });
     }
-    Ok(())
+
+    Ok(coll_config)
 }
 
 pub(super) fn validate_payment(info: &MessageInfo, expected: &Coin) -> Result<(), ContractError> {
@@ -108,6 +172,7 @@ pub(super) fn query_royalty_amount(
 pub(super) struct SaleInfo {
     pub(super) platform_fee: Uint128,
     pub(super) royalty: Uint128,
+    pub(super) trading_fee_bps: u64,
 }
 
 pub(super) fn execute_sale(
@@ -124,8 +189,11 @@ pub(super) fn execute_sale(
 ) -> Result<(Vec<CosmosMsg>, SaleInfo), ContractError> {
     let mut messages: Vec<CosmosMsg> = vec![];
 
+    // Get effective trading fee for this collection
+    let trading_fee_bps = resolve_collection_trading_fee(deps.storage, config, collection)?;
+
     // Calculate fees
-    let platform_fee = price.multiply_ratio(config.trading_fee_bps as u128, 10_000u128);
+    let platform_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);
     let royalty =
         query_royalty_amount(&deps.as_ref(), collection, price).unwrap_or(Uint128::zero());
     let seller_amount = price - platform_fee - royalty;
@@ -194,6 +262,7 @@ pub(super) fn execute_sale(
         SaleInfo {
             platform_fee,
             royalty,
+            trading_fee_bps,
         },
     ))
 }

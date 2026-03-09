@@ -15,6 +15,9 @@ pub enum ContractError {
     #[error("Invalid request id")]
     InvalidRequestId {},
 
+    #[error("Invalid code id for {field}")]
+    InvalidCodeId { field: String },
+
     #[error("Ecosystem id cannot be empty")]
     EmptyEcosystemId {},
 
@@ -35,4 +38,10 @@ pub enum ContractError {
 
     #[error("Ecosystem creation request already resolved: {request_id}")]
     RequestAlreadyResolved { request_id: u64 },
+
+    #[error("Pending ecosystem creation not found for reply_id: {reply_id}")]
+    PendingCreationNotFound { reply_id: u64 },
+
+    #[error("Failed to parse reply data")]
+    ReplyParseError {},
 }

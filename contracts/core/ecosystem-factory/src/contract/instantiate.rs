@@ -9,6 +9,18 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    // Validate code IDs
+    if msg.collection_factory_code_id == 0 {
+        return Err(ContractError::InvalidCodeId {
+            field: "collection_factory_code_id".to_string(),
+        });
+    }
+    if msg.collection_code_id == 0 {
+        return Err(ContractError::InvalidCodeId {
+            field: "collection_code_id".to_string(),
+        });
+    }
+
     let admin = msg
         .admin
         .map(|a| deps.api.addr_validate(&a))
@@ -27,6 +39,8 @@ pub fn instantiate(
         admin: admin.clone(),
         operators,
         registry,
+        collection_factory_code_id: msg.collection_factory_code_id,
+        collection_code_id: msg.collection_code_id,
         paused: false,
     };
 
@@ -36,5 +50,10 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "ecosystem-factory")
-        .add_attribute("admin", admin))
+        .add_attribute("admin", admin)
+        .add_attribute(
+            "collection_factory_code_id",
+            msg.collection_factory_code_id.to_string(),
+        )
+        .add_attribute("collection_code_id", msg.collection_code_id.to_string()))
 }

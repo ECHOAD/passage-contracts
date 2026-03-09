@@ -8,20 +8,11 @@ pub struct Config {
     pub admin: Addr,
     pub operators: Vec<Addr>,
     pub registry: Addr,
+    /// Code ID for instantiating collection-factory contracts
+    pub collection_factory_code_id: u64,
+    /// Code ID for instantiating pg721 collection contracts (passed to collection-factory)
+    pub collection_code_id: u64,
     pub paused: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum EcosystemType {
-    Public,
-    Private,
-}
-
-impl Default for EcosystemType {
-    fn default() -> Self {
-        Self::Private
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,8 +29,6 @@ pub struct EcosystemCreationRequest {
     pub creator: Addr,
     pub id: String,
     pub name: String,
-    pub ecosystem_type: EcosystemType,
-    pub collection_factory: Option<Addr>,
     pub detail: String,
     pub image_urls: Vec<String>,
     pub animation_url: Option<String>,
@@ -51,7 +40,23 @@ pub struct EcosystemCreationRequest {
     pub review_note: Option<String>,
 }
 
+/// Pending ecosystem creation waiting for collection-factory reply
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PendingEcosystemCreation {
+    pub request_id: u64,
+    pub ecosystem_id: String,
+    pub ecosystem_name: String,
+    pub creator: Addr,
+    pub detail: String,
+    pub image_urls: Vec<String>,
+    pub animation_url: Option<String>,
+    pub url: Option<String>,
+}
+
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const REQUESTS: Map<u64, EcosystemCreationRequest> = Map::new("requests");
 pub const PENDING_REQUEST_BY_ID: Map<String, u64> = Map::new("pending_request_by_id");
 pub const NEXT_REQUEST_ID: Item<u64> = Item::new("next_request_id");
+/// Temporary storage for pending ecosystem creations (keyed by reply_id)
+pub const PENDING_ECOSYSTEM_CREATIONS: Map<u64, PendingEcosystemCreation> =
+    Map::new("pending_ecosystem_creations");

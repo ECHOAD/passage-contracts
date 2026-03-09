@@ -61,7 +61,6 @@ pub fn execute(
             id,
             name,
             creator,
-            ecosystem_type,
             collection_factory,
             detail,
             image_urls,
@@ -74,7 +73,6 @@ pub fn execute(
             id,
             name,
             creator,
-            ecosystem_type,
             collection_factory,
             detail,
             image_urls,
@@ -422,8 +420,7 @@ fn execute_register_ecosystem_from_factory(
     id: String,
     name: String,
     creator: String,
-    ecosystem_type: Option<EcosystemType>,
-    collection_factory: Option<String>,
+    collection_factory: String,
     detail: String,
     image_urls: Vec<String>,
     animation_url: Option<String>,
@@ -454,13 +451,11 @@ fn execute_register_ecosystem_from_factory(
     }
 
     let creator_addr = deps.api.addr_validate(&creator)?;
-    let ecosystem_type = ecosystem_type.unwrap_or_default();
-    let collection_creation_policy = CollectionCreationPolicy::default_for_type(&ecosystem_type);
-    validate_ecosystem_policy(&ecosystem_type, &collection_creation_policy)?;
+    let collection_factory_addr = deps.api.addr_validate(&collection_factory)?;
 
-    let collection_factory = collection_factory
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
+    // All ecosystems from factory are Private with Permissioned policy
+    let ecosystem_type = EcosystemType::Private;
+    let collection_creation_policy = CollectionCreationPolicy::Permissioned;
 
     let ecosystem = Ecosystem {
         id: id.clone(),
@@ -468,7 +463,7 @@ fn execute_register_ecosystem_from_factory(
         admin: creator_addr.clone(),
         ecosystem_type,
         collection_creation_policy,
-        collection_factory,
+        collection_factory: Some(collection_factory_addr.clone()),
         detail,
         image_urls,
         animation_url,
@@ -489,6 +484,7 @@ fn execute_register_ecosystem_from_factory(
         .add_attribute("action", "register_ecosystem_from_factory")
         .add_attribute("ecosystem_id", id)
         .add_attribute("creator", creator_addr)
+        .add_attribute("collection_factory", collection_factory_addr)
         .add_attribute("factory", info.sender))
 }
 

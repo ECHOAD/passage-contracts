@@ -8,32 +8,78 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// Admin address
     pub admin: Addr,
-    /// Supported NFT collection addresses (empty = all supported)
-    pub supported_collections: Vec<Addr>,
-    /// Whether to allow any collection or only supported ones
-    pub allow_any_collection: bool,
     /// Token denom for payments (e.g., "upasg")
     pub denom: String,
     /// Minimum price for listings
     pub min_price: Uint128,
-    /// Trading fee in basis points (e.g., 250 = 2.5%)
+    /// Default trading fee in basis points (e.g., 250 = 2.5%)
     pub trading_fee_bps: u64,
+    /// Maximum allowed trading fee in basis points (e.g., 1000 = 10%)
+    pub max_trading_fee_bps: u64,
     /// Fee collector address (legacy mode)
     pub fee_collector: Addr,
-    /// Registry contract address
+    /// Registry contract address (required for collection verification)
     pub registry: Option<Addr>,
     /// Revenue Router address (preferred over fee_collector)
     pub revenue_router: Option<Addr>,
     /// Whether to use Revenue Router
     pub use_revenue_router: bool,
-    /// Operators who can update ask states
+    /// Operators who can update ask states and manage collections
     pub operators: Vec<Addr>,
     /// Whether the contract is paused
     pub paused: bool,
+    /// Whether to require collection registration (if false, any collection can trade)
+    pub require_registration: bool,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
-/// Optional denom overrides per collection. If missing, config.denom is used.
+
+// ========== Collection Configuration ==========
+
+/// Per-collection configuration for the global marketplace
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct CollectionConfig {
+    /// Collection address
+    pub collection: Addr,
+    /// Whether the collection is active on the marketplace
+    pub active: bool,
+    /// Whether the collection is blacklisted (moderation)
+    pub blacklisted: bool,
+    /// Blacklist reason (if blacklisted)
+    pub blacklist_reason: Option<String>,
+    /// Custom trading fee in basis points (None = use default)
+    pub trading_fee_bps: Option<u64>,
+    /// Custom denom for this collection (None = use default)
+    pub denom: Option<String>,
+    /// Who registered this collection
+    pub registered_by: Addr,
+    /// When the collection was registered
+    pub registered_at: u64,
+    /// When the collection config was last updated
+    pub updated_at: u64,
+}
+
+impl CollectionConfig {
+    /// Get the effective trading fee for this collection
+    pub fn get_trading_fee_bps(&self, default_fee: u64) -> u64 {
+        self.trading_fee_bps.unwrap_or(default_fee)
+    }
+
+    /// Get the effective denom for this collection
+    pub fn get_denom(&self, default_denom: &str) -> String {
+        self.denom.clone().unwrap_or_else(|| default_denom.to_string())
+    }
+
+    /// Check if collection can be traded
+    pub fn can_trade(&self) -> bool {
+        self.active && !self.blacklisted
+    }
+}
+
+/// Key: collection address
+pub const COLLECTION_CONFIGS: Map<Addr, CollectionConfig> = Map::new("coll_configs");
+
+/// Legacy: Optional denom overrides per collection. Migrated to CollectionConfig.
 pub const COLLECTION_DENOMS: Map<Addr, String> = Map::new("coll_denom");
 
 pub type TokenId = String;
