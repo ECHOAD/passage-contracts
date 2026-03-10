@@ -8,7 +8,8 @@
       "Bash(findstr:*)",
       "Bash(cat:*)",
       "Bash(cargo --version:*)",
-      "Bash(rustc:*)"
+      "Bash(rustc:*)",
+      "mcp__figma__generate_diagram"
     ]
   }
 }
