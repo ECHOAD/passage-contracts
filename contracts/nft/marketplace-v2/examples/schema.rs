@@ -1,5 +1,5 @@
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-use marketplace_v2::{MarketplaceContract, msg};
+use marketplace_v2::{msg, MarketplaceContract};
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
@@ -14,10 +14,22 @@ fn main() {
     export_schema(&schema_for!(msg::ExecuteMsg), &out_dir);
     export_schema(&schema_for!(msg::QueryMsg), &out_dir);
 
-    export_schema(&schema_for!(msg::QueryOptions<msg::TokenAddrOffset>), &out_dir);
-    export_schema(&schema_for!(msg::QueryOptions<msg::TokenPriceOffset>), &out_dir);
-    export_schema(&schema_for!(msg::QueryOptions<msg::BidTokenPriceOffset>), &out_dir);
-    export_schema(&schema_for!(msg::QueryOptions<msg::CollectionBidPriceOffset>), &out_dir);
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::TokenAddrOffset>),
+        &out_dir,
+    );
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::TokenPriceOffset>),
+        &out_dir,
+    );
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::BidTokenPriceOffset>),
+        &out_dir,
+    );
+    export_schema(
+        &schema_for!(msg::QueryOptions<msg::CollectionBidPriceOffset>),
+        &out_dir,
+    );
     export_schema(&schema_for!(msg::CollectionBidPriceOffset), &out_dir);
     export_schema(&schema_for!(msg::AskResponse), &out_dir);
     export_schema(&schema_for!(msg::AsksResponse), &out_dir);

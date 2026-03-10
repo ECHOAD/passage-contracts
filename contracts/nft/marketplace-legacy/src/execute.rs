@@ -1,12 +1,12 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg};
-use crate::state::{Config, Token, CONFIG, token_map};
+use crate::state::{token_map, Config, Token, CONFIG};
 use crate::ContractError;
 use std::ops::Mul;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg,
+    to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, SubMsg,
     Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -190,7 +190,7 @@ pub fn execute_buy(
 
     let execute_transfer_msg: CosmosMsg = WasmMsg::Execute {
         contract_addr: cfg.nft_contract_addr.clone().into_string(),
-        msg: to_binary(&transfer_msg)?,
+        msg: to_json_binary(&transfer_msg)?,
         funds: vec![],
     }
     .into();

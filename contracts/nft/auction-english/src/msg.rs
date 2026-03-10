@@ -1,157 +1,232 @@
-use crate::state::{TokenId, Config, Auction, AuctionStatus};
-use cosmwasm_std::{Coin, Timestamp, Uint128};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::state::{Auction, AuctionStatus, Config};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Coin, Decimal, Timestamp, Uint128};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
-    /// The NFT contract
-    pub cw721_address: String,
-    /// The token used to pay for NFTs
+    pub admin: Option<String>,
     pub denom: String,
-    /// The address collecting marketplace fees
-    pub collector_address: String,
-    /// Fair Burn fee for winning bids
-    /// 0.25% = 25, 0.5% = 50, 1% = 100, 2.5% = 250
-    pub trading_fee_bps: u64,
-    /// Operators are entites that are responsible for maintaining the active state of Asks.
-    /// They listen to NFT transfer events, and update the active state of Asks.
-    pub operators: Vec<String>,
-    /// Min value for an Auction starting price
     pub min_price: Uint128,
-    /// The minimum difference between incremental bids
-    pub min_bid_increment: Uint128,
-    /// The minimum duration of an auction 
+    pub trading_fee_bps: u64,
+    pub max_trading_fee_bps: Option<u64>,
+    pub fee_collector: String,
+    pub registry: Option<String>,
+    pub split_router: Option<String>,
+    pub use_split_router: Option<bool>,
+    pub min_bid_increment_percent: Decimal,
     pub min_duration: u64,
-    /// The maximum duration of an auction 
     pub max_duration: u64,
-    /// The duration the Auction remains in the Closed state
-    pub closed_duration: u64,
-    /// The duration an Auction is extended by when a bid is placed in the final minutes
-    pub buffer_duration: u64,
+    pub extend_duration: u64,
+    pub require_registration: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
-    /// Update the contract parameters
     UpdateConfig {
-        collector_address: Option<String>,
-        trading_fee_bps: Option<u64>,
-        operators: Option<Vec<String>>,
+        admin: Option<String>,
+        denom: Option<String>,
         min_price: Option<Uint128>,
-        min_bid_increment: Option<Uint128>,
+        trading_fee_bps: Option<u64>,
+        max_trading_fee_bps: Option<u64>,
+        fee_collector: Option<String>,
+        registry: Option<String>,
+        split_router: Option<String>,
+        use_split_router: Option<bool>,
+        min_bid_increment_percent: Option<Decimal>,
         min_duration: Option<u64>,
         max_duration: Option<u64>,
-        closed_duration: Option<u64>,
-        buffer_duration: Option<u64>,
+        extend_duration: Option<u64>,
+        paused: Option<bool>,
+        require_registration: Option<bool>,
     },
-    /// Create an auction for a specified token
-    SetAuction {
-        token_id: TokenId,
-        start_time: Timestamp,
-        end_time: Timestamp,
-        starting_price: Coin,
-        reserve_price: Option<Coin>,
-        funds_recipient: Option<String>,
+    CreateAuction {
+        collection: String,
+        token_id: String,
+        reserve_price: Coin,
+        duration: u64,
+        seller_funds_recipient: Option<String>,
     },
-    /// Place a bid on an existing auction
-    SetAuctionBid {
-        token_id: TokenId,
-        price: Coin,
+    UpdateReservePrice {
+        collection: String,
+        token_id: String,
+        reserve_price: Coin,
     },
-    /// Sellers can close a previously created auction that has
-    /// not met the reserve price
-    CloseAuction {
-        token_id: TokenId,
-        accept_highest_bid: bool,
+    CancelAuction {
+        collection: String,
+        token_id: String,
     },
-    /// Anyone can finalize an auction that has met the reserve price
-    FinalizeAuction {
-        token_id: TokenId,
+    PlaceBid {
+        collection: String,
+        token_id: String,
     },
-    /// The bidder can void an expired Auction that has not been determined
-    /// by the seller
-    VoidAuction {
-        token_id: TokenId,
+    SettleAuction {
+        collection: String,
+        token_id: String,
     },
 }
 
-/// Options when querying for Asks and Bids
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct QueryOptions<T> {
-    pub descending: Option<bool>,
-    pub filter_expiry: Option<Timestamp>,
-    pub start_after: Option<T>,
-    pub limit: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TokenTimestampOffset {
-    pub token_id: TokenId,
-    pub timestamp: Timestamp,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TokenPriceOffset {
-    pub token_id: TokenId,
-    pub price: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Get the config for the contract
-    /// Return type: `ConfigResponse`
+    #[returns(ConfigResponse)]
     Config {},
-    /// Get the auction for a specific NFT
-    /// Return type: `AuctionResponse`
+    #[returns(CanTradeResponse)]
+    CanTrade { collection: String },
+    #[returns(AuctionResponse)]
     Auction {
-        token_id: TokenId,
+        collection: String,
+        token_id: String,
     },
-    /// Get the auctions sorted by the start time
-    /// Return type: `AuctionsResponse`
-    AuctionsByStartTime {
-        query_options: QueryOptions<TokenTimestampOffset>
+    #[returns(AuctionsResponse)]
+    AuctionsByCollection {
+        collection: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
     },
-    /// Get the auctions sorted by the end time
-    /// Return type: `AuctionsResponse`
+    #[returns(AuctionsResponse)]
+    AuctionsBySeller { seller: String, limit: Option<u32> },
+    #[returns(AuctionsResponse)]
     AuctionsByEndTime {
-        query_options: QueryOptions<TokenTimestampOffset>
-    },
-    /// Get the auctions sorted by the highest bid price
-    /// Return type: `AuctionsResponse`
-    AuctionsByHighestBidPrice {
-        query_options: QueryOptions<TokenPriceOffset>
-    },
-    /// Get all auctions sorted by seller and end time
-    /// Return type: `AuctionsResponse`
-    AuctionsBySellerEndTime {
-        seller: String,
-        query_options: QueryOptions<TokenTimestampOffset>
-    },
-    /// Get all auctions sorted by bidder and end time
-    /// Return type: `AuctionsResponse`
-    AuctionsByBidderEndTime {
-        bidder: String,
-        query_options: QueryOptions<TokenTimestampOffset>
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        descending: Option<bool>,
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct ConfigResponse {
-    pub config: Config,
+    pub admin: String,
+    pub denom: String,
+    pub min_price: Uint128,
+    pub trading_fee_bps: u64,
+    pub max_trading_fee_bps: u64,
+    pub fee_collector: String,
+    pub registry: Option<String>,
+    pub split_router: Option<String>,
+    pub use_split_router: bool,
+    pub min_bid_increment_percent: Decimal,
+    pub min_duration: u64,
+    pub max_duration: u64,
+    pub extend_duration: u64,
+    pub paused: bool,
+    pub require_registration: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+impl From<Config> for ConfigResponse {
+    fn from(config: Config) -> Self {
+        Self {
+            admin: config.admin.to_string(),
+            denom: config.denom,
+            min_price: config.min_price,
+            trading_fee_bps: config.trading_fee_bps,
+            max_trading_fee_bps: config.max_trading_fee_bps,
+            fee_collector: config.fee_collector.to_string(),
+            registry: config.registry.map(|addr| addr.to_string()),
+            split_router: config.split_router.map(|addr| addr.to_string()),
+            use_split_router: config.use_split_router,
+            min_bid_increment_percent: config.min_bid_increment_percent,
+            min_duration: config.min_duration,
+            max_duration: config.max_duration,
+            extend_duration: config.extend_duration,
+            paused: config.paused,
+            require_registration: config.require_registration,
+        }
+    }
+}
+
+#[cw_serde]
+pub struct CanTradeResponse {
+    pub can_trade: bool,
+    pub reason: Option<String>,
+}
+
+#[cw_serde]
 pub struct AuctionResponse {
     pub auction: Option<Auction>,
-    pub auction_status: Option<AuctionStatus>,
-    pub is_reserve_price_met: Option<bool>,
-    pub next_bid_min: Option<Uint128>,
+    pub status: Option<AuctionStatus>,
+    pub min_bid: Option<Coin>,
+    pub can_settle: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct AuctionsResponse {
     pub auctions: Vec<Auction>,
+}
+
+#[cw_serde]
+pub enum SplitRouterExecuteMsg {
+    RouteAuctionRoyalty { collection: String },
+}
+
+#[cw_serde]
+pub enum Cw721ExecuteMsg {
+    TransferNft { recipient: String, token_id: String },
+}
+
+#[cw_serde]
+pub enum Cw721QueryMsg {
+    OwnerOf {
+        token_id: String,
+        include_expired: Option<bool>,
+    },
+}
+
+#[cw_serde]
+pub struct OwnerOfResponse {
+    pub owner: String,
+    pub approvals: Vec<Approval>,
+}
+
+#[cw_serde]
+pub struct Approval {
+    pub spender: String,
+    pub expires: Expiration,
+}
+
+#[cw_serde]
+pub enum Expiration {
+    AtHeight(u64),
+    AtTime(Timestamp),
+    Never {},
+}
+
+#[cw_serde]
+pub enum Pg721QueryMsg {
+    CollectionInfo {},
+}
+
+#[cw_serde]
+pub struct CollectionInfoResponse {
+    pub creator: String,
+    pub description: String,
+    pub image: String,
+    pub external_link: Option<String>,
+    pub royalty_info: Option<RoyaltyInfoResponse>,
+}
+
+#[cw_serde]
+pub struct RoyaltyInfoResponse {
+    pub payment_address: String,
+    pub share: String,
+}
+
+#[cw_serde]
+pub enum RegistryQueryMsg {
+    Collection { address: String },
+    CanTradeCollection { address: String },
+}
+
+#[cw_serde]
+pub struct RegistryCollectionResponse {
+    pub collection: Option<RegistryCollection>,
+}
+
+#[cw_serde]
+pub struct RegistryCollection {
+    pub creator: String,
+}
+
+#[cw_serde]
+pub struct RegistryApprovalStatusResponse {
+    pub approved: bool,
 }

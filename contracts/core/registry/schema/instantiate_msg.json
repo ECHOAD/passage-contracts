@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "properties": {
+    "admin": {
+      "description": "Admin address with full control",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ecosystem_factory": {
+      "description": "Optional ecosystem factory contract. It can be wired after deployment with `UpdateConfig`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "operators": {
+      "description": "Optional operator addresses",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "recovery_council": {
+      "description": "Optional recovery authority addresses",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

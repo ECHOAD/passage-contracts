@@ -3,7 +3,7 @@ use crate::msg::{FollowsResponse, IsFollowResponse, QueryMsg, QueryOptions};
 use crate::state::{follow_key, follows, Follow, FOLLOW_HOOKS, UNFOLLOW_HOOKS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_json_binary, Addr, Binary, Deps, Env, StdResult};
 use cw_storage_plus::Bound;
 
 // Query limits
@@ -16,15 +16,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
     match msg {
         QueryMsg::FollowHooks { target } => {
-            to_binary(&FOLLOW_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
+            to_json_binary(&FOLLOW_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
         }
         QueryMsg::UnfollowHooks { target } => {
-            to_binary(&UNFOLLOW_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
+            to_json_binary(&UNFOLLOW_HOOKS.query_hooks(deps, api.addr_validate(&target)?)?)
         }
         QueryMsg::Follows {
             origin,
             query_options,
-        } => to_binary(&query_follows(
+        } => to_json_binary(&query_follows(
             deps,
             api.addr_validate(&origin)?,
             query_options,
@@ -32,12 +32,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Followers {
             target,
             query_options,
-        } => to_binary(&query_followers(
+        } => to_json_binary(&query_followers(
             deps,
             api.addr_validate(&target)?,
             query_options,
         )?),
-        QueryMsg::IsFollow { origin, target } => to_binary(&query_is_follow(
+        QueryMsg::IsFollow { origin, target } => to_json_binary(&query_is_follow(
             deps,
             api.addr_validate(&origin)?,
             api.addr_validate(&target)?,

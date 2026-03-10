@@ -1,0 +1,759 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Get contract configuration",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get ecosystem by ID",
+      "type": "object",
+      "required": [
+        "ecosystem"
+      ],
+      "properties": {
+        "ecosystem": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List all ecosystems",
+      "type": "object",
+      "required": [
+        "ecosystems"
+      ],
+      "properties": {
+        "ecosystems": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List ecosystems by admin",
+      "type": "object",
+      "required": [
+        "ecosystems_by_admin"
+      ],
+      "properties": {
+        "ecosystems_by_admin": {
+          "type": "object",
+          "required": [
+            "admin"
+          ],
+          "properties": {
+            "admin": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get creator moderation settings",
+      "type": "object",
+      "required": [
+        "creator_moderation"
+      ],
+      "properties": {
+        "creator_moderation": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get ecosystem moderation settings",
+      "type": "object",
+      "required": [
+        "ecosystem_moderation"
+      ],
+      "properties": {
+        "ecosystem_moderation": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get collection moderation settings",
+      "type": "object",
+      "required": [
+        "collection_moderation"
+      ],
+      "properties": {
+        "collection_moderation": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get ecosystem recovery policy",
+      "type": "object",
+      "required": [
+        "ecosystem_recovery_policy"
+      ],
+      "properties": {
+        "ecosystem_recovery_policy": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get collection recovery policy",
+      "type": "object",
+      "required": [
+        "collection_recovery_policy"
+      ],
+      "properties": {
+        "collection_recovery_policy": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check whether a creator can create ecosystems",
+      "type": "object",
+      "required": [
+        "can_create_ecosystem"
+      ],
+      "properties": {
+        "can_create_ecosystem": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if address is a cross-ecosystem admin/operator",
+      "type": "object",
+      "required": [
+        "is_cross_ecosystem_admin"
+      ],
+      "properties": {
+        "is_cross_ecosystem_admin": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if an address is approved member of an ecosystem",
+      "type": "object",
+      "required": [
+        "is_ecosystem_member"
+      ],
+      "properties": {
+        "is_ecosystem_member": {
+          "type": "object",
+          "required": [
+            "ecosystem_id",
+            "member"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "member": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check whether creator can create collections in an ecosystem (policy-aware)",
+      "type": "object",
+      "required": [
+        "can_create_collection_in_ecosystem"
+      ],
+      "properties": {
+        "can_create_collection_in_ecosystem": {
+          "type": "object",
+          "required": [
+            "creator",
+            "ecosystem_id"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get collection creation request by ecosystem+creator",
+      "type": "object",
+      "required": [
+        "collection_creation_request"
+      ],
+      "properties": {
+        "collection_creation_request": {
+          "type": "object",
+          "required": [
+            "creator",
+            "ecosystem_id"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List collection creation requests in an ecosystem",
+      "type": "object",
+      "required": [
+        "collection_creation_requests"
+      ],
+      "properties": {
+        "collection_creation_requests": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after_creator": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/CollectionCreationRequestStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get collection by address",
+      "type": "object",
+      "required": [
+        "collection"
+      ],
+      "properties": {
+        "collection": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List all collections",
+      "type": "object",
+      "required": [
+        "collections"
+      ],
+      "properties": {
+        "collections": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List collections by ecosystem",
+      "type": "object",
+      "required": [
+        "collections_by_ecosystem"
+      ],
+      "properties": {
+        "collections_by_ecosystem": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List collections by creator",
+      "type": "object",
+      "required": [
+        "collections_by_creator"
+      ],
+      "properties": {
+        "collections_by_creator": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if collection is verified/official",
+      "type": "object",
+      "required": [
+        "is_collection_verified"
+      ],
+      "properties": {
+        "is_collection_verified": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check whether a collection can mint",
+      "type": "object",
+      "required": [
+        "can_mint_collection"
+      ],
+      "properties": {
+        "can_mint_collection": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check whether a collection can trade",
+      "type": "object",
+      "required": [
+        "can_trade_collection"
+      ],
+      "properties": {
+        "can_trade_collection": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if minter is authorized for collection",
+      "type": "object",
+      "required": [
+        "is_minter_authorized"
+      ],
+      "properties": {
+        "is_minter_authorized": {
+          "type": "object",
+          "required": [
+            "collection_address",
+            "minter_address"
+          ],
+          "properties": {
+            "collection_address": {
+              "type": "string"
+            },
+            "minter_address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List authorized minters for a collection",
+      "type": "object",
+      "required": [
+        "authorized_minters"
+      ],
+      "properties": {
+        "authorized_minters": {
+          "type": "object",
+          "required": [
+            "collection_address"
+          ],
+          "properties": {
+            "collection_address": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get ownership recovery config",
+      "type": "object",
+      "required": [
+        "recovery_config"
+      ],
+      "properties": {
+        "recovery_config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get recovery case by ID",
+      "type": "object",
+      "required": [
+        "recovery_case"
+      ],
+      "properties": {
+        "recovery_case": {
+          "type": "object",
+          "required": [
+            "case_id"
+          ],
+          "properties": {
+            "case_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List recovery cases",
+      "type": "object",
+      "required": [
+        "recovery_cases"
+      ],
+      "properties": {
+        "recovery_cases": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/RecoveryCaseStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get latest known creator activity timestamp",
+      "type": "object",
+      "required": [
+        "last_creator_activity"
+      ],
+      "properties": {
+        "last_creator_activity": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "CollectionCreationRequestStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ]
+    },
+    "RecoveryCaseStatus": {
+      "description": "Lifecycle of an ownership recovery case.",
+      "type": "string",
+      "enum": [
+        "open",
+        "contested",
+        "resolved"
+      ]
+    }
+  }
+}

@@ -1,18 +1,15 @@
-use crate::msg::{ExecuteMsg};
 use crate::error::ContractError;
-use crate::state::{
-    Config, TokenId, Bid, bids, Ask, asks
-};
+use crate::msg::ExecuteMsg;
+use crate::state::{asks, bids, Ask, Bid, Config, TokenId};
 use cosmwasm_std::{
-    to_binary, Addr, Api, StdResult, WasmMsg,CosmosMsg, Order,
-    Deps, Event, Coin, coin, Uint128, Response, MessageInfo, Attribute,
-    BankMsg, SubMsg, Env, Decimal
+    coin, to_json_binary, Addr, Api, Attribute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env,
+    Event, MessageInfo, Order, Response, StdResult, SubMsg, Uint128, WasmMsg,
 };
+use cw721::Cw721ExecuteMsg;
+use cw721_base::helpers::Cw721Contract;
 use pg721::msg::{CollectionInfoResponse, QueryMsg as Pg721QueryMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cw721::{Cw721ExecuteMsg};
-use cw721_base::helpers::Cw721Contract;
 
 // MarketplaceContract is a wrapper around Addr that provides a lot of helpers
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -24,7 +21,7 @@ impl MarketplaceContract {
     }
 
     pub fn call<T: Into<ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
-        let msg = to_binary(&msg.into())?;
+        let msg = to_json_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,
@@ -42,9 +39,15 @@ pub fn map_validate(api: &dyn Api, addresses: &[String]) -> StdResult<Vec<Addr>>
 }
 
 pub fn option_bool_to_order(descending: Option<bool>) -> Order {
-     match descending {
-        Some(_descending) => if _descending { Order::Descending } else { Order::Ascending },
-        _ => Order::Ascending
+    match descending {
+        Some(_descending) => {
+            if _descending {
+                Order::Descending
+            } else {
+                Order::Ascending
+            }
+        }
+        _ => Order::Ascending,
     }
 }
 
@@ -98,7 +101,7 @@ pub fn payout(
             coin(surplus_amount.u128(), &config.denom),
             surplus_recipient.to_string(),
             "payout-surplus",
-            response
+            response,
         )?;
     }
 
@@ -111,7 +114,7 @@ pub fn payout(
             coin(market_fee.u128(), &config.denom),
             config.collector_address.to_string(),
             "payout-market",
-            response
+            response,
         )?;
     }
 
@@ -123,7 +126,7 @@ pub fn payout(
     // Charge royalties if they exist
     let royalties = match &collection_info.royalty_info {
         Some(royalty) => Some((payment_amount * royalty.share, &royalty.payment_address)),
-        None => None
+        None => None,
     };
     if let Some(_royalties) = &royalties {
         if _royalties.0 > Uint128::zero() {
@@ -131,7 +134,7 @@ pub fn payout(
                 coin(_royalties.0.u128(), &config.denom),
                 _royalties.1.to_string(),
                 "payout-royalty",
-                response
+                response,
             )?;
         }
     };
@@ -146,7 +149,7 @@ pub fn payout(
         coin(seller_amount.u128(), &config.denom),
         payment_recipient.to_string(),
         "payout-seller",
-        response
+        response,
     )?;
 
     Ok(())
@@ -154,11 +157,7 @@ pub fn payout(
 
 // Validate Bid or Ask price
 pub fn price_validate(price: &Coin, config: &Config) -> Result<(), ContractError> {
-    if
-        price.amount.is_zero() ||
-        price.denom != config.denom ||
-        price.amount < config.min_price
-    {
+    if price.amount.is_zero() || price.denom != config.denom || price.amount < config.min_price {
         return Err(ContractError::InvalidPrice {});
     }
 
@@ -188,18 +187,19 @@ pub fn only_owner(
 ) -> Result<(), ContractError> {
     let res = Cw721Contract(collection.clone()).owner_of(&deps.querier, token_id, false)?;
     if res.owner != info.sender {
-        return Err(ContractError::Unauthorized(String::from("only the owner can call this function")));
+        return Err(ContractError::Unauthorized(String::from(
+            "only the owner can call this function",
+        )));
     }
     Ok(())
 }
 
 /// Checks to enforce only Ask seller can call
-pub fn only_seller(
-    info: &MessageInfo,
-    seller: &Addr,
-) -> Result<(), ContractError> {
+pub fn only_seller(info: &MessageInfo, seller: &Addr) -> Result<(), ContractError> {
     if &info.sender != seller {
-        return Err(ContractError::Unauthorized(String::from("only the seller can call this function")));
+        return Err(ContractError::Unauthorized(String::from(
+            "only the seller can call this function",
+        )));
     }
     Ok(())
 }
@@ -211,13 +211,20 @@ pub fn only_operator(info: &MessageInfo, config: &Config) -> Result<Addr, Contra
         .iter()
         .any(|a| a.as_ref() == info.sender.as_ref())
     {
-        return Err(ContractError::Unauthorized(String::from("only an operator can call this function")));
+        return Err(ContractError::Unauthorized(String::from(
+            "only an operator can call this function",
+        )));
     }
 
     Ok(info.sender.clone())
 }
 
-pub fn transfer_nft(token_id: &TokenId, recipient: &Addr, collection: &Addr, response: &mut Response,) -> StdResult<()> {
+pub fn transfer_nft(
+    token_id: &TokenId,
+    recipient: &Addr,
+    collection: &Addr,
+    response: &mut Response,
+) -> StdResult<()> {
     let cw721_transfer_msg = Cw721ExecuteMsg::TransferNft {
         token_id: token_id.to_string(),
         recipient: recipient.to_string(),
@@ -225,7 +232,7 @@ pub fn transfer_nft(token_id: &TokenId, recipient: &Addr, collection: &Addr, res
 
     let exec_cw721_transfer = SubMsg::new(WasmMsg::Execute {
         contract_addr: collection.to_string(),
-        msg: to_binary(&cw721_transfer_msg)?,
+        msg: to_json_binary(&cw721_transfer_msg)?,
         funds: vec![],
     });
     response.messages.push(exec_cw721_transfer);
@@ -235,14 +242,19 @@ pub fn transfer_nft(token_id: &TokenId, recipient: &Addr, collection: &Addr, res
         .add_attribute("token_id", token_id.to_string())
         .add_attribute("recipient", recipient.to_string());
     response.events.push(event);
-    
+
     Ok(())
 }
 
-pub fn transfer_token(coin_send: Coin, recipient: String, event_label: &str, response: &mut Response) -> StdResult<()> {
+pub fn transfer_token(
+    coin_send: Coin,
+    recipient: String,
+    event_label: &str,
+    response: &mut Response,
+) -> StdResult<()> {
     let token_transfer_msg = BankMsg::Send {
         to_address: recipient.clone(),
-        amount: vec![coin_send.clone()]
+        amount: vec![coin_send.clone()],
     };
     response.messages.push(SubMsg::new(token_transfer_msg));
 
@@ -266,67 +278,82 @@ pub fn match_ask(deps: Deps, ask: &Ask, response: &mut Response) -> StdResult<Op
 
     let highest_bid_option = highest_bid_results.get(0);
     if let None = highest_bid_option {
-        return Ok(None)
+        return Ok(None);
     }
 
     let highest_bid = highest_bid_option.unwrap().clone();
     let mut event = Event::new("match-ask")
         .add_attribute("token-id", ask.token_id.clone())
         .add_attribute("outcome", "match");
-    
+
     if highest_bid.price.amount < ask.price.amount {
         set_match_outcome(&mut event, "ask-too-high");
         response.events.push(event);
-        return Ok(None)
+        return Ok(None);
     }
 
     response.events.push(event);
-    return Ok(Some(highest_bid))
+    return Ok(Some(highest_bid));
 }
 
-pub fn match_bid(deps: Deps, _env: &Env, bid: &Bid, response: &mut Response) -> StdResult<Option<Ask>> {
+pub fn match_bid(
+    deps: Deps,
+    _env: &Env,
+    bid: &Bid,
+    response: &mut Response,
+) -> StdResult<Option<Ask>> {
     let matching_ask = asks().may_load(deps.storage, bid.token_id.clone())?;
 
     if let None = matching_ask {
-        return Ok(None)
+        return Ok(None);
     }
 
     let existing_ask = matching_ask.unwrap();
     let mut event = Event::new("match-bid")
         .add_attribute("token-id", bid.token_id.clone())
         .add_attribute("outcome", "match");
-    
+
     if existing_ask.price.amount > bid.price.amount {
         set_match_outcome(&mut event, "bid-too-low");
         response.events.push(event);
-        return Ok(None)
+        return Ok(None);
     }
 
     response.events.push(event);
-    return Ok(Some(existing_ask))
+    return Ok(Some(existing_ask));
 }
 
 fn set_match_outcome(event: &mut Event, outcome: &str) -> () {
-    event.attributes = event.attributes.iter_mut().map(|attr| {
-        if attr.key == "outcome" {
-            return Attribute {
-                key: String::from("outcome"),
-                value: String::from(outcome),
+    event.attributes = event
+        .attributes
+        .iter_mut()
+        .map(|attr| {
+            if attr.key == "outcome" {
+                return Attribute {
+                    key: String::from("outcome"),
+                    value: String::from(outcome),
+                };
             }
-        }
-        attr.clone()
-    }).collect();
+            attr.clone()
+        })
+        .collect();
 }
 
 pub fn validate_config(config: &Config) -> Result<(), ContractError> {
     if config.trading_fee_percent > Decimal::percent(10000) {
-        return Err(ContractError::InvalidConfig(String::from("trading_fee_percent must be less than or equal to 100")));
+        return Err(ContractError::InvalidConfig(String::from(
+            "trading_fee_percent must be less than or equal to 100",
+        )));
     }
     if config.operators.is_empty() {
-        return Err(ContractError::InvalidConfig(String::from("operators must be non-empty")));
+        return Err(ContractError::InvalidConfig(String::from(
+            "operators must be non-empty",
+        )));
     }
     if config.min_price.is_zero() {
-        return Err(ContractError::InvalidConfig(String::from("min_price must be greater than zero")));
+        return Err(ContractError::InvalidConfig(String::from(
+            "min_price must be greater than zero",
+        )));
     }
     Ok(())
 }

@@ -1,6 +1,6 @@
 use crate::state::Friend;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_binary, Addr, Binary, StdResult, Timestamp};
+use cosmwasm_std::{to_json_binary, Addr, Binary, StdResult, Timestamp};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -94,7 +94,7 @@ impl HookMsg {
             HookAction::Friend => HookExecuteMsg::FriendHook(self),
             HookAction::Unfriend => HookExecuteMsg::UnfriendHook(self),
         };
-        to_binary(&msg)
+        to_json_binary(&msg)
     }
 }
 

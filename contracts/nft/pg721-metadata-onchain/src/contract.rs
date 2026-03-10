@@ -1,7 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdResult, Response, Event};
-use cw2::{set_contract_version, get_contract_version};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Response, StdResult,
+};
+use cw2::{get_contract_version, set_contract_version};
 
 use crate::ContractError;
 use cw721::ContractInfoResponse;
@@ -9,8 +11,8 @@ use cw721_base::ContractError as BaseError;
 use url::Url;
 
 use crate::msg::{
-    CollectionInfoResponse, InstantiateMsg, QueryMsg, RoyaltyInfoResponse,
-    Extension, ExecuteMsg, MigrateMsg
+    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, MigrateMsg, QueryMsg,
+    RoyaltyInfoResponse,
 };
 use crate::state::{CollectionInfo, RoyaltyInfo, COLLECTION_INFO};
 
@@ -96,7 +98,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::CollectionInfo {} => to_binary(&query_config(deps)?),
+        QueryMsg::CollectionInfo {} => to_json_binary(&query_config(deps)?),
         _ => Pg721MetadataContract::default().query(deps, env, msg.into()),
     }
 }
@@ -133,8 +135,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
             .minter
             .save(deps.storage, &minter)?;
 
-        let event = Event::new("migrate-storage")
-            .add_attribute("new-minter", minter.to_string());
+        let event = Event::new("migrate-storage").add_attribute("new-minter", minter.to_string());
         response.events.push(event);
     }
 
@@ -146,73 +147,4 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::state::CollectionInfo;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Decimal, Attribute};
-
-    const NATIVE_DENOM: &str = "ujunox";
-
-    fn setup_contract(deps: DepsMut, royalty_info: Option<RoyaltyInfoResponse>) {
-        let collection = String::from("collection0");
-        let image: String = "https://example.com/image.png".to_string();
-        let msg = InstantiateMsg {
-            name: collection,
-            symbol: String::from("BOBO"),
-            minter: String::from("minter"),
-            collection_info: CollectionInfo {
-                creator: String::from("creator"),
-                description: String::from("Passage Monkeys"),
-                image: image.clone(),
-                external_link: Some("https://example.com/external.html".to_string()),
-                royalty_info: royalty_info,
-            },
-        };
-        let info = mock_info("creator", &coins(0, NATIVE_DENOM));
-        let res = instantiate(deps, mock_env(), info.clone(), msg).unwrap();
-        assert!(res.attributes[0].eq(&Attribute::new("action", "instantiate")));
-        assert!(res.attributes[1].eq(&Attribute::new("contract_name", CONTRACT_NAME)));
-        assert!(res.attributes[2].eq(&Attribute::new("contract_version", CONTRACT_VERSION)));
-        assert!(res.attributes[3].eq(&Attribute::new("image", image)));
-    }
-
-    #[test]
-    fn proper_initialization_no_royalties() {
-        let mut deps = mock_dependencies();
-        setup_contract(deps.as_mut(), None);
-
-        // let's query the collection info
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::CollectionInfo {}).unwrap();
-        let value: CollectionInfoResponse = from_binary(&res).unwrap();
-        assert_eq!("https://example.com/image.png", value.image);
-        assert_eq!("Passage Monkeys", value.description);
-        assert_eq!(
-            "https://example.com/external.html",
-            value.external_link.unwrap()
-        );
-        assert_eq!(None, value.royalty_info);
-    }
-
-    #[test]
-    fn proper_initialization_with_royalties() {
-        let mut deps = mock_dependencies();
-        let creator: String = String::from("creator");
-        setup_contract(deps.as_mut(), Some(RoyaltyInfoResponse {
-            payment_address: creator.clone(),
-            share: Decimal::percent(10)
-        }));
-
-        // let's query the collection info
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::CollectionInfo {}).unwrap();
-        let value: CollectionInfoResponse = from_binary(&res).unwrap();
-        assert_eq!(
-            Some(RoyaltyInfoResponse {
-                payment_address: creator,
-                share: Decimal::percent(10),
-            }),
-            value.royalty_info
-        );
-    }
-}
+mod tests;

@@ -1,6 +1,89 @@
 [workspace]
-members = ["contracts/nft/*", "contracts/relationship/*"]
+resolver = "2"
+members = [
+    "contracts/nft/*",
+    "contracts/relationship/*",
+    "contracts/core/*",
+    "contracts/staking/*",
+]
 
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+repository = "https://github.com/psg-timern/passage-contracts"
+description = "Passage Protocol - NFT commerce, staking, and economic infrastructure"
+authors = ["Passage Team"]
+license = "Apache-2.0"
+
+# ============================================================================
+# WORKSPACE DEPENDENCIES
+# Using modern workspace.dependencies pattern for consistent versioning
+# ============================================================================
+
+[workspace.dependencies]
+# CosmWasm Core (pinned to match nft-staking Cargo.lock)
+cosmwasm-schema = "=2.1.3"
+cosmwasm-std = { version = "=2.1.3", features = [
+    "staking",
+    "stargate",
+    "cosmwasm_1_2",
+] }
+
+# CosmWasm Utilities
+cw2 = "2.0"
+cw20 = "2.0"
+cw721 = "0.18"
+cw721-base = { version = "0.18", features = ["library"] }
+cw-address-like = "2.0"
+cw-controllers = "2.0"
+cw-storage-plus = "2.0"
+cw-storage-macro = "2.0"
+cw-utils = "2.0"
+
+# Serialization
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
+# Framework
+sylvia = "=1.2.1"
+thiserror = "1.0"
+
+# Utilities
+anyhow = "1.0"
+sha2 = "0.10"
+
+# UJU Labs Crates (for staking contracts)
+uju-cw2-common = "0.2"
+uju-cw2-nft = "0.1"
+uju-index-query = "0.1"
+
+# Local workspace crates
+nft-vault = { path = "./contracts/staking/nft-vault", features = ["library"] }
+stake-rewards = { path = "./contracts/staking/stake-rewards", features = ["library"] }
+vault-factory = { path = "./contracts/staking/vault-factory", features = ["library"] }
+pg721 = { path = "./contracts/nft/pg721", features = ["library"] }
+pg721-updatable = { path = "./contracts/nft/pg721-updatable", features = ["library"] }
+
+# Testing
+cw-multi-test = { version = "=2.1.1", features = [
+    "staking",
+    "stargate",
+    "cosmwasm_1_2",
+] }
+
+# ============================================================================
+# RELEASE PROFILES
+# ============================================================================
+
+[profile.release]
+rpath = false
+lto = true
+overflow-checks = true
+opt-level = 3
+debug = false
+debug-assertions = false
+
+# NFT Contracts
 [profile.release.package.auction-english]
 codegen-units = 1
 incremental = false
@@ -13,6 +96,10 @@ incremental = false
 codegen-units = 1
 incremental = false
 
+[profile.release.package.marketplace-v3]
+codegen-units = 1
+incremental = false
+
 [profile.release.package.minter]
 codegen-units = 1
 incremental = false
@@ -21,7 +108,19 @@ incremental = false
 codegen-units = 1
 incremental = false
 
+[profile.release.package.minter-v2]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.minter-v2-metadata-onchain]
+codegen-units = 1
+incremental = false
+
 [profile.release.package.pg721]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.pg721-updatable]
 codegen-units = 1
 incremental = false
 
@@ -41,10 +140,36 @@ incremental = false
 codegen-units = 1
 incremental = false
 
-[profile.release]
-rpath = false
-lto = true
-overflow-checks = true
-opt-level = 3
-debug = false
-debug-assertions = false
+# Core Contracts
+[profile.release.package.registry]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.split-router]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.collection-factory]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.ecosystem-factory]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.multisig]
+codegen-units = 1
+incremental = false
+
+# Staking Contracts
+[profile.release.package.nft-vault]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.stake-rewards]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.vault-factory]
+codegen-units = 1
+incremental = false

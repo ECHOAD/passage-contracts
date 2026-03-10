@@ -1,0 +1,956 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Update contract configuration",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
+          "type": "object",
+          "properties": {
+            "admin": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ecosystem_factory": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operators": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "paused": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "recovery_council": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update moderation settings for a creator",
+      "type": "object",
+      "required": [
+        "update_creator_moderation"
+      ],
+      "properties": {
+        "update_creator_moderation": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "collection_creation_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_creation_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "mint_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "trade_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update moderation settings for an ecosystem",
+      "type": "object",
+      "required": [
+        "update_ecosystem_moderation"
+      ],
+      "properties": {
+        "update_ecosystem_moderation": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "collection_creation_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "mint_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "trade_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update moderation settings for a collection",
+      "type": "object",
+      "required": [
+        "update_collection_moderation"
+      ],
+      "properties": {
+        "update_collection_moderation": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "mint_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "trade_enabled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Set the ownership recovery policy for an ecosystem",
+      "type": "object",
+      "required": [
+        "set_ecosystem_recovery_policy"
+      ],
+      "properties": {
+        "set_ecosystem_recovery_policy": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "delegate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "designated_successor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ecosystem_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Set the ownership recovery policy for a collection",
+      "type": "object",
+      "required": [
+        "set_collection_recovery_policy"
+      ],
+      "properties": {
+        "set_collection_recovery_policy": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "delegate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "designated_successor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Register a new ecosystem from an authorized ecosystem factory",
+      "type": "object",
+      "required": [
+        "register_ecosystem_from_factory"
+      ],
+      "properties": {
+        "register_ecosystem_from_factory": {
+          "type": "object",
+          "required": [
+            "collection_factory",
+            "creator",
+            "description",
+            "id",
+            "image_urls",
+            "name"
+          ],
+          "properties": {
+            "animation_url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "collection_factory": {
+              "description": "Collection factory address (required - created by ecosystem-factory)",
+              "type": "string"
+            },
+            "creator": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "image_urls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update an existing ecosystem",
+      "type": "object",
+      "required": [
+        "update_ecosystem"
+      ],
+      "properties": {
+        "update_ecosystem": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "admin": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "animation_url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "collection_creation_policy": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/CollectionCreationPolicy"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "collection_factory": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ecosystem_type": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/EcosystemType"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "id": {
+              "type": "string"
+            },
+            "image_urls": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Approve a team member to register collections in an ecosystem",
+      "type": "object",
+      "required": [
+        "approve_ecosystem_member"
+      ],
+      "properties": {
+        "approve_ecosystem_member": {
+          "type": "object",
+          "required": [
+            "ecosystem_id",
+            "member"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "member": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Revoke team member approval for an ecosystem",
+      "type": "object",
+      "required": [
+        "revoke_ecosystem_member"
+      ],
+      "properties": {
+        "revoke_ecosystem_member": {
+          "type": "object",
+          "required": [
+            "ecosystem_id",
+            "member"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "member": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Submit request to be approved for collection creation in an ecosystem",
+      "type": "object",
+      "required": [
+        "submit_collection_creation_request"
+      ],
+      "properties": {
+        "submit_collection_creation_request": {
+          "type": "object",
+          "required": [
+            "ecosystem_id"
+          ],
+          "properties": {
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Approve/reject a pending collection creation request",
+      "type": "object",
+      "required": [
+        "resolve_collection_creation_request"
+      ],
+      "properties": {
+        "resolve_collection_creation_request": {
+          "type": "object",
+          "required": [
+            "approved",
+            "creator",
+            "ecosystem_id"
+          ],
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            },
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Register a new collection (pg721 contract)",
+      "type": "object",
+      "required": [
+        "register_collection"
+      ],
+      "properties": {
+        "register_collection": {
+          "type": "object",
+          "required": [
+            "address",
+            "ecosystem_id",
+            "name"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Register collection from authorized ecosystem factory",
+      "type": "object",
+      "required": [
+        "register_collection_from_factory"
+      ],
+      "properties": {
+        "register_collection_from_factory": {
+          "type": "object",
+          "required": [
+            "address",
+            "creator",
+            "ecosystem_id",
+            "name"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Register an existing/already-deployed collection",
+      "type": "object",
+      "required": [
+        "register_existing_collection"
+      ],
+      "properties": {
+        "register_existing_collection": {
+          "type": "object",
+          "required": [
+            "address",
+            "creator",
+            "ecosystem_id",
+            "name"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "creator": {
+              "type": "string"
+            },
+            "ecosystem_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update collection metadata",
+      "type": "object",
+      "required": [
+        "update_collection"
+      ],
+      "properties": {
+        "update_collection": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "marketplace": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "minter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "verified": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Transfer collection ownership",
+      "type": "object",
+      "required": [
+        "transfer_collection_ownership"
+      ],
+      "properties": {
+        "transfer_collection_ownership": {
+          "type": "object",
+          "required": [
+            "address",
+            "new_creator"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "new_creator": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Authorize a minter for a collection",
+      "type": "object",
+      "required": [
+        "authorize_minter"
+      ],
+      "properties": {
+        "authorize_minter": {
+          "type": "object",
+          "required": [
+            "collection_address",
+            "minter_address"
+          ],
+          "properties": {
+            "collection_address": {
+              "type": "string"
+            },
+            "minter_address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Revoke minter authorization",
+      "type": "object",
+      "required": [
+        "revoke_minter"
+      ],
+      "properties": {
+        "revoke_minter": {
+          "type": "object",
+          "required": [
+            "collection_address",
+            "minter_address"
+          ],
+          "properties": {
+            "collection_address": {
+              "type": "string"
+            },
+            "minter_address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update recovery configuration (admin only)",
+      "type": "object",
+      "required": [
+        "update_recovery_config"
+      ],
+      "properties": {
+        "update_recovery_config": {
+          "type": "object",
+          "properties": {
+            "abandonment_inactivity_period_secs": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "contest_period_secs": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Open an ownership recovery case",
+      "type": "object",
+      "required": [
+        "open_recovery_case"
+      ],
+      "properties": {
+        "open_recovery_case": {
+          "type": "object",
+          "required": [
+            "case_kind",
+            "reason",
+            "target"
+          ],
+          "properties": {
+            "case_kind": {
+              "$ref": "#/definitions/RecoveryCaseKind"
+            },
+            "evidence_url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "proposed_replacement": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "target": {
+              "$ref": "#/definitions/RecoveryTargetInput"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Contest a recovery case (target admin only)",
+      "type": "object",
+      "required": [
+        "contest_recovery_case"
+      ],
+      "properties": {
+        "contest_recovery_case": {
+          "type": "object",
+          "required": [
+            "case_id"
+          ],
+          "properties": {
+            "case_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Resolve a recovery case (recovery authority/admin only)",
+      "type": "object",
+      "required": [
+        "resolve_recovery_case"
+      ],
+      "properties": {
+        "resolve_recovery_case": {
+          "type": "object",
+          "required": [
+            "approved",
+            "case_id"
+          ],
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            },
+            "case_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "CollectionCreationPolicy": {
+      "type": "string",
+      "enum": [
+        "open",
+        "permissioned",
+        "approval_required"
+      ]
+    },
+    "EcosystemType": {
+      "type": "string",
+      "enum": [
+        "public",
+        "private"
+      ]
+    },
+    "RecoveryCaseKind": {
+      "description": "Ownership recovery case type.",
+      "type": "string",
+      "enum": [
+        "lost_access",
+        "abandonment"
+      ]
+    },
+    "RecoveryTargetInput": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ecosystem"
+          ],
+          "properties": {
+            "ecosystem": {
+              "type": "object",
+              "required": [
+                "ecosystem_id"
+              ],
+              "properties": {
+                "ecosystem_id": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "object",
+              "required": [
+                "address"
+              ],
+              "properties": {
+                "address": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

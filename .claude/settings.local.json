@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cargo check:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(findstr:*)",
+      "Bash(cat:*)",
+      "Bash(cargo --version:*)",
+      "Bash(rustc:*)"
+    ]
+  }
+}

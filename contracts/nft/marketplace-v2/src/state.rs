@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint128, Coin};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -61,8 +61,8 @@ impl<'a> IndexList<Ask> for AskIndices<'a> {
 
 pub fn asks<'a>() -> IndexedMap<'a, AskKey, Ask, AskIndices<'a>> {
     let indexes = AskIndices {
-        price: MultiIndex::new(|d: &Ask|  d.price.amount.u128(), "asks", "asks__price"),
-        seller: MultiIndex::new(|d: &Ask|  d.seller.clone(), "asks", "asks__seller"),
+        price: MultiIndex::new(|d: &Ask| d.price.amount.u128(), "asks", "asks__price"),
+        seller: MultiIndex::new(|d: &Ask| d.seller.clone(), "asks", "asks__seller"),
     };
     IndexedMap::new("asks", indexes)
 }
@@ -91,9 +91,7 @@ pub struct BidIndices<'a> {
 
 impl<'a> IndexList<Bid> for BidIndices<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Bid>> + '_> {
-        let v: Vec<&dyn Index<Bid>> = vec![
-            &self.token_price,
-        ];
+        let v: Vec<&dyn Index<Bid>> = vec![&self.token_price];
         Box::new(v.into_iter())
     }
 }
@@ -133,17 +131,18 @@ pub struct CollectionBidIndices<'a> {
 
 impl<'a> IndexList<CollectionBid> for CollectionBidIndices<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<CollectionBid>> + '_> {
-        let v: Vec<&dyn Index<CollectionBid>> = vec![
-            &self.price,
-        ];
+        let v: Vec<&dyn Index<CollectionBid>> = vec![&self.price];
         Box::new(v.into_iter())
     }
 }
 
-pub fn collection_bids<'a>(
-) -> IndexedMap<'a, Addr, CollectionBid, CollectionBidIndices<'a>> {
+pub fn collection_bids<'a>() -> IndexedMap<'a, Addr, CollectionBid, CollectionBidIndices<'a>> {
     let indexes = CollectionBidIndices {
-        price: MultiIndex::new(|d: &CollectionBid|  d.price.amount.u128(), "col_bids", "col_bids__price"),
+        price: MultiIndex::new(
+            |d: &CollectionBid| d.price.amount.u128(),
+            "col_bids",
+            "col_bids__price",
+        ),
     };
     IndexedMap::new("col_bids", indexes)
 }

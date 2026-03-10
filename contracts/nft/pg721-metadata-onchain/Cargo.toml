@@ -42,5 +42,3 @@ pg721 = { path = "../pg721", features = ["library"] }
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta7" }
 
-[profile.release]
-overflow-checks = true
