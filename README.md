@@ -4,7 +4,7 @@ Passage smart contracts written in CosmWasm and deployed to Passage.
 
 ## Diagram
 
-![Screen Shot 2022-09-29 at 3 06 37 PM](https://user-images.githubusercontent.com/6496257/193121168-9a5f52a5-4447-4732-9cea-caefc455063e.png)
+![Diagram Protocol](Passage%20Protocol%20-%20Contract%20Interactions%20-%20DIAGRAM.png)
 
 ## Commands
 
