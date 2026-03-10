@@ -1,53 +1,58 @@
 # Passage Commerce Docs
 
-Esta carpeta documenta el flujo on-chain actual de Passage desde `registry` hasta una venta por precio fijo o por subasta.
+This folder documents the current Passage on-chain commerce flow from `registry` to either a fixed-price sale or an auction.
 
-Orden recomendado de lectura:
+Recommended reading order:
 
 1. `01-end-to-end-setup.md`
 2. `02-method-reference.md`
 3. `03-json-examples.md`
+4. `04-multisig-governance.md`
 
-## Mapa rapido
+## Quick map
 
-- `registry`: fuente de verdad para ecosystems, collections y minters autorizados.
-- `ecosystem-factory`: flujo gobernado para crear ecosystems y desplegar su `collection-factory`.
-- `collection-factory`: despliega colecciones `pg721` dentro de un ecosystem y las registra en `registry`.
-- `pg721`: contrato NFT base de la coleccion.
-- `split-router`: distribuye fondos creator-side para mint y royalties.
-- `marketplace-v3`: ventas secundarias por precio fijo, bids y collection bids.
-- `auction-english`: subastas reserve-style por NFT.
-- `minter-v2`: flujo opcional de venta primaria; despliega su propio `pg721`.
+- `registry`: source of truth for ecosystems, collections, and authorized minters.
+- `ecosystem-factory`: governed flow for creating ecosystems and deploying their `collection-factory`.
+- `collection-factory`: deploys `pg721` collections inside an ecosystem and registers them in `registry`.
+- `pg721`: base NFT collection contract.
+- `split-router`: routes creator-side mint and royalty proceeds.
+- `marketplace-v3`: fixed-price secondary sales, bids, and collection bids.
+- `auction-english`: reserve-style NFT auctions.
+- `minter-v2`: optional primary sale flow; deploys its own `pg721`.
 
-## Nota de naming
+## Naming note
 
-El contrato se llama `split-router`, pero el directorio fisico aun es:
+The contract is named `split-router`, but its physical directory is still:
 
 - `contracts/core/revenue-router`
 
-La documentacion usa el nombre funcional `split-router`, porque asi esta expuesto hoy el paquete y la integracion.
+This documentation uses the functional name `split-router`, because that is how the package and integrations are exposed today.
 
-## Dos caminos de coleccion
+## Two collection paths
 
-Hay dos formas de llegar a una coleccion operable:
+There are two ways to end up with an operable collection:
 
 1. `registry` -> `ecosystem-factory` / `collection-factory` -> `pg721`
-   Uso recomendado cuando ya controlas la emision o quieres colecciones curadas dentro de un ecosystem.
+   Recommended when you already control minting or want curated collections inside an ecosystem.
 
 2. `minter-v2` -> `pg721`
-   Uso recomendado para drops primarios. En este camino el minter crea su propia coleccion y luego debe registrarse en `registry`.
+   Recommended for primary drops. In this path the minter deploys its own collection and that collection must then be registered in `registry`.
 
-## Resultado final
+## Final outcome
 
-Con el stack actual puedes terminar en dos canales de venta secundaria:
+With the current stack you can end up with two secondary sale channels:
 
-- `marketplace-v3` para fixed price sale, bids y collection bids.
-- `auction-english` para reserve auction.
+- `marketplace-v3` for fixed-price sales, bids, and collection bids.
+- `auction-english` for reserve auctions.
 
-Si quieres venta primaria, el contrato correcto es `minter-v2`, no `marketplace-v3` ni `auction-english`.
+If you want primary sales, the correct contract is `minter-v2`, not `marketplace-v3` or `auction-english`.
 
-## Ejemplos listos para usar
+## Ready-to-use payloads
 
-Si quieres payloads concretos de `instantiate`, `execute` y algunas `query`, revisa:
+For concrete `instantiate`, `execute`, and selected `query` payloads, see:
 
 - `03-json-examples.md`
+
+For the recommended multisig governance flow and proposal examples against `registry`, see:
+
+- `04-multisig-governance.md`

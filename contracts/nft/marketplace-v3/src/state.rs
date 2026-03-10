@@ -43,10 +43,6 @@ pub struct CollectionConfig {
     pub collection: Addr,
     /// Whether the collection is active on the marketplace
     pub active: bool,
-    /// Whether the collection is blacklisted (moderation)
-    pub blacklisted: bool,
-    /// Blacklist reason (if blacklisted)
-    pub blacklist_reason: Option<String>,
     /// Custom trading fee in basis points (None = use default)
     pub trading_fee_bps: Option<u64>,
     /// Custom denom for this collection (None = use default)
@@ -74,7 +70,7 @@ impl CollectionConfig {
 
     /// Check if collection can be traded
     pub fn can_trade(&self) -> bool {
-        self.active && !self.blacklisted
+        self.active
     }
 }
 

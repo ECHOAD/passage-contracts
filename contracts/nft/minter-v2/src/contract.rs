@@ -9,9 +9,10 @@ pub(super) use crate::migration::migrate_state;
 pub(super) use crate::msg::{
     CanMintResponse, ConfigResponse, ExecuteMsg, HasMemberResponse, InstantiateMsg,
     IsMintingActiveResponse, MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse,
-    MintableNumTokensResponse, NativeAssetTemplateResponse, QueryMsg, RegistryCollectionResponse,
-    RegistryMinterAuthorizedResponse, RegistryQueryMsg, SplitRouterExecuteMsg, StartTimeResponse,
-    TokenNativeAssetsResponse, WhitelistConfigResponse, WhitelistQueryMsg,
+    MintableNumTokensResponse, NativeAssetTemplateResponse, QueryMsg,
+    RegistryApprovalStatusResponse, RegistryCollectionResponse, RegistryMinterAuthorizedResponse,
+    RegistryQueryMsg, SplitRouterExecuteMsg, StartTimeResponse, TokenNativeAssetsResponse,
+    WhitelistConfigResponse, WhitelistQueryMsg,
 };
 pub(super) use crate::state::{
     Config, Extension, MetadataMode, MintStats, NativeAsset, TokenMetadata, CONFIG,

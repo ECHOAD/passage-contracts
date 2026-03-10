@@ -75,12 +75,6 @@ pub fn execute(
         ExecuteMsg::ReactivateCollection { collection } => {
             execute_reactivate_collection(deps, env, info, collection)
         }
-        ExecuteMsg::BlacklistCollection { collection, reason } => {
-            execute_blacklist_collection(deps, env, info, collection, reason)
-        }
-        ExecuteMsg::UnblacklistCollection { collection } => {
-            execute_unblacklist_collection(deps, env, info, collection)
-        }
 
         // Asks
         ExecuteMsg::SetAsk {
@@ -264,8 +258,6 @@ fn execute_register_collection(
     let collection_config = CollectionConfig {
         collection: collection_addr.clone(),
         active: true,
-        blacklisted: false,
-        blacklist_reason: None,
         trading_fee_bps,
         denom,
         registered_by: info.sender.clone(),
@@ -382,16 +374,6 @@ fn execute_reactivate_collection(
             collection: collection.clone(),
         })?;
 
-    // Cannot reactivate if blacklisted
-    if collection_config.blacklisted {
-        return Err(ContractError::CollectionBlacklisted {
-            collection: collection.clone(),
-            reason: collection_config
-                .blacklist_reason
-                .unwrap_or_else(|| "Unknown".to_string()),
-        });
-    }
-
     collection_config.active = true;
     collection_config.updated_at = env.block.time.seconds();
 
@@ -401,73 +383,6 @@ fn execute_reactivate_collection(
         .add_attribute("action", "reactivate_collection")
         .add_attribute("collection", collection_addr))
 }
-
-fn execute_blacklist_collection(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    collection: String,
-    reason: String,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let collection_addr = deps.api.addr_validate(&collection)?;
-
-    // Authorization: admin only (moderation action)
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let mut collection_config = COLLECTION_CONFIGS
-        .load(deps.storage, collection_addr.clone())
-        .map_err(|_| ContractError::CollectionNotRegistered {
-            collection: collection.clone(),
-        })?;
-
-    collection_config.blacklisted = true;
-    collection_config.blacklist_reason = Some(reason.clone());
-    collection_config.active = false;
-    collection_config.updated_at = env.block.time.seconds();
-
-    COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "blacklist_collection")
-        .add_attribute("collection", collection_addr)
-        .add_attribute("reason", reason))
-}
-
-fn execute_unblacklist_collection(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    collection: String,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let collection_addr = deps.api.addr_validate(&collection)?;
-
-    // Authorization: admin only (moderation action)
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let mut collection_config = COLLECTION_CONFIGS
-        .load(deps.storage, collection_addr.clone())
-        .map_err(|_| ContractError::CollectionNotRegistered {
-            collection: collection.clone(),
-        })?;
-
-    collection_config.blacklisted = false;
-    collection_config.blacklist_reason = None;
-    collection_config.updated_at = env.block.time.seconds();
-    // Note: does NOT automatically reactivate - admin must call ReactivateCollection
-
-    COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "unblacklist_collection")
-        .add_attribute("collection", collection_addr))
-}
-
 fn execute_set_ask(
     deps: DepsMut,
     env: Env,
@@ -481,7 +396,7 @@ fn execute_set_ask(
     let collection_addr = deps.api.addr_validate(&collection)?;
 
     // Validate collection can be traded
-    validate_collection(deps.storage, &config, &collection_addr)?;
+    validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
     let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
@@ -690,7 +605,7 @@ fn execute_set_bid(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    validate_collection(deps.storage, &config, &collection_addr)?;
+    validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
     let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
@@ -861,7 +776,7 @@ fn execute_set_collection_bid(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    validate_collection(deps.storage, &config, &collection_addr)?;
+    validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
     let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;

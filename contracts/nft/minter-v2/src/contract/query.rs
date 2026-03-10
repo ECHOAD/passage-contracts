@@ -74,6 +74,9 @@ fn query_can_mint(deps: Deps, env: Env, address: String) -> StdResult<CanMintRes
                 ContractError::MinterNotAuthorized {} => {
                     "Minter is not authorized in registry".to_string()
                 }
+                ContractError::CollectionMintDisabled {} => {
+                    "Minting is disabled by registry moderation".to_string()
+                }
                 _ => "Registry validation failed".to_string(),
             }),
         });

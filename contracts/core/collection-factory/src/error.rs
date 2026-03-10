@@ -15,7 +15,7 @@ pub enum ContractError {
     #[error("Creator wallet is not approved")]
     CreatorNotApproved {},
 
-    #[error("Creator wallet is not approved for the configured ecosystem")]
+    #[error("Creator wallet is not allowed to create collections in the configured ecosystem")]
     CreatorNotApprovedInEcosystem {},
 
     #[error("Configured ecosystem was not found in registry")]

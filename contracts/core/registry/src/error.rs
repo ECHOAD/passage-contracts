@@ -39,7 +39,7 @@ pub enum ContractError {
     #[error("Name cannot be empty")]
     EmptyName {},
 
-    #[error("Detail cannot be empty")]
+    #[error("Description cannot be empty")]
     EmptyDescription {},
 
     #[error("At least one image is required")]
@@ -48,20 +48,20 @@ pub enum ContractError {
     #[error("Only ecosystem admin can perform this action")]
     NotEcosystemAdmin {},
 
-    #[error("Creator is not approved to register ecosystems")]
-    EcosystemCreatorNotApproved {},
-
-    #[error("Ecosystem creation request already pending for ecosystem id: {id}")]
-    EcosystemCreationRequestAlreadyPending { id: String },
-
-    #[error("Ecosystem creation request not found: {request_id}")]
-    EcosystemCreationRequestNotFound { request_id: u64 },
-
-    #[error("Ecosystem creation request already resolved: {request_id}")]
-    EcosystemCreationRequestAlreadyResolved { request_id: u64 },
+    #[error("Creator cannot create ecosystems: {creator}")]
+    CreatorCannotCreateEcosystem { creator: String },
 
     #[error("Address is not approved as member for ecosystem: {ecosystem_id}")]
     EcosystemMemberNotApproved { ecosystem_id: String },
+
+    #[error("Collection creation is disabled for ecosystem: {ecosystem_id}")]
+    CollectionCreationDisabled { ecosystem_id: String },
+
+    #[error("Minting is disabled for collection: {address}")]
+    CollectionMintDisabled { address: String },
+
+    #[error("Trading is disabled for collection: {address}")]
+    CollectionTradeDisabled { address: String },
 
     #[error("Cross-ecosystem admin cannot manage owner-controlled ecosystem")]
     CrossAdminCannotManageOwnerEcosystem {},
@@ -77,9 +77,6 @@ pub enum ContractError {
 
     #[error("Only configured ecosystem factory can perform this action")]
     NotEcosystemFactory {},
-
-    #[error("Ecosystem creation must go through ecosystem-factory when configured")]
-    EcosystemFactoryFlowRequired {},
 
     #[error("Collection creation request already pending for ecosystem: {ecosystem_id}")]
     CollectionCreationRequestAlreadyPending { ecosystem_id: String },
@@ -104,24 +101,33 @@ pub enum ContractError {
     #[error("Recovery configuration is invalid")]
     InvalidRecoveryConfig {},
 
-    #[error("Dead project reason cannot be empty")]
+    #[error("Recovery reason cannot be empty")]
     EmptyRecoveryReason {},
 
-    #[error("Dead project case not found: {case_id}")]
-    DeadProjectCaseNotFound { case_id: u64 },
+    #[error("Recovery case not found: {case_id}")]
+    RecoveryCaseNotFound { case_id: u64 },
 
-    #[error("There is already an open dead project case for target: {target}")]
-    DeadProjectCaseAlreadyOpen { target: String },
+    #[error("There is already an open recovery case for target: {target}")]
+    RecoveryCaseAlreadyOpen { target: String },
 
-    #[error("Dead project case already resolved: {case_id}")]
-    DeadProjectCaseAlreadyResolved { case_id: u64 },
+    #[error("Recovery case already resolved: {case_id}")]
+    RecoveryCaseAlreadyResolved { case_id: u64 },
 
-    #[error("Dead project case is not contestable: {case_id}")]
-    DeadProjectCaseNotContestable { case_id: u64 },
+    #[error("Recovery case is not contestable: {case_id}")]
+    RecoveryCaseNotContestable { case_id: u64 },
 
-    #[error("Only target admin can contest dead project case")]
-    OnlyTargetAdminCanContest {},
+    #[error("Recovery case is still in its contest window: {case_id}")]
+    RecoveryCaseContestWindowOpen { case_id: u64 },
 
-    #[error("Approved dead project recovery requires a proposed replacement")]
+    #[error("Only the target admin can contest a recovery case")]
+    OnlyTargetAdminCanContestRecoveryCase {},
+
+    #[error("Opening a recovery case requires a replacement candidate or designated successor")]
     RecoveryReplacementRequired {},
+
+    #[error("Abandonment threshold not met for target: {target}")]
+    RecoveryAbandonmentThresholdNotMet { target: String },
+
+    #[error("Lost-access recovery is not configured for target: {target}")]
+    LostAccessRecoveryNotConfigured { target: String },
 }

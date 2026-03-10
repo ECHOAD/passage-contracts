@@ -2,7 +2,8 @@ use crate::{
     error::ContractError,
     msg::{
         CollectionInfoResponse, Cw721ExecuteMsg, Cw721QueryMsg, OwnerOfResponse, Pg721QueryMsg,
-        RegistryCollectionResponse, RegistryQueryMsg, RoyaltyInfoResponse,
+        RegistryApprovalStatusResponse, RegistryCollectionResponse, RegistryQueryMsg,
+        RoyaltyInfoResponse,
     },
     state::{Auction, Config},
 };
@@ -77,16 +78,9 @@ pub fn validate_collection_registration(
     config: &Config,
     collection: &Addr,
 ) -> Result<(), ContractError> {
-    if !config.require_registration {
+    let Some(registry) = config.registry.as_ref() else {
         return Ok(());
-    }
-
-    let registry = config
-        .registry
-        .as_ref()
-        .ok_or(ContractError::InvalidConfig {
-            reason: "registry must be configured when require_registration is true".to_string(),
-        })?;
+    };
 
     let response: RegistryCollectionResponse = deps
         .querier
@@ -102,6 +96,24 @@ pub fn validate_collection_registration(
 
     if response.collection.is_none() {
         return Err(ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        });
+    }
+
+    let trade_allowed: RegistryApprovalStatusResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::CanTradeCollection {
+                address: collection.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::CollectionTradingDisabled {
+            collection: collection.to_string(),
+        })?;
+
+    if !trade_allowed.approved {
+        return Err(ContractError::CollectionTradingDisabled {
             collection: collection.to_string(),
         });
     }

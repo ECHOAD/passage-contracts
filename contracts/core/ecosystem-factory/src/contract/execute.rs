@@ -35,7 +35,7 @@ pub fn execute(
         ExecuteMsg::SubmitEcosystemCreationRequest {
             id,
             name,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
@@ -45,7 +45,7 @@ pub fn execute(
             info,
             id,
             name,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
@@ -131,12 +131,27 @@ fn execute_submit_request(
     info: MessageInfo,
     id: String,
     name: String,
-    detail: String,
+    description: String,
     image_urls: Vec<String>,
     animation_url: Option<String>,
     url: Option<String>,
 ) -> Result<Response, ContractError> {
-    validate_request_input(&id, &name, &detail, &image_urls)?;
+    validate_request_input(&id, &name, &description, &image_urls)?;
+
+    let config = CONFIG.load(deps.storage)?;
+    let can_create: RegistryApprovalStatusResponse = deps
+        .querier
+        .query_wasm_smart(
+            config.registry.to_string(),
+            &RegistryQueryMsg::CanCreateEcosystem {
+                creator: info.sender.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::EcosystemCreationNotAllowed {})?;
+
+    if !can_create.approved {
+        return Err(ContractError::EcosystemCreationNotAllowed {});
+    }
 
     if PENDING_REQUEST_BY_ID.has(deps.storage, id.clone()) {
         return Err(ContractError::RequestAlreadyPending { id });
@@ -150,7 +165,7 @@ fn execute_submit_request(
         creator: info.sender.clone(),
         id: id.clone(),
         name,
-        detail,
+        description,
         image_urls,
         animation_url,
         url,
@@ -227,13 +242,27 @@ fn execute_resolve_request(
         .add_attribute("approved", approved.to_string());
 
     if approved {
+        let can_create: RegistryApprovalStatusResponse = deps
+            .querier
+            .query_wasm_smart(
+                config.registry.to_string(),
+                &RegistryQueryMsg::CanCreateEcosystem {
+                    creator: request.creator.to_string(),
+                },
+            )
+            .map_err(|_| ContractError::EcosystemCreationNotAllowed {})?;
+
+        if !can_create.approved {
+            return Err(ContractError::EcosystemCreationNotAllowed {});
+        }
+
         // Store pending ecosystem creation data for reply handler
         let pending = PendingEcosystemCreation {
             request_id,
             ecosystem_id: request.id.clone(),
             ecosystem_name: request.name.clone(),
             creator: request.creator.clone(),
-            detail: request.detail.clone(),
+            description: request.description.clone(),
             image_urls: request.image_urls.clone(),
             animation_url: request.animation_url.clone(),
             url: request.url.clone(),

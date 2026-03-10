@@ -1,4 +1,8 @@
-use super::helpers::{can_create_collection_in_ecosystem, is_cross_ecosystem_admin};
+use super::helpers::{
+    can_create_collection_in_ecosystem, can_create_ecosystem, can_mint_collection,
+    can_trade_collection, collection_moderation, collection_recovery_policy, creator_moderation,
+    ecosystem_moderation, ecosystem_recovery_policy, is_cross_ecosystem_admin,
+};
 use super::*;
 
 // ========== Query ==========
@@ -18,8 +22,23 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         } => to_json_binary(&query_ecosystems_by_admin(deps, admin, start_after, limit)?),
-        QueryMsg::IsEcosystemCreatorApproved { creator } => {
-            to_json_binary(&query_is_ecosystem_creator_approved(deps, creator)?)
+        QueryMsg::CreatorModeration { creator } => {
+            to_json_binary(&query_creator_moderation(deps, creator)?)
+        }
+        QueryMsg::EcosystemModeration { ecosystem_id } => {
+            to_json_binary(&query_ecosystem_moderation(deps, ecosystem_id)?)
+        }
+        QueryMsg::CollectionModeration { address } => {
+            to_json_binary(&query_collection_moderation(deps, address)?)
+        }
+        QueryMsg::EcosystemRecoveryPolicy { ecosystem_id } => {
+            to_json_binary(&query_ecosystem_recovery_policy(deps, ecosystem_id)?)
+        }
+        QueryMsg::CollectionRecoveryPolicy { address } => {
+            to_json_binary(&query_collection_recovery_policy(deps, address)?)
+        }
+        QueryMsg::CanCreateEcosystem { creator } => {
+            to_json_binary(&query_can_create_ecosystem(deps, creator)?)
         }
         QueryMsg::IsCrossEcosystemAdmin { address } => {
             to_json_binary(&query_is_cross_ecosystem_admin(deps, address)?)
@@ -56,19 +75,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after_creator,
             limit,
         )?),
-        QueryMsg::EcosystemCreationRequest { request_id } => {
-            to_json_binary(&query_ecosystem_creation_request(deps, request_id)?)
-        }
-        QueryMsg::EcosystemCreationRequests {
-            status,
-            start_after,
-            limit,
-        } => to_json_binary(&query_ecosystem_creation_requests(
-            deps,
-            status,
-            start_after,
-            limit,
-        )?),
 
         // Collection queries
         QueryMsg::Collection { address } => to_json_binary(&query_collection(deps, address)?),
@@ -98,6 +104,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsCollectionVerified { address } => {
             to_json_binary(&query_is_collection_verified(deps, address)?)
         }
+        QueryMsg::CanMintCollection { address } => {
+            to_json_binary(&query_can_mint_collection(deps, address)?)
+        }
+        QueryMsg::CanTradeCollection { address } => {
+            to_json_binary(&query_can_trade_collection(deps, address)?)
+        }
 
         // Minter queries
         QueryMsg::IsMinterAuthorized {
@@ -120,14 +132,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         )?),
 
         QueryMsg::RecoveryConfig {} => to_json_binary(&query_recovery_config(deps)?),
-        QueryMsg::DeadProjectCase { case_id } => {
-            to_json_binary(&query_dead_project_case(deps, case_id)?)
-        }
-        QueryMsg::DeadProjectCases {
+        QueryMsg::RecoveryCase { case_id } => to_json_binary(&query_recovery_case(deps, case_id)?),
+        QueryMsg::RecoveryCases {
             status,
             start_after,
             limit,
-        } => to_json_binary(&query_dead_project_cases(deps, status, start_after, limit)?),
+        } => to_json_binary(&query_recovery_cases(deps, status, start_after, limit)?),
         QueryMsg::LastCreatorActivity { creator } => {
             to_json_binary(&query_last_creator_activity(deps, creator)?)
         }
@@ -183,12 +193,58 @@ fn query_ecosystems_by_admin(
     Ok(EcosystemsResponse { ecosystems })
 }
 
-fn query_is_ecosystem_creator_approved(
-    deps: Deps,
-    creator: String,
-) -> StdResult<ApprovalStatusResponse> {
+fn query_creator_moderation(deps: Deps, creator: String) -> StdResult<CreatorModerationResponse> {
     let creator_addr = deps.api.addr_validate(&creator)?;
-    let approved = APPROVED_ECOSYSTEM_CREATORS.has(deps.storage, creator_addr);
+    let moderation = creator_moderation(deps.storage, &creator_addr)?;
+    Ok(CreatorModerationResponse {
+        creator,
+        moderation,
+    })
+}
+
+fn query_ecosystem_moderation(
+    deps: Deps,
+    ecosystem_id: String,
+) -> StdResult<EcosystemModerationResponse> {
+    let moderation = ecosystem_moderation(deps.storage, &ecosystem_id)?;
+    Ok(EcosystemModerationResponse {
+        ecosystem_id,
+        moderation,
+    })
+}
+
+fn query_collection_moderation(
+    deps: Deps,
+    address: String,
+) -> StdResult<CollectionModerationResponse> {
+    let collection_addr = deps.api.addr_validate(&address)?;
+    let moderation = collection_moderation(deps.storage, &collection_addr)?;
+    Ok(CollectionModerationResponse {
+        address,
+        moderation,
+    })
+}
+
+fn query_ecosystem_recovery_policy(
+    deps: Deps,
+    ecosystem_id: String,
+) -> StdResult<RecoveryPolicyResponse> {
+    let policy = ecosystem_recovery_policy(deps.storage, &ecosystem_id)?;
+    Ok(RecoveryPolicyResponse { policy })
+}
+
+fn query_collection_recovery_policy(
+    deps: Deps,
+    address: String,
+) -> StdResult<RecoveryPolicyResponse> {
+    let collection_addr = deps.api.addr_validate(&address)?;
+    let policy = collection_recovery_policy(deps.storage, &collection_addr)?;
+    Ok(RecoveryPolicyResponse { policy })
+}
+
+fn query_can_create_ecosystem(deps: Deps, creator: String) -> StdResult<ApprovalStatusResponse> {
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let approved = can_create_ecosystem(deps.storage, &creator_addr)?;
     Ok(ApprovalStatusResponse { approved })
 }
 
@@ -281,37 +337,6 @@ fn query_collection_creation_requests(
     Ok(CollectionCreationRequestsResponse { requests })
 }
 
-fn query_ecosystem_creation_request(
-    deps: Deps,
-    request_id: u64,
-) -> StdResult<EcosystemCreationRequestResponse> {
-    let request = ECOSYSTEM_CREATION_REQUESTS.may_load(deps.storage, request_id)?;
-    Ok(EcosystemCreationRequestResponse { request })
-}
-
-fn query_ecosystem_creation_requests(
-    deps: Deps,
-    status: Option<EcosystemCreationRequestStatus>,
-    start_after: Option<u64>,
-    limit: Option<u32>,
-) -> StdResult<EcosystemCreationRequestsResponse> {
-    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(Bound::exclusive);
-
-    let requests = ECOSYSTEM_CREATION_REQUESTS
-        .range(deps.storage, start, None, Order::Ascending)
-        .filter_map(|item| {
-            item.ok().and_then(|(_, request)| match &status {
-                Some(expected_status) if request.status != *expected_status => None,
-                _ => Some(request),
-            })
-        })
-        .take(limit)
-        .collect::<Vec<_>>();
-
-    Ok(EcosystemCreationRequestsResponse { requests })
-}
-
 fn query_collection(deps: Deps, address: String) -> StdResult<CollectionResponse> {
     let addr = deps.api.addr_validate(&address)?;
     let collection = collections().may_load(deps.storage, addr)?;
@@ -400,6 +425,24 @@ fn query_is_collection_verified(deps: Deps, address: String) -> StdResult<IsVeri
     Ok(IsVerifiedResponse { is_verified })
 }
 
+fn query_can_mint_collection(deps: Deps, address: String) -> StdResult<ApprovalStatusResponse> {
+    let addr = deps.api.addr_validate(&address)?;
+    let collection = collections()
+        .may_load(deps.storage, addr)?
+        .ok_or_else(|| cosmwasm_std::StdError::generic_err("collection not found"))?;
+    let approved = can_mint_collection(deps.storage, &collection)?;
+    Ok(ApprovalStatusResponse { approved })
+}
+
+fn query_can_trade_collection(deps: Deps, address: String) -> StdResult<ApprovalStatusResponse> {
+    let addr = deps.api.addr_validate(&address)?;
+    let collection = collections()
+        .may_load(deps.storage, addr)?
+        .ok_or_else(|| cosmwasm_std::StdError::generic_err("collection not found"))?;
+    let approved = can_trade_collection(deps.storage, &collection)?;
+    Ok(ApprovalStatusResponse { approved })
+}
+
 fn query_is_minter_authorized(
     deps: Deps,
     collection_address: String,
@@ -445,21 +488,21 @@ fn query_recovery_config(deps: Deps) -> StdResult<RecoveryConfigResponse> {
     Ok(RecoveryConfigResponse { config })
 }
 
-fn query_dead_project_case(deps: Deps, case_id: u64) -> StdResult<DeadProjectCaseResponse> {
-    let case = DEAD_PROJECT_CASES.may_load(deps.storage, case_id)?;
-    Ok(DeadProjectCaseResponse { case })
+fn query_recovery_case(deps: Deps, case_id: u64) -> StdResult<RecoveryCaseResponse> {
+    let case = RECOVERY_CASES.may_load(deps.storage, case_id)?;
+    Ok(RecoveryCaseResponse { case })
 }
 
-fn query_dead_project_cases(
+fn query_recovery_cases(
     deps: Deps,
-    status: Option<DeadProjectStatus>,
+    status: Option<RecoveryCaseStatus>,
     start_after: Option<u64>,
     limit: Option<u32>,
-) -> StdResult<DeadProjectCasesResponse> {
+) -> StdResult<RecoveryCasesResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after.map(Bound::exclusive);
 
-    let cases: Vec<DeadProjectCase> = DEAD_PROJECT_CASES
+    let cases: Vec<RecoveryCase> = RECOVERY_CASES
         .range(deps.storage, start, None, Order::Ascending)
         .filter_map(|item| {
             item.ok().and_then(|(_, c)| match &status {
@@ -470,7 +513,7 @@ fn query_dead_project_cases(
         .take(limit)
         .collect();
 
-    Ok(DeadProjectCasesResponse { cases })
+    Ok(RecoveryCasesResponse { cases })
 }
 
 fn query_last_creator_activity(

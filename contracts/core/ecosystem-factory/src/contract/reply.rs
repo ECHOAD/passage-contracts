@@ -40,7 +40,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             name: pending.ecosystem_name.clone(),
             creator: pending.creator.to_string(),
             collection_factory: collection_factory_addr.to_string(),
-            detail: pending.detail,
+            description: pending.description,
             image_urls: pending.image_urls,
             animation_url: pending.animation_url,
             url: pending.url,

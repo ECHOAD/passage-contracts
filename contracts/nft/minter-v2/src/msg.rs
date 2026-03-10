@@ -268,6 +268,9 @@ pub enum RegistryQueryMsg {
     Collection {
         address: String,
     },
+    CanMintCollection {
+        address: String,
+    },
     IsMinterAuthorized {
         collection_address: String,
         minter_address: String,
@@ -287,4 +290,9 @@ pub struct RegistryCollection {
 #[cw_serde]
 pub struct RegistryMinterAuthorizedResponse {
     pub is_authorized: bool,
+}
+
+#[cw_serde]
+pub struct RegistryApprovalStatusResponse {
+    pub approved: bool,
 }

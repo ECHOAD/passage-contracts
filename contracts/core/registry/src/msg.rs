@@ -1,7 +1,8 @@
 use crate::state::{
     Collection, CollectionCreationPolicy, CollectionCreationRequest,
-    CollectionCreationRequestStatus, Config, DeadProjectCase, DeadProjectStatus, Ecosystem,
-    EcosystemCreationRequest, EcosystemCreationRequestStatus, EcosystemType, RecoveryConfig,
+    CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
+    EcosystemModeration, EcosystemType, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
+    RecoveryConfig, RecoveryPolicy,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
@@ -12,7 +13,9 @@ pub struct InstantiateMsg {
     pub admin: Option<String>,
     /// Optional operator addresses
     pub operators: Option<Vec<String>>,
-    /// Optional ecosystem factory contract allowed to register approved ecosystems
+    /// Optional recovery authority addresses
+    pub recovery_council: Option<Vec<String>>,
+    /// Optional ecosystem factory contract. It can be wired after deployment with `UpdateConfig`.
     pub ecosystem_factory: Option<String>,
 }
 
@@ -23,27 +26,48 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<String>,
         operators: Option<Vec<String>>,
+        recovery_council: Option<Vec<String>>,
         ecosystem_factory: Option<String>,
         paused: Option<bool>,
     },
-    /// Approve a creator to register new ecosystems
-    ApproveEcosystemCreator { creator: String },
-    /// Revoke ecosystem creation approval
-    RevokeEcosystemCreator { creator: String },
+    /// Update moderation settings for a creator
+    UpdateCreatorModeration {
+        creator: String,
+        ecosystem_creation_enabled: Option<bool>,
+        collection_creation_enabled: Option<bool>,
+        mint_enabled: Option<bool>,
+        trade_enabled: Option<bool>,
+        reason: Option<String>,
+    },
+    /// Update moderation settings for an ecosystem
+    UpdateEcosystemModeration {
+        ecosystem_id: String,
+        collection_creation_enabled: Option<bool>,
+        mint_enabled: Option<bool>,
+        trade_enabled: Option<bool>,
+        reason: Option<String>,
+    },
+    /// Update moderation settings for a collection
+    UpdateCollectionModeration {
+        address: String,
+        mint_enabled: Option<bool>,
+        trade_enabled: Option<bool>,
+        reason: Option<String>,
+    },
+    /// Set the ownership recovery policy for an ecosystem
+    SetEcosystemRecoveryPolicy {
+        ecosystem_id: String,
+        delegate: Option<String>,
+        designated_successor: Option<String>,
+    },
+    /// Set the ownership recovery policy for a collection
+    SetCollectionRecoveryPolicy {
+        address: String,
+        delegate: Option<String>,
+        designated_successor: Option<String>,
+    },
 
     // ========== Ecosystem Operations ==========
-    /// Register a new ecosystem
-    RegisterEcosystem {
-        id: String,
-        name: String,
-        ecosystem_type: Option<EcosystemType>,
-        collection_creation_policy: Option<CollectionCreationPolicy>,
-        collection_factory: Option<String>,
-        detail: String,
-        image_urls: Vec<String>,
-        animation_url: Option<String>,
-        url: Option<String>,
-    },
     /// Register a new ecosystem from an authorized ecosystem factory
     RegisterEcosystemFromFactory {
         id: String,
@@ -51,34 +75,16 @@ pub enum ExecuteMsg {
         creator: String,
         /// Collection factory address (required - created by ecosystem-factory)
         collection_factory: String,
-        detail: String,
+        description: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,
         url: Option<String>,
-    },
-    /// Submit a new ecosystem creation request for admin approval
-    SubmitEcosystemCreationRequest {
-        id: String,
-        name: String,
-        ecosystem_type: Option<EcosystemType>,
-        collection_creation_policy: Option<CollectionCreationPolicy>,
-        collection_factory: Option<String>,
-        detail: String,
-        image_urls: Vec<String>,
-        animation_url: Option<String>,
-        url: Option<String>,
-    },
-    /// Approve/reject an ecosystem creation request
-    ResolveEcosystemCreationRequest {
-        request_id: u64,
-        approved: bool,
-        note: Option<String>,
     },
     /// Update an existing ecosystem
     UpdateEcosystem {
         id: String,
         name: Option<String>,
-        detail: Option<String>,
+        description: Option<String>,
         image_urls: Option<Vec<String>>,
         animation_url: Option<String>,
         url: Option<String>,
@@ -157,23 +163,24 @@ pub enum ExecuteMsg {
         minter_address: String,
     },
 
-    // ========== Dead Project Recovery Governance ==========
+    // ========== Ownership Recovery Governance ==========
     /// Update recovery configuration (admin only)
     UpdateRecoveryConfig {
-        inactivity_period_secs: Option<u64>,
+        abandonment_inactivity_period_secs: Option<u64>,
         contest_period_secs: Option<u64>,
     },
-    /// Open a dead project recovery case
-    OpenDeadProjectCase {
+    /// Open an ownership recovery case
+    OpenRecoveryCase {
+        case_kind: RecoveryCaseKind,
         target: RecoveryTargetInput,
         reason: String,
         evidence_url: Option<String>,
         proposed_replacement: Option<String>,
     },
-    /// Contest a dead project case (target admin only)
-    ContestDeadProjectCase { case_id: u64, note: Option<String> },
-    /// Resolve a dead project case (registry governance/admin only)
-    ResolveDeadProjectCase {
+    /// Contest a recovery case (target admin only)
+    ContestRecoveryCase { case_id: u64, note: Option<String> },
+    /// Resolve a recovery case (recovery authority/admin only)
+    ResolveRecoveryCase {
         case_id: u64,
         approved: bool,
         note: Option<String>,
@@ -210,9 +217,24 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    /// Check if an address is approved to register ecosystems
+    /// Get creator moderation settings
+    #[returns(CreatorModerationResponse)]
+    CreatorModeration { creator: String },
+    /// Get ecosystem moderation settings
+    #[returns(EcosystemModerationResponse)]
+    EcosystemModeration { ecosystem_id: String },
+    /// Get collection moderation settings
+    #[returns(CollectionModerationResponse)]
+    CollectionModeration { address: String },
+    /// Get ecosystem recovery policy
+    #[returns(RecoveryPolicyResponse)]
+    EcosystemRecoveryPolicy { ecosystem_id: String },
+    /// Get collection recovery policy
+    #[returns(RecoveryPolicyResponse)]
+    CollectionRecoveryPolicy { address: String },
+    /// Check whether a creator can create ecosystems
     #[returns(ApprovalStatusResponse)]
-    IsEcosystemCreatorApproved { creator: String },
+    CanCreateEcosystem { creator: String },
     /// Check if address is a cross-ecosystem admin/operator
     #[returns(ApprovalStatusResponse)]
     IsCrossEcosystemAdmin { address: String },
@@ -240,16 +262,6 @@ pub enum QueryMsg {
         ecosystem_id: String,
         status: Option<CollectionCreationRequestStatus>,
         start_after_creator: Option<String>,
-        limit: Option<u32>,
-    },
-    /// Get ecosystem creation request by id
-    #[returns(EcosystemCreationRequestResponse)]
-    EcosystemCreationRequest { request_id: u64 },
-    /// List ecosystem creation requests
-    #[returns(EcosystemCreationRequestsResponse)]
-    EcosystemCreationRequests {
-        status: Option<EcosystemCreationRequestStatus>,
-        start_after: Option<u64>,
         limit: Option<u32>,
     },
 
@@ -280,6 +292,12 @@ pub enum QueryMsg {
     /// Check if collection is verified/official
     #[returns(IsVerifiedResponse)]
     IsCollectionVerified { address: String },
+    /// Check whether a collection can mint
+    #[returns(ApprovalStatusResponse)]
+    CanMintCollection { address: String },
+    /// Check whether a collection can trade
+    #[returns(ApprovalStatusResponse)]
+    CanTradeCollection { address: String },
 
     // ========== Minter Queries ==========
     /// Check if minter is authorized for collection
@@ -296,17 +314,17 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
 
-    // ========== Dead Project Recovery Queries ==========
-    /// Get dead project recovery config
+    // ========== Ownership Recovery Queries ==========
+    /// Get ownership recovery config
     #[returns(RecoveryConfigResponse)]
     RecoveryConfig {},
-    /// Get dead project case by ID
-    #[returns(DeadProjectCaseResponse)]
-    DeadProjectCase { case_id: u64 },
-    /// List dead project cases
-    #[returns(DeadProjectCasesResponse)]
-    DeadProjectCases {
-        status: Option<DeadProjectStatus>,
+    /// Get recovery case by ID
+    #[returns(RecoveryCaseResponse)]
+    RecoveryCase { case_id: u64 },
+    /// List recovery cases
+    #[returns(RecoveryCasesResponse)]
+    RecoveryCases {
+        status: Option<RecoveryCaseStatus>,
         start_after: Option<u64>,
         limit: Option<u32>,
     },
@@ -363,6 +381,29 @@ pub struct ApprovalStatusResponse {
 }
 
 #[cw_serde]
+pub struct CreatorModerationResponse {
+    pub creator: String,
+    pub moderation: CreatorModeration,
+}
+
+#[cw_serde]
+pub struct EcosystemModerationResponse {
+    pub ecosystem_id: String,
+    pub moderation: EcosystemModeration,
+}
+
+#[cw_serde]
+pub struct CollectionModerationResponse {
+    pub address: String,
+    pub moderation: CollectionModeration,
+}
+
+#[cw_serde]
+pub struct RecoveryPolicyResponse {
+    pub policy: RecoveryPolicy,
+}
+
+#[cw_serde]
 pub struct CollectionCreationRequestResponse {
     pub request: Option<CollectionCreationRequest>,
 }
@@ -373,28 +414,18 @@ pub struct CollectionCreationRequestsResponse {
 }
 
 #[cw_serde]
-pub struct EcosystemCreationRequestResponse {
-    pub request: Option<EcosystemCreationRequest>,
-}
-
-#[cw_serde]
-pub struct EcosystemCreationRequestsResponse {
-    pub requests: Vec<EcosystemCreationRequest>,
-}
-
-#[cw_serde]
 pub struct RecoveryConfigResponse {
     pub config: RecoveryConfig,
 }
 
 #[cw_serde]
-pub struct DeadProjectCaseResponse {
-    pub case: Option<DeadProjectCase>,
+pub struct RecoveryCaseResponse {
+    pub case: Option<RecoveryCase>,
 }
 
 #[cw_serde]
-pub struct DeadProjectCasesResponse {
-    pub cases: Vec<DeadProjectCase>,
+pub struct RecoveryCasesResponse {
+    pub cases: Vec<RecoveryCase>,
 }
 
 #[cw_serde]

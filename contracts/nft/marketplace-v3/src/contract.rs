@@ -13,7 +13,8 @@ pub(super) use crate::msg::{
     CollectionDenomResponse, CollectionFeeResponse, CollectionInfoResponse,
     CollectionStatsResponse, ConfigResponse, CountResponse, Cw721ExecuteMsg, Cw721QueryMsg,
     ExecuteMsg, InstantiateMsg, MarketStatsResponse, MigrateMsg, OwnerOfResponse, Pg721QueryMsg,
-    QueryMsg, SalePreviewResponse, SplitRouterExecuteMsg,
+    QueryMsg, RegistryApprovalStatusResponse, RegistryQueryMsg, SalePreviewResponse,
+    SplitRouterExecuteMsg,
 };
 pub(super) use crate::state::{
     asks, bids, collection_bids, Ask, Bid, CollectionBid, CollectionConfig, Config, MarketStats,

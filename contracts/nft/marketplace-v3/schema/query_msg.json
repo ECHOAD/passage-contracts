@@ -1,0 +1,601 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Get contract configuration",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get a collection's configuration",
+      "type": "object",
+      "required": [
+        "collection_config"
+      ],
+      "properties": {
+        "collection_config": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List all registered collections",
+      "type": "object",
+      "required": [
+        "collection_configs"
+      ],
+      "properties": {
+        "collection_configs": {
+          "type": "object",
+          "properties": {
+            "active_only": {
+              "description": "Filter by active status",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if a collection is registered and can trade",
+      "type": "object",
+      "required": [
+        "can_trade"
+      ],
+      "properties": {
+        "can_trade": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get effective denom for a specific collection",
+      "type": "object",
+      "required": [
+        "collection_denom"
+      ],
+      "properties": {
+        "collection_denom": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get effective trading fee for a specific collection",
+      "type": "object",
+      "required": [
+        "collection_fee"
+      ],
+      "properties": {
+        "collection_fee": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get a specific ask",
+      "type": "object",
+      "required": [
+        "ask"
+      ],
+      "properties": {
+        "ask": {
+          "type": "object",
+          "required": [
+            "collection",
+            "token_id"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "token_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List asks by collection",
+      "type": "object",
+      "required": [
+        "asks_by_collection"
+      ],
+      "properties": {
+        "asks_by_collection": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List asks by seller",
+      "type": "object",
+      "required": [
+        "asks_by_seller"
+      ],
+      "properties": {
+        "asks_by_seller": {
+          "type": "object",
+          "required": [
+            "seller"
+          ],
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "seller": {
+              "type": "string"
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List asks sorted by price",
+      "type": "object",
+      "required": [
+        "asks_by_price"
+      ],
+      "properties": {
+        "asks_by_price": {
+          "type": "object",
+          "properties": {
+            "collection": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "descending": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Count of active asks",
+      "type": "object",
+      "required": [
+        "ask_count"
+      ],
+      "properties": {
+        "ask_count": {
+          "type": "object",
+          "properties": {
+            "collection": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get a specific bid",
+      "type": "object",
+      "required": [
+        "bid"
+      ],
+      "properties": {
+        "bid": {
+          "type": "object",
+          "required": [
+            "bidder",
+            "collection",
+            "token_id"
+          ],
+          "properties": {
+            "bidder": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "token_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List bids for a token",
+      "type": "object",
+      "required": [
+        "bids_by_token"
+      ],
+      "properties": {
+        "bids_by_token": {
+          "type": "object",
+          "required": [
+            "collection",
+            "token_id"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List bids by bidder",
+      "type": "object",
+      "required": [
+        "bids_by_bidder"
+      ],
+      "properties": {
+        "bids_by_bidder": {
+          "type": "object",
+          "required": [
+            "bidder"
+          ],
+          "properties": {
+            "bidder": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get a collection bid",
+      "type": "object",
+      "required": [
+        "collection_bid"
+      ],
+      "properties": {
+        "collection_bid": {
+          "type": "object",
+          "required": [
+            "bidder",
+            "collection"
+          ],
+          "properties": {
+            "bidder": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List collection bids",
+      "type": "object",
+      "required": [
+        "collection_bids_by_collection"
+      ],
+      "properties": {
+        "collection_bids_by_collection": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "List collection bids by bidder",
+      "type": "object",
+      "required": [
+        "collection_bids_by_bidder"
+      ],
+      "properties": {
+        "collection_bids_by_bidder": {
+          "type": "object",
+          "required": [
+            "bidder"
+          ],
+          "properties": {
+            "bidder": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get marketplace statistics",
+      "type": "object",
+      "required": [
+        "market_stats"
+      ],
+      "properties": {
+        "market_stats": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get collection statistics",
+      "type": "object",
+      "required": [
+        "collection_stats"
+      ],
+      "properties": {
+        "collection_stats": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Calculate sale proceeds (preview)",
+      "type": "object",
+      "required": [
+        "preview_sale"
+      ],
+      "properties": {
+        "preview_sale": {
+          "type": "object",
+          "required": [
+            "collection",
+            "price"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "price": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    }
+  }
+}

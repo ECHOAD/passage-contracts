@@ -100,10 +100,6 @@ pub enum ExecuteMsg {
     },
     /// Reactivate a previously deactivated collection
     ReactivateCollection { collection: String },
-    /// Blacklist a collection (moderation action - admin only)
-    BlacklistCollection { collection: String, reason: String },
-    /// Remove blacklist from a collection (admin only)
-    UnblacklistCollection { collection: String },
 
     // ========== Listing Operations ==========
     /// Create a listing (ask) for an NFT
@@ -476,4 +472,14 @@ pub struct CollectionInfoResponse {
 pub struct RoyaltyInfoResponse {
     pub payment_address: String,
     pub share: String, // Decimal as string
+}
+
+#[cw_serde]
+pub enum RegistryQueryMsg {
+    CanTradeCollection { address: String },
+}
+
+#[cw_serde]
+pub struct RegistryApprovalStatusResponse {
+    pub approved: bool,
 }

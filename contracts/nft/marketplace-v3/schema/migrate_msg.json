@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MigrateMsg",
+  "description": "Migration message from marketplace-v2 to v3",
+  "type": "object",
+  "required": [
+    "collection"
+  ],
+  "properties": {
+    "additional_collections": {
+      "description": "Additional collections to support (besides the migrated one)",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "collection": {
+      "description": "The collection address from marketplace-v2 (single collection) This is required to migrate asks/bids to multi-collection format",
+      "type": "string"
+    },
+    "collection_denoms": {
+      "description": "Optional per-collection denom overrides",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/definitions/CollectionDenomInput"
+      }
+    },
+    "registry": {
+      "description": "Optional: Registry contract address",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "split_router": {
+      "description": "Optional: Split Router address for creator-side royalty distribution",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "use_split_router": {
+      "description": "Whether to use Split Router (default: true if split_router is set)",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "CollectionDenomInput": {
+      "type": "object",
+      "required": [
+        "collection",
+        "denom"
+      ],
+      "properties": {
+        "collection": {
+          "type": "string"
+        },
+        "denom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

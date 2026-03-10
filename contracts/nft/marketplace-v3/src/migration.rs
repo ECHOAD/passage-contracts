@@ -197,8 +197,6 @@ pub fn migrate_state(
         let coll_config = CollectionConfig {
             collection: coll.clone(),
             active: true,
-            blacklisted: false,
-            blacklist_reason: None,
             trading_fee_bps: None,                // Use default
             denom: Some(config_v2.denom.clone()), // Preserve original denom
             registered_by: config_v3.admin.clone(),

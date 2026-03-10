@@ -63,6 +63,9 @@ pub enum ContractError {
     #[error("Minter not authorized for this collection")]
     MinterNotAuthorized {},
 
+    #[error("Minting is disabled for this collection")]
+    CollectionMintDisabled {},
+
     #[error("Invalid instantiate reply data")]
     InvalidInstantiateReplyData {},
 

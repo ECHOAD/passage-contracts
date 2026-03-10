@@ -1,30 +1,72 @@
 # Method Reference
 
-Esta referencia resume para que sirve cada smart contract y cuales son sus metodos mas importantes.
+This reference summarizes what each smart contract does and which methods matter most.
 
-Si necesitas ejemplos exactos de payload, revisa tambien:
+If you need exact payload examples, also check:
 
 - `03-json-examples.md`
+- `04-multisig-governance.md`
 
-## `registry`
+## `multisig`
 
-Rol:
+Role:
 
-- fuente de verdad para ecosystems, collections y minters autorizados
+- proposal-based admin contract for `registry` and other critical Passage contracts
 
 Instantiate:
 
-- `InstantiateMsg { admin, operators, ecosystem_factory }`
+- `InstantiateMsg { members, threshold, max_voting_period_secs }`
 
-Execute mas importantes:
+Most important execute messages:
+
+- `Propose`
+- `Vote`
+- `Execute`
+- `Close`
+- `UpdateMembers`
+
+When to use them:
+
+- `Propose`: create a proposal containing one or more `CosmosMsg`
+- `Vote`: approve or reject a proposal
+- `Execute`: dispatch proposal messages once the threshold is reached
+- `Close`: explicitly close an expired or failed proposal
+- `UpdateMembers`: rotate signers or threshold; this is self-call only and must be executed through a multisig proposal
+
+Most useful queries:
+
+- `Config`
+- `Member`
+- `Members`
+- `Proposal`
+- `Proposals`
+- `Vote`
+- `Votes`
+- `CanExecute`
+
+## `registry`
+
+Role:
+
+- source of truth for ecosystems, collections, and authorized minters
+
+Instantiate:
+
+- `InstantiateMsg { admin, operators, recovery_council, ecosystem_factory }`
+
+Note:
+
+- `ecosystem_factory` can be wired during instantiate or later with `UpdateConfig`, but ecosystem creation still only happens through `RegisterEcosystemFromFactory`
+
+Most important execute messages:
 
 - `UpdateConfig`
-- `ApproveEcosystemCreator`
-- `RevokeEcosystemCreator`
-- `RegisterEcosystem`
+- `UpdateCreatorModeration`
+- `UpdateEcosystemModeration`
+- `UpdateCollectionModeration`
+- `SetEcosystemRecoveryPolicy`
+- `SetCollectionRecoveryPolicy`
 - `RegisterEcosystemFromFactory`
-- `SubmitEcosystemCreationRequest`
-- `ResolveEcosystemCreationRequest`
 - `UpdateEcosystem`
 - `ApproveEcosystemMember`
 - `RevokeEcosystemMember`
@@ -37,33 +79,54 @@ Execute mas importantes:
 - `TransferCollectionOwnership`
 - `AuthorizeMinter`
 - `RevokeMinter`
+- `UpdateRecoveryConfig`
+- `OpenRecoveryCase`
+- `ContestRecoveryCase`
+- `ResolveRecoveryCase`
 
-Cuando usar cada uno:
+When to use them:
 
-- `RegisterEcosystem`: alta directa del ecosystem
-- `RegisterEcosystemFromFactory`: callback del ecosystem-factory
-- `RegisterCollectionFromFactory`: callback del collection-factory
-- `RegisterExistingCollection`: alta manual de una coleccion ya desplegada
-- `UpdateCollection`: guardar runtime pointers como `minter` y `marketplace`
-- `AuthorizeMinter`: obligatorio si un `minter-v2` va a operar con `registry` habilitado
+- `UpdateCreatorModeration`: block or allow ecosystem creation, collection creation, minting, and trading for a creator
+- `UpdateEcosystemModeration`: block or allow collection creation, minting, and trading at ecosystem scope
+- `UpdateCollectionModeration`: block or allow minting and trading for one collection
+- `SetEcosystemRecoveryPolicy`: define who can open a lost-access recovery case for an ecosystem and who should receive control if approved
+- `SetCollectionRecoveryPolicy`: define who can open a lost-access recovery case for a collection and who should receive control if approved
+- `RegisterEcosystemFromFactory`: callback from `ecosystem-factory`; this is the only ecosystem creation path
+- `RegisterCollectionFromFactory`: callback from `collection-factory`
+- `RegisterExistingCollection`: manually onboard an already deployed collection
+- `UpdateCollection`: store runtime pointers such as `minter` and `marketplace`
+- `AuthorizeMinter`: required if a `minter-v2` instance will operate with `registry` enabled
+- `OpenRecoveryCase`: open either `lost_access` or `abandonment` recovery
+- `ResolveRecoveryCase`: recovery authority decision after the contest window
 
-Queries mas utiles:
+Most useful queries:
 
 - `Config`
 - `Ecosystem`
 - `Ecosystems`
+- `CanCreateEcosystem`
 - `CanCreateCollectionInEcosystem`
+- `CanMintCollection`
+- `CanTradeCollection`
+- `CreatorModeration`
+- `EcosystemModeration`
+- `CollectionModeration`
+- `EcosystemRecoveryPolicy`
+- `CollectionRecoveryPolicy`
 - `Collection`
 - `CollectionsByEcosystem`
 - `IsCollectionVerified`
 - `IsMinterAuthorized`
 - `AuthorizedMinters`
+- `RecoveryConfig`
+- `RecoveryCase`
+- `RecoveryCases`
 
 ## `ecosystem-factory`
 
-Rol:
+Role:
 
-- flujo gobernado para crear ecosystems y desplegar su `collection-factory`
+- governed flow for creating ecosystems and deploying their `collection-factory`
 
 Instantiate:
 
@@ -83,15 +146,15 @@ Queries:
 - `PendingRequestById`
 - `IsAdminOrOperator`
 
-Nota:
+Note:
 
-- al aprobar un request, este contrato despliega el `collection-factory` y registra el ecosystem en `registry`
+- when a request is approved, this contract deploys the `collection-factory` and registers the ecosystem in `registry`
 
 ## `collection-factory`
 
-Rol:
+Role:
 
-- desplegar `pg721` dentro de un ecosystem y registrarlo en `registry`
+- deploy `pg721` inside an ecosystem and register it in `registry`
 
 Instantiate:
 
@@ -104,7 +167,7 @@ Execute:
 - `RevokeCreator`
 - `CreateCollection`
 
-`CreateCollection` recibe:
+`CreateCollection` receives:
 
 - `name`
 - `symbol`
@@ -121,23 +184,23 @@ Queries:
 - `Collections`
 - `CollectionsByCreator`
 
-Notas:
+Notes:
 
-- si `enforce_local_allowlist` esta activo, la wallet debe estar aprobada localmente
-- ademas siempre se consulta `registry.CanCreateCollectionInEcosystem`
-- en el `reply`, el factory llama `registry.RegisterCollectionFromFactory`
+- if `enforce_local_allowlist` is enabled, the wallet must be approved locally
+- it always also queries `registry.CanCreateCollectionInEcosystem`
+- in `reply`, the factory calls `registry.RegisterCollectionFromFactory`
 
 ## `pg721`
 
-Rol:
+Role:
 
-- contrato NFT base de la coleccion
+- base NFT collection contract
 
 Instantiate:
 
 - `InstantiateMsg { name, symbol, minter, collection_info }`
 
-Execute relevantes:
+Relevant execute messages:
 
 - `Mint`
 - `TransferNft`
@@ -148,7 +211,7 @@ Execute relevantes:
 - `RevokeAll`
 - `Burn`
 
-Queries relevantes:
+Relevant queries:
 
 - `OwnerOf`
 - `Approval`
@@ -161,16 +224,16 @@ Queries relevantes:
 - `Minter`
 - `CollectionInfo`
 
-Uso en comercio:
+Commerce usage:
 
-- `Approve` o `ApproveAll` para `marketplace-v3` y `auction-english`
-- `CollectionInfo` para resolver royalties
+- `Approve` or `ApproveAll` for `marketplace-v3` and `auction-english`
+- `CollectionInfo` to resolve royalties
 
 ## `split-router`
 
-Rol:
+Role:
 
-- repartir fondos creator-side para mint y royalties
+- route creator-side mint and royalty proceeds
 
 Instantiate:
 
@@ -192,12 +255,12 @@ Execute:
 - `DistributeSplitWallet`
 - `RemoveSplitWallet`
 
-Cuando usar cada uno:
+When to use them:
 
-- `SetDistributionRule`: crear regla por coleccion
-- `RoutePrimarySale`: lo llama `minter-v2`
-- `RouteSecondaryRoyalty`: lo llama `marketplace-v3`
-- `RouteAuctionRoyalty`: lo llama `auction-english`
+- `SetDistributionRule`: create the collection rule
+- `RoutePrimarySale`: called by `minter-v2`
+- `RouteSecondaryRoyalty`: called by `marketplace-v3`
+- `RouteAuctionRoyalty`: called by `auction-english`
 
 Queries:
 
@@ -213,9 +276,10 @@ Queries:
 
 ## `marketplace-v3`
 
-Rol:
+Role:
 
-- fixed price sale, token bids y collection bids
+- fixed-price sales, token bids, and collection bids
+- marketplace-level pricing and activation config, while moderation comes from `registry`
 
 Instantiate:
 
@@ -228,8 +292,6 @@ Admin execute:
 - `UpdateCollectionConfig`
 - `DeactivateCollection`
 - `ReactivateCollection`
-- `BlacklistCollection`
-- `UnblacklistCollection`
 
 Trading execute:
 
@@ -246,13 +308,14 @@ Trading execute:
 - `SyncAsk`
 - `BatchSyncAsks`
 
-Cuando usar cada uno:
+When to use them:
 
-- `SetAsk`: publicar una venta fija
-- `BuyNow`: comprar una venta fija
-- `SetBid` / `AcceptBid`: oferta por token
-- `SetCollectionBid` / `AcceptCollectionBid`: oferta por cualquier NFT de la coleccion
-- `RegisterCollection`: habilitar una coleccion para trading
+- `SetAsk`: publish a fixed-price listing
+- `BuyNow`: buy a fixed-price listing
+- `SetBid` / `AcceptBid`: token-specific offer flow
+- `SetCollectionBid` / `AcceptCollectionBid`: collection-wide offer flow
+- `RegisterCollection`: enable a collection for trading
+- `DeactivateCollection` / `ReactivateCollection`: local marketplace operational switch; this is not the moderation source of truth
 
 Queries:
 
@@ -279,9 +342,9 @@ Queries:
 
 ## `auction-english`
 
-Rol:
+Role:
 
-- reserve auction custodial por NFT
+- custodial reserve auction per NFT
 
 Instantiate:
 
@@ -296,13 +359,13 @@ Execute:
 - `PlaceBid`
 - `SettleAuction`
 
-Reglas principales:
+Core rules:
 
-- `CreateAuction` mueve el NFT al contrato
-- `UpdateReservePrice` solo antes del primer bid
-- `CancelAuction` solo antes del primer bid
-- `PlaceBid` inicia o sube la subasta
-- `SettleAuction` liquida y entrega el NFT al ganador
+- `CreateAuction` moves the NFT into the contract
+- `UpdateReservePrice` is only allowed before the first bid
+- `CancelAuction` is only allowed before the first bid
+- `PlaceBid` starts or increases the auction
+- `SettleAuction` pays out and transfers the NFT to the winner
 
 Queries:
 
@@ -315,9 +378,9 @@ Queries:
 
 ## `minter-v2`
 
-Rol:
+Role:
 
-- venta primaria y despliegue de su propio `pg721`
+- primary sale flow and deployment of its own `pg721`
 
 Instantiate:
 
@@ -339,13 +402,13 @@ Execute:
 - `SetTokenNativeAssetOverride`
 - `ClearTokenNativeAssetOverride`
 
-Notas operativas:
+Operational notes:
 
-- `Mint` y `BatchMint` usan `split-router` si esta activo
-- si `registry` esta configurado, el minter exige que:
-  - la coleccion exista en `registry`
-  - el minter este autorizado via `AuthorizeMinter`
-- `Withdraw` solo aplica si `use_split_router = false`
+- `Mint` and `BatchMint` use `split-router` if enabled
+- if `registry` is configured, the minter requires:
+  - the collection to exist in `registry`
+  - the minter to be authorized through `AuthorizeMinter`
+- `Withdraw` only applies when `use_split_router = false`
 
 Queries:
 
@@ -360,19 +423,19 @@ Queries:
 - `NativeAssetTemplate`
 - `TokenNativeAssets`
 
-## Relacion entre contratos
+## Contract relationships
 
-Relaciones practicas mas importantes:
+Most important practical relationships:
 
-- `collection-factory` depende de `registry`
-- `marketplace-v3` consulta `pg721` y opcionalmente `registry` y `split-router`
-- `auction-english` consulta `pg721` y opcionalmente `registry` y `split-router`
-- `minter-v2` despliega `pg721` y opcionalmente usa `registry` y `split-router`
-- `split-router` puede usar `registry` para validar creator-side config
+- `collection-factory` depends on `registry`
+- `marketplace-v3` queries `pg721` and optionally `registry` and `split-router`
+- `auction-english` queries `pg721` and optionally `registry` and `split-router`
+- `minter-v2` deploys `pg721` and optionally uses `registry` and `split-router`
+- `split-router` can use `registry` for creator-side validation
 
-Si el objetivo es una venta secundaria, el camino minimo suele ser:
+If the goal is a secondary sale, the minimum path is usually:
 
 1. `registry`
 2. `collection-factory` + `pg721`
 3. `split-router`
-4. `marketplace-v3` o `auction-english`
+4. `marketplace-v3` or `auction-english`

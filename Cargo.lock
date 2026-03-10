@@ -1919,6 +1919,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "multisig"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema 2.1.3",
+ "cosmwasm-std 2.1.3",
+ "cw-multi-test 2.1.1",
+ "cw-storage-plus 2.0.0",
+ "cw2 2.0.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "nft-vault"
 version = "0.1.0"
 dependencies = [

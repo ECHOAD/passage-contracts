@@ -33,33 +33,40 @@ pub(super) fn resolve_collection_trading_fee(
 }
 
 /// Validate that a collection can be traded on the marketplace
-/// Checks: registration (if required), active status, blacklist status
+/// Checks: registration/local activation and registry moderation status
 pub(super) fn validate_collection(
     storage: &dyn cosmwasm_std::Storage,
     config: &Config,
     collection: &Addr,
+    deps: &Deps,
 ) -> Result<(), ContractError> {
-    // If registration is required, check CollectionConfig
-    if config.require_registration {
-        let coll_config = COLLECTION_CONFIGS
-            .may_load(storage, collection.clone())?
-            .ok_or_else(|| ContractError::CollectionNotRegistered {
+    if let Some(coll_config) = COLLECTION_CONFIGS.may_load(storage, collection.clone())? {
+        if !coll_config.active {
+            return Err(ContractError::CollectionNotActive {
+                collection: collection.to_string(),
+            });
+        }
+    } else if config.require_registration {
+        return Err(ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        });
+    }
+
+    if let Some(registry) = &config.registry {
+        let trade_allowed: RegistryApprovalStatusResponse = deps
+            .querier
+            .query_wasm_smart(
+                registry.to_string(),
+                &RegistryQueryMsg::CanTradeCollection {
+                    address: collection.to_string(),
+                },
+            )
+            .map_err(|_| ContractError::CollectionTradingDisabled {
                 collection: collection.to_string(),
             })?;
 
-        // Check if blacklisted
-        if coll_config.blacklisted {
-            return Err(ContractError::CollectionBlacklisted {
-                collection: collection.to_string(),
-                reason: coll_config
-                    .blacklist_reason
-                    .unwrap_or_else(|| "Unknown".to_string()),
-            });
-        }
-
-        // Check if active
-        if !coll_config.active {
-            return Err(ContractError::CollectionNotActive {
+        if !trade_allowed.approved {
+            return Err(ContractError::CollectionTradingDisabled {
                 collection: collection.to_string(),
             });
         }
@@ -307,111 +314,4 @@ pub(super) fn update_stats(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::msg::RoyaltyInfoResponse;
-    use cosmwasm_std::{
-        from_json,
-        testing::{mock_dependencies, mock_env},
-        ContractResult, OwnedDeps, SystemError, SystemResult, WasmQuery,
-    };
-
-    fn mock_collection_info(
-        deps: &mut OwnedDeps<
-            cosmwasm_std::testing::MockStorage,
-            cosmwasm_std::testing::MockApi,
-            cosmwasm_std::testing::MockQuerier,
-        >,
-        contract_addr: &str,
-        royalty_recipient: &str,
-        royalty_share: &str,
-    ) {
-        let contract_addr = contract_addr.to_string();
-        let royalty_recipient = royalty_recipient.to_string();
-        let royalty_share = royalty_share.to_string();
-
-        deps.querier.update_wasm(move |query| match query {
-            WasmQuery::Smart {
-                contract_addr: addr,
-                msg,
-            } if addr == &contract_addr => {
-                let parsed: Pg721QueryMsg = from_json(msg).unwrap();
-                match parsed {
-                    Pg721QueryMsg::CollectionInfo {} => SystemResult::Ok(ContractResult::Ok(
-                        to_json_binary(&CollectionInfoResponse {
-                            creator: "creator".to_string(),
-                            description: "desc".to_string(),
-                            image: "ipfs://image".to_string(),
-                            external_link: None,
-                            royalty_info: Some(RoyaltyInfoResponse {
-                                payment_address: royalty_recipient.clone(),
-                                share: royalty_share.clone(),
-                            }),
-                        })
-                        .unwrap(),
-                    )),
-                }
-            }
-            WasmQuery::Smart { .. } => SystemResult::Err(SystemError::NoSuchContract {
-                addr: "unknown".to_string(),
-            }),
-            _ => SystemResult::Err(SystemError::UnsupportedRequest {
-                kind: "unsupported wasm query".to_string(),
-            }),
-        });
-    }
-
-    #[test]
-    fn legacy_sale_sends_royalty_payment() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let collection = Addr::unchecked("collection");
-        let buyer = Addr::unchecked("buyer");
-        let seller = Addr::unchecked("seller");
-        let recipient = Addr::unchecked("seller_payout");
-        let config = Config {
-            admin: Addr::unchecked("admin"),
-            denom: "upasg".to_string(),
-            min_price: Uint128::new(1),
-            trading_fee_bps: 250,
-            max_trading_fee_bps: 1000,
-            fee_collector: Addr::unchecked("treasury"),
-            registry: None,
-            split_router: None,
-            use_split_router: false,
-            operators: vec![],
-            paused: false,
-            require_registration: false,
-        };
-        let royalty_recipient = deps.api.addr_make("royalty-wallet");
-
-        mock_collection_info(&mut deps, "collection", royalty_recipient.as_str(), "0.1");
-
-        let (messages, sale_info) = execute_sale(
-            &deps.as_mut(),
-            &env,
-            &config,
-            &collection,
-            "1",
-            &seller,
-            &buyer,
-            &recipient,
-            "upasg",
-            Uint128::new(1_000),
-        )
-        .unwrap();
-
-        assert_eq!(sale_info.trading_fee, Uint128::new(25));
-        assert_eq!(sale_info.royalty, Uint128::new(100));
-        assert_eq!(messages.len(), 4);
-
-        let royalty_msg = &messages[2];
-        match royalty_msg {
-            CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
-                assert_eq!(to_address, royalty_recipient.as_str());
-                assert_eq!(amount[0].amount, Uint128::new(100));
-            }
-            _ => panic!("expected royalty bank send"),
-        }
-    }
-}
+mod tests;

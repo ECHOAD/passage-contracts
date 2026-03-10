@@ -144,7 +144,7 @@ fn query_collection_configs(
         .range(deps.storage, start, None, Order::Ascending)
         .filter_map(|item| {
             item.ok().and_then(|(_, config)| {
-                if active_only && (!config.active || config.blacklisted) {
+                if active_only && !config.active {
                     None
                 } else {
                     Some(config)
@@ -161,44 +161,24 @@ fn query_can_trade(deps: Deps, collection: String) -> StdResult<CanTradeResponse
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // If registration is not required, any collection can trade
-    if !config.require_registration {
-        return Ok(CanTradeResponse {
+    match validate_collection(deps.storage, &config, &collection_addr, &deps) {
+        Ok(()) => Ok(CanTradeResponse {
             can_trade: true,
             reason: None,
-        });
-    }
-
-    // Check if collection is registered
-    let coll_config = COLLECTION_CONFIGS.may_load(deps.storage, collection_addr)?;
-
-    match coll_config {
-        None => Ok(CanTradeResponse {
+        }),
+        Err(ContractError::CollectionNotRegistered { .. }) => Ok(CanTradeResponse {
             can_trade: false,
             reason: Some("Collection not registered".to_string()),
         }),
-        Some(cfg) => {
-            if cfg.blacklisted {
-                Ok(CanTradeResponse {
-                    can_trade: false,
-                    reason: Some(format!(
-                        "Collection blacklisted: {}",
-                        cfg.blacklist_reason
-                            .unwrap_or_else(|| "Unknown".to_string())
-                    )),
-                })
-            } else if !cfg.active {
-                Ok(CanTradeResponse {
-                    can_trade: false,
-                    reason: Some("Collection not active".to_string()),
-                })
-            } else {
-                Ok(CanTradeResponse {
-                    can_trade: true,
-                    reason: None,
-                })
-            }
-        }
+        Err(ContractError::CollectionNotActive { .. }) => Ok(CanTradeResponse {
+            can_trade: false,
+            reason: Some("Collection not active on marketplace".to_string()),
+        }),
+        Err(ContractError::CollectionTradingDisabled { .. }) => Ok(CanTradeResponse {
+            can_trade: false,
+            reason: Some("Collection blocked by registry moderation".to_string()),
+        }),
+        Err(err) => Err(cosmwasm_std::StdError::generic_err(err.to_string())),
     }
 }
 

@@ -213,6 +213,7 @@ pub struct RoyaltyInfoResponse {
 #[cw_serde]
 pub enum RegistryQueryMsg {
     Collection { address: String },
+    CanTradeCollection { address: String },
 }
 
 #[cw_serde]
@@ -223,4 +224,9 @@ pub struct RegistryCollectionResponse {
 #[cw_serde]
 pub struct RegistryCollection {
     pub creator: String,
+}
+
+#[cw_serde]
+pub struct RegistryApprovalStatusResponse {
+    pub approved: bool,
 }

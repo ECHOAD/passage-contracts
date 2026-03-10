@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "collection_code_id",
+    "collection_factory_code_id",
+    "registry"
+  ],
+  "properties": {
+    "admin": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "collection_code_id": {
+      "description": "Code ID for pg721 collection contracts (passed to collection-factory)",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "collection_factory_code_id": {
+      "description": "Code ID for collection-factory contracts",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "operators": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "registry": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

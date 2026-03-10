@@ -1,15 +1,140 @@
 # JSON Examples
 
-Este archivo contiene ejemplos de payloads JSON para los contratos principales del flujo comercial de Passage.
+This file contains example JSON payloads for the main contracts in the Passage commerce flow.
 
-## Convenciones
+## Conventions
 
-- Usa placeholders como `<registry_addr>` o `<collection_addr>` y reemplazalos por direcciones reales.
-- Los `Decimal` normalmente van como string, por ejemplo `"0.05"`.
-- Los `Timestamp` en estos contratos conviene tratarlos como string en nanosegundos.
-- Cuando un mensaje requiere fondos, el monto no va dentro del JSON del mensaje; se adjunta en la transaccion.
-- Los enums serializados con `cw_serde` usan `snake_case`.
-- `RevenueEventType` es una excepcion en el estado actual y usa nombres tipo `PrimarySale` o `SecondaryRoyalty`.
+- Use placeholders like `<registry_addr>` or `<collection_addr>` and replace them with real addresses.
+- `Decimal` values are typically strings, for example `"0.05"`.
+- `Timestamp` values in these contracts are safest when treated as nanosecond strings.
+- When a message requires funds, the amount does not go inside the JSON message itself; it is attached to the transaction.
+- Enums serialized with `cw_serde` generally use `snake_case`.
+- `RevenueEventType` is an exception in the current code and uses names such as `PrimarySale` or `SecondaryRoyalty`.
+- In `multisig`, a `WasmMsg::Execute` stores its inner contract message as base64-encoded binary. The examples below show both the human-readable inner message and the outer multisig payload.
+
+## 0. `multisig`
+
+### Instantiate
+
+```json
+{
+  "members": [
+    "passage1signer1...",
+    "passage1signer2...",
+    "passage1signer3..."
+  ],
+  "threshold": 2,
+  "max_voting_period_secs": 86400
+}
+```
+
+### Propose: pause `registry`
+
+Human-readable inner `registry` execute message:
+
+```json
+{
+  "update_config": {
+    "admin": null,
+    "operators": null,
+    "ecosystem_factory": null,
+    "paused": true
+  }
+}
+```
+
+Outer `multisig` proposal payload:
+
+```json
+{
+  "propose": {
+    "title": "Pause registry",
+    "description": "Emergency pause after suspicious admin activity",
+    "msgs": [
+      {
+        "wasm": {
+          "execute": {
+            "contract_addr": "passage1registry...",
+            "msg": "<base64 of the inner registry message>",
+            "funds": []
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Vote on a proposal
+
+```json
+{
+  "vote": {
+    "proposal_id": 1,
+    "vote": "approve"
+  }
+}
+```
+
+### Execute a passed proposal
+
+```json
+{
+  "execute": {
+    "proposal_id": 1
+  }
+}
+```
+
+### Rotate multisig members
+
+Human-readable inner `multisig` self-call:
+
+```json
+{
+  "update_members": {
+    "members": [
+      "passage1signer1...",
+      "passage1signer2...",
+      "passage1signer4..."
+    ],
+    "threshold": 2,
+    "max_voting_period_secs": 86400
+  }
+}
+```
+
+Outer `multisig` proposal payload:
+
+```json
+{
+  "propose": {
+    "title": "Rotate compromised signer",
+    "description": "Replace signer3 with signer4",
+    "msgs": [
+      {
+        "wasm": {
+          "execute": {
+            "contract_addr": "passage1multisig...",
+            "msg": "<base64 of the inner update_members message>",
+            "funds": []
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Query: check whether a proposal can execute
+
+```json
+{
+  "can_execute": {
+    "proposal_id": 1
+  }
+}
+```
 
 ## 1. `registry`
 
@@ -17,41 +142,30 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 
 ```json
 {
-  "admin": "passage1admin...",
+  "admin": "passage1multisig...",
   "operators": ["passage1ops1...", "passage1ops2..."],
-  "ecosystem_factory": "passage1ecosystemfactory..."
+  "recovery_council": ["passage1recovery1...", "passage1recovery2..."],
+  "ecosystem_factory": null
 }
 ```
 
-### Aprobar creador de ecosystem
+### Rotate the authorized ecosystem factory
 
 ```json
 {
-  "approve_ecosystem_creator": {
-    "creator": "passage1creator..."
+  "update_config": {
+    "admin": null,
+    "operators": null,
+    "recovery_council": null,
+    "ecosystem_factory": "passage1newfactory...",
+    "paused": null
   }
 }
 ```
 
-### Registrar ecosystem directo
+`registry` does not expose direct ecosystem creation. Ecosystems are created by approving requests in `ecosystem-factory`, which then calls `register_ecosystem_from_factory` internally.
 
-```json
-{
-  "register_ecosystem": {
-    "id": "music",
-    "name": "Music Ecosystem",
-    "ecosystem_type": "public",
-    "collection_creation_policy": "approval_required",
-    "collection_factory": "passage1collectionfactory...",
-    "detail": "Ecosistema para colecciones musicales",
-    "image_urls": ["https://cdn.example.com/music-cover.png"],
-    "animation_url": null,
-    "url": "https://example.com/music"
-  }
-}
-```
-
-### Aprobar miembro del ecosystem
+### Approve ecosystem member
 
 ```json
 {
@@ -62,7 +176,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Registrar coleccion ya desplegada
+### Register already deployed collection
 
 ```json
 {
@@ -75,7 +189,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Guardar runtime pointers de la coleccion
+### Store collection runtime pointers
 
 ```json
 {
@@ -89,7 +203,143 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Autorizar minter
+### Moderate a creator
+
+```json
+{
+  "update_creator_moderation": {
+    "creator": "passage1creator...",
+    "ecosystem_creation_enabled": true,
+    "collection_creation_enabled": true,
+    "mint_enabled": true,
+    "trade_enabled": false,
+    "reason": "Trading temporarily disabled for compliance review"
+  }
+}
+```
+
+### Moderate an ecosystem
+
+```json
+{
+  "update_ecosystem_moderation": {
+    "ecosystem_id": "music",
+    "collection_creation_enabled": true,
+    "mint_enabled": true,
+    "trade_enabled": false,
+    "reason": "Marketplace activity paused at ecosystem scope"
+  }
+}
+```
+
+### Moderate a collection
+
+```json
+{
+  "update_collection_moderation": {
+    "address": "passage1collection...",
+    "mint_enabled": false,
+    "trade_enabled": false,
+    "reason": "Collection under review"
+  }
+}
+```
+
+### Set ecosystem recovery policy
+
+```json
+{
+  "set_ecosystem_recovery_policy": {
+    "ecosystem_id": "music",
+    "delegate": "passage1trusteddelegate...",
+    "designated_successor": "passage1backupowner..."
+  }
+}
+```
+
+### Set collection recovery policy
+
+```json
+{
+  "set_collection_recovery_policy": {
+    "address": "passage1collection...",
+    "delegate": "passage1trusteddelegate...",
+    "designated_successor": "passage1backupowner..."
+  }
+}
+```
+
+### Update recovery config
+
+```json
+{
+  "update_recovery_config": {
+    "abandonment_inactivity_period_secs": 7776000,
+    "contest_period_secs": 2592000
+  }
+}
+```
+
+### Open lost-access recovery case
+
+```json
+{
+  "open_recovery_case": {
+    "case_kind": "lost_access",
+    "target": {
+      "collection": {
+        "address": "passage1collection..."
+      }
+    },
+    "reason": "Creator lost custody of the original wallet",
+    "evidence_url": "https://support.example.com/case/123",
+    "proposed_replacement": "passage1newowner..."
+  }
+}
+```
+
+### Open abandonment recovery case
+
+```json
+{
+  "open_recovery_case": {
+    "case_kind": "abandonment",
+    "target": {
+      "ecosystem": {
+        "ecosystem_id": "music"
+      }
+    },
+    "reason": "Project appears abandoned and team is unreachable",
+    "evidence_url": "https://forum.example.com/thread/456",
+    "proposed_replacement": "passage1newadmin..."
+  }
+}
+```
+
+### Contest a recovery case
+
+```json
+{
+  "contest_recovery_case": {
+    "case_id": 1,
+    "note": "Control has not been abandoned and original owner remains active"
+  }
+}
+```
+
+### Resolve a recovery case
+
+```json
+{
+  "resolve_recovery_case": {
+    "case_id": 1,
+    "approved": true,
+    "note": "Approved after contest window and off-chain review"
+  }
+}
+```
+
+### Authorize minter
 
 ```json
 {
@@ -100,7 +350,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Query: ver coleccion
+### Query: get collection
 
 ```json
 {
@@ -110,13 +360,33 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Query: validar minter
+### Query: validate minter
 
 ```json
 {
   "is_minter_authorized": {
     "collection_address": "passage1collection...",
     "minter_address": "passage1minter..."
+  }
+}
+```
+
+### Query: get collection recovery policy
+
+```json
+{
+  "collection_recovery_policy": {
+    "address": "passage1collection..."
+  }
+}
+```
+
+### Query: get recovery case
+
+```json
+{
+  "recovery_case": {
+    "case_id": 1
   }
 }
 ```
@@ -142,7 +412,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
   "submit_ecosystem_creation_request": {
     "id": "music",
     "name": "Music Ecosystem",
-    "detail": "Ecosistema para artistas y colecciones musicales",
+    "description": "Ecosystem for artists and music collections",
     "image_urls": ["https://cdn.example.com/music.png"],
     "animation_url": null,
     "url": "https://example.com/music"
@@ -150,14 +420,14 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Aprobar request
+### Approve request
 
 ```json
 {
   "resolve_ecosystem_creation_request": {
     "request_id": 1,
     "approved": true,
-    "note": "Aprobado por governance"
+    "note": "Approved by governance"
   }
 }
 ```
@@ -178,7 +448,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Aprobar creador local
+### Approve local creator
 
 ```json
 {
@@ -188,7 +458,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Crear coleccion
+### Create collection
 
 ```json
 {
@@ -197,7 +467,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
     "symbol": "GMC",
     "minter": "passage1creator...",
     "collection_info": {
-      "description": "Coleccion genesis del ecosystem musical",
+      "description": "Genesis collection for the music ecosystem",
       "image": "ipfs://bafy.../cover.png",
       "external_link": "https://example.com/gmc",
       "royalty_info": {
@@ -210,7 +480,7 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 }
 ```
 
-### Query: colecciones del creator
+### Query: collections by creator
 
 ```json
 {
@@ -224,9 +494,9 @@ Este archivo contiene ejemplos de payloads JSON para los contratos principales d
 
 ## 4. `pg721`
 
-Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este es el shape del instantiate.
+`pg721` is usually deployed by `collection-factory` or `minter-v2`, but this is the instantiate shape.
 
-### Instantiate directo
+### Direct instantiate
 
 ```json
 {
@@ -235,7 +505,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
   "minter": "passage1creator...",
   "collection_info": {
     "creator": "passage1creator...",
-    "description": "Coleccion genesis del ecosystem musical",
+    "description": "Genesis collection for the music ecosystem",
     "image": "ipfs://bafy.../cover.png",
     "external_link": "https://example.com/gmc",
     "royalty_info": {
@@ -246,7 +516,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
 }
 ```
 
-### Aprobar marketplace o auction para un token
+### Approve marketplace or auction for one token
 
 ```json
 {
@@ -258,7 +528,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
 }
 ```
 
-### Aprobar operator global
+### Approve global operator
 
 ```json
 {
@@ -288,7 +558,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
 }
 ```
 
-### Crear regla de distribucion
+### Create distribution rule
 
 ```json
 {
@@ -312,7 +582,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
 }
 ```
 
-### Actualizar regla
+### Update rule
 
 ```json
 {
@@ -344,7 +614,7 @@ Normalmente `pg721` lo despliega `collection-factory` o `minter-v2`, pero este e
 
 ### Route primary sale
 
-Normalmente este mensaje lo llama `minter-v2` con fondos adjuntos.
+This message is normally called by `minter-v2` with attached funds.
 
 ```json
 {
@@ -356,7 +626,7 @@ Normalmente este mensaje lo llama `minter-v2` con fondos adjuntos.
 
 ### Route secondary royalty
 
-Normalmente este mensaje lo llama `marketplace-v3` con el royalty adjunto.
+This message is normally called by `marketplace-v3` with the royalty funds attached.
 
 ```json
 {
@@ -398,7 +668,7 @@ Normalmente este mensaje lo llama `marketplace-v3` con el royalty adjunto.
 }
 ```
 
-### Registrar coleccion
+### Register collection
 
 ```json
 {
@@ -410,7 +680,7 @@ Normalmente este mensaje lo llama `marketplace-v3` con el royalty adjunto.
 }
 ```
 
-### Publicar venta fija
+### Publish fixed-price listing
 
 ```json
 {
@@ -426,9 +696,9 @@ Normalmente este mensaje lo llama `marketplace-v3` con el royalty adjunto.
 }
 ```
 
-### Comprar venta fija
+### Buy fixed-price listing
 
-Adjunta exactamente `1000000upasg` en la transaccion.
+Attach exactly `1000000upasg` to the transaction.
 
 ```json
 {
@@ -439,9 +709,9 @@ Adjunta exactamente `1000000upasg` en la transaccion.
 }
 ```
 
-### Poner bid por token
+### Place token bid
 
-Adjunta el bid en la transaccion.
+Attach the bid amount to the transaction.
 
 ```json
 {
@@ -457,7 +727,7 @@ Adjunta el bid en la transaccion.
 }
 ```
 
-### Aceptar bid
+### Accept bid
 
 ```json
 {
@@ -469,9 +739,9 @@ Adjunta el bid en la transaccion.
 }
 ```
 
-### Poner collection bid
+### Place collection bid
 
-Adjunta `units * price.amount` en la transaccion.
+Attach `units * price.amount` to the transaction.
 
 ```json
 {
@@ -521,7 +791,7 @@ Adjunta `units * price.amount` en la transaccion.
 }
 ```
 
-### Crear subasta
+### Create auction
 
 ```json
 {
@@ -538,7 +808,7 @@ Adjunta `units * price.amount` en la transaccion.
 }
 ```
 
-### Actualizar reserve price
+### Update reserve price
 
 ```json
 {
@@ -553,9 +823,9 @@ Adjunta `units * price.amount` en la transaccion.
 }
 ```
 
-### Poner bid
+### Place bid
 
-Adjunta el monto del bid en la transaccion.
+Attach the bid amount to the transaction.
 
 ```json
 {
@@ -566,7 +836,7 @@ Adjunta el monto del bid en la transaccion.
 }
 ```
 
-### Liquidar subasta
+### Settle auction
 
 ```json
 {
@@ -577,7 +847,7 @@ Adjunta el monto del bid en la transaccion.
 }
 ```
 
-### Query: ver subasta
+### Query: get auction
 
 ```json
 {
@@ -603,7 +873,7 @@ Adjunta el monto del bid en la transaccion.
     "minter": "passage1mintercontract...",
     "collection_info": {
       "creator": "passage1creator...",
-      "description": "Drop primario del ecosystem",
+      "description": "Primary drop for the ecosystem",
       "image": "ipfs://bafy.../cover.png",
       "external_link": "https://example.com/drop",
       "royalty_info": {
@@ -629,7 +899,7 @@ Adjunta el monto del bid en la transaccion.
 
 ### Mint
 
-Adjunta exactamente el `unit_price`.
+Attach exactly the `unit_price`.
 
 ```json
 {
@@ -639,7 +909,7 @@ Adjunta exactamente el `unit_price`.
 
 ### Batch mint
 
-Adjunta `count * unit_price.amount`.
+Attach `count * unit_price.amount`.
 
 ```json
 {
@@ -688,18 +958,18 @@ Adjunta `count * unit_price.amount`.
 }
 ```
 
-## 9. CLI shape sugerido
+## 9. Suggested CLI shape
 
-Ejemplo conceptual de ejecucion con `wasmd`:
+Conceptual `wasmd` execute example:
 
 ```bash
 wasmd tx wasm execute <contract_addr> '<json_msg>' --from <wallet> --amount 1000000upasg
 ```
 
-Ejemplo conceptual de query:
+Conceptual query example:
 
 ```bash
 wasmd query wasm contract-state smart <contract_addr> '<json_query>'
 ```
 
-Si vas a operar desde backend o frontend, reutiliza estos mismos payloads como body del mensaje CosmWasm.
+If you are operating from backend or frontend code, you can reuse these exact payloads as the CosmWasm message body.

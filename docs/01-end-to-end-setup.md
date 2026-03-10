@@ -1,51 +1,58 @@
 # End-to-End Setup
 
-Esta guia describe el flujo recomendado desde la instanciacion de `registry` hasta dejar una coleccion lista para vender por `marketplace-v3` o por `auction-english`.
+This guide describes the recommended flow from `registry` instantiation to a collection that is ready to sell through `marketplace-v3` or `auction-english`.
 
-Payloads JSON listos para usar:
+Ready-to-use JSON payloads:
 
 - `03-json-examples.md`
 
-## 1. Instanciar `registry`
+Recommended admin pattern:
 
-`registry` es el primer contrato que debe existir.
+- `04-multisig-governance.md`
 
-Campos importantes de `InstantiateMsg`:
+## 0. Instantiate `multisig` first
 
-- `admin`: admin global del registry.
-- `operators`: operadores globales opcionales.
-- `ecosystem_factory`: direccion opcional del `ecosystem-factory` autorizado para registrar ecosystems aprobados.
+This is not mandatory, but it is the recommended admin model for Passage.
 
-Uso:
+Recommended usage:
 
-- Si vas a manejar ecosystems manualmente, puedes instanciar `registry` sin `ecosystem_factory`.
-- Si vas a usar el flujo gobernado, despliega `ecosystem-factory` y luego conecta su direccion con `UpdateConfig`.
+- deploy `multisig` before `registry`
+- use the multisig address as `registry` contract admin in `InstantiateMsg.admin`
+- use the same multisig address as the CosmWasm instance admin for migration control
 
-## 2. Elegir como crear el ecosystem
+Why:
 
-Hay dos caminos.
+- a compromised signer does not automatically compromise the whole admin surface
+- signer rotation can happen in-place without changing the multisig address
+- all critical admin actions become proposal-based and auditable
 
-### Camino A: directo en `registry`
+## 1. Instantiate `registry`
 
-Usa este camino si el equipo admin controla todo el alta.
+`registry` is the first contract that should exist.
 
-Mensajes relevantes:
+Important `InstantiateMsg` fields:
 
-- `ApproveEcosystemCreator`
-- `RegisterEcosystem`
-- `UpdateEcosystem`
+- `admin`: global registry admin.
+- `operators`: optional global operators.
+- `ecosystem_factory`: optional at deploy time, but must be configured before any ecosystem can be approved and registered.
 
-Flujo:
+Usage:
 
-1. El admin aprueba al creador con `ApproveEcosystemCreator { creator }`, si aplica.
-2. El creador o admin llama `RegisterEcosystem`.
-3. Si aun no existe un `collection-factory` para ese ecosystem, debes desplegarlo manualmente y luego guardar su direccion con `UpdateEcosystem { collection_factory }`.
+- Deploy `registry` after `multisig` if you are using the recommended setup.
+- Deploy `ecosystem-factory` pointing to that `registry`.
+- Call `registry.UpdateConfig { ecosystem_factory }` to wire the authorized factory address.
+- `registry` does not accept direct ecosystem creation. Approved ecosystems are registered only through `RegisterEcosystemFromFactory`, so ecosystem onboarding remains blocked until the factory address is configured.
 
-### Camino B: gobernado con `ecosystem-factory`
+Recommended admin wiring:
 
-Usa este camino si quieres requests y aprobacion.
+- `registry InstantiateMsg.admin = <multisig_addr>`
+- CosmWasm instance admin for `registry` = `<multisig_addr>`
 
-`ecosystem-factory` se instancia con:
+## 2. Create the ecosystem through `ecosystem-factory`
+
+This is the only supported path.
+
+`ecosystem-factory` is instantiated with:
 
 - `admin`
 - `operators`
@@ -53,23 +60,23 @@ Usa este camino si quieres requests y aprobacion.
 - `collection_factory_code_id`
 - `collection_code_id`
 
-Flujo:
+Flow:
 
-1. Un creador llama `SubmitEcosystemCreationRequest`.
-2. Admin u operador llama `ResolveEcosystemCreationRequest`.
-3. Si se aprueba, `ecosystem-factory` despliega un `collection-factory` dedicado.
-4. En el `reply`, el factory llama `registry.RegisterEcosystemFromFactory`.
+1. A creator calls `SubmitEcosystemCreationRequest`.
+2. An admin or operator calls `ResolveEcosystemCreationRequest`.
+3. If approved, `ecosystem-factory` deploys a dedicated `collection-factory`.
+4. In `reply`, the factory calls `registry.RegisterEcosystemFromFactory`.
 
-Resultado esperado:
+Expected result:
 
-- El ecosystem queda registrado en `registry`.
-- El ecosystem queda enlazado a un `collection-factory`.
+- The ecosystem is registered in `registry`.
+- The ecosystem is linked to a `collection-factory`.
 
-## 3. Instanciar o validar `collection-factory`
+## 3. Validate the dedicated `collection-factory`
 
-Si el ecosystem vino desde `ecosystem-factory`, este paso ya queda hecho.
+When the request is approved, `ecosystem-factory` already instantiates the dedicated `collection-factory` for that ecosystem.
 
-Si el ecosystem fue creado directo, debes instanciar `collection-factory` manualmente con:
+That child factory is instantiated with:
 
 - `admin`
 - `operators`
@@ -79,72 +86,72 @@ Si el ecosystem fue creado directo, debes instanciar `collection-factory` manual
 - `enforce_local_allowlist`
 - `approved_creators`
 
-Notas:
+Notes:
 
-- `enforce_local_allowlist = true` obliga a aprobar wallets localmente con `ApproveCreator`.
-- Aun si desactivas la allowlist local, `collection-factory` sigue consultando `registry.CanCreateCollectionInEcosystem`.
+- `enforce_local_allowlist = true` requires wallets to be approved locally through `ApproveCreator`.
+- Even if local allowlisting is disabled, `collection-factory` still queries `registry.CanCreateCollectionInEcosystem`.
 
-## 4. Crear la coleccion `pg721`
+## 4. Create the `pg721` collection
 
-La coleccion se crea desde `collection-factory`.
+The collection is created through `collection-factory`.
 
-Mensaje principal:
+Main message:
 
 - `CreateCollection { name, symbol, minter, collection_info, label }`
 
-`collection_info` incluye:
+`collection_info` includes:
 
 - `description`
 - `image`
 - `external_link`
 - `royalty_info`
 
-Puntos importantes:
+Important points:
 
-- `minter` es quien podra hacer `Mint` dentro del `pg721`.
-- Si quieres mintear manualmente, usa una wallet o contrato que controles.
-- Si quieres un drop primario con `minter-v2`, no uses este camino para esa coleccion; `minter-v2` despliega su propio `pg721`.
+- `minter` is the address that will be allowed to call `Mint` inside `pg721`.
+- If you want to mint manually, use a wallet or contract you control.
+- If you want a primary drop with `minter-v2`, do not use this path for that collection; `minter-v2` deploys its own `pg721`.
 
-Que pasa despues:
+What happens next:
 
-1. `collection-factory` instancia `pg721`.
-2. En `reply`, registra la nueva coleccion en `registry` via `RegisterCollectionFromFactory`.
+1. `collection-factory` instantiates `pg721`.
+2. In `reply`, it registers the new collection in `registry` via `RegisterCollectionFromFactory`.
 
-Verificaciones recomendadas:
+Recommended checks:
 
 - `registry.Collection { address }`
 - `registry.CollectionsByEcosystem { ecosystem_id }`
 
-## 5. Instanciar `split-router`
+## 5. Instantiate `split-router`
 
-`split-router` reparte ingresos del creator y royalties.
+`split-router` routes creator proceeds and royalties.
 
-Se instancia con:
+It is instantiated with:
 
 - `admin`
 - `registry`
 
-Despues debes crear una regla por coleccion:
+Then you should create a rule per collection:
 
 - `SetDistributionRule { collection, creator, creator_share, collaborators }`
 
-Uso recomendado:
+Recommended usage:
 
-- Configuralo antes de habilitar ventas.
-- Si usaras `marketplace-v3` o `auction-english` con `use_split_router = true`, la coleccion debe tener regla cargada.
+- Configure it before enabling sales.
+- If you will use `marketplace-v3` or `auction-english` with `use_split_router = true`, the collection must already have a rule.
 
-Queries utiles:
+Useful queries:
 
 - `DistributionRule { collection }`
 - `PreviewDistribution { collection, amount, event_type }`
 
-## 6. Camino de fixed price sale con `marketplace-v3`
+## 6. Fixed-price sale path with `marketplace-v3`
 
-`marketplace-v3` es para secondary sales. No crea ni custodia colecciones.
+`marketplace-v3` is for secondary sales. It does not create or custody collections.
 
-### 6.1 Instanciar el marketplace
+### 6.1 Instantiate the marketplace
 
-Campos importantes:
+Important fields:
 
 - `admin`
 - `denom`
@@ -158,74 +165,74 @@ Campos importantes:
 - `operators`
 - `require_registration`
 
-Uso recomendado:
+Recommended usage:
 
 - `require_registration = true`
 - `registry = <registry>`
 - `split_router = <split-router>`
 - `use_split_router = true`
 
-### 6.2 Registrar la coleccion en el marketplace
+### 6.2 Register the collection in the marketplace
 
-Mensaje:
+Message:
 
 - `RegisterCollection { collection, trading_fee_bps, denom }`
 
-Notas:
+Notes:
 
-- Esto habilita la coleccion dentro del marketplace.
-- No sustituye el registro en `registry`; son dos registros distintos.
+- This enables the collection inside the marketplace.
+- It does not replace registration in `registry`; these are two separate registrations.
 
-Opcional pero recomendado:
+Optional but recommended:
 
-- Guardar el puntero runtime en `registry` con `UpdateCollection { marketplace: Some(...) }`
+- Save the runtime pointer in `registry` with `UpdateCollection { marketplace: Some(...) }`
 
-### 6.3 Aprobar el marketplace en `pg721`
+### 6.3 Approve the marketplace in `pg721`
 
-Antes de listar, el owner debe aprobar el marketplace en la coleccion `pg721`.
+Before listing, the owner must approve the marketplace in the `pg721` collection.
 
-Metodos relevantes del `pg721`:
+Relevant `pg721` methods:
 
 - `Approve { spender, token_id, expires }`
 - `ApproveAll { operator, expires }`
 
-Sin esa aprobacion, no podra completarse la venta cuando llegue el comprador.
+Without this approval, the sale will not be able to complete when a buyer arrives.
 
-### 6.4 Crear la venta
+### 6.4 Create the sale
 
-Mensaje:
+Message:
 
 - `SetAsk { collection, token_id, price, funds_recipient }`
 
-Luego tienes tres salidas:
+From there you have three paths:
 
-- compra directa con `BuyNow`
-- oferta puntual con `SetBid` y aceptacion con `AcceptBid`
-- oferta sobre toda la coleccion con `SetCollectionBid` y aceptacion con `AcceptCollectionBid`
+- direct purchase with `BuyNow`
+- token-specific offer with `SetBid` and acceptance with `AcceptBid`
+- collection-wide offer with `SetCollectionBid` and acceptance with `AcceptCollectionBid`
 
-### 6.5 Como liquida la venta
+### 6.5 How sale settlement works
 
-En el modelo actual:
+In the current model:
 
-- `marketplace-v3` cobra `trading_fee_bps`
-- el seller recibe `sale_price - trading_fee - royalty`
-- si `use_split_router = true`, el royalty se manda a `split-router`
-- si `use_split_router = false`, el royalty se paga directo al `payment_address` de `pg721`
+- `marketplace-v3` charges `trading_fee_bps`
+- the seller receives `sale_price - trading_fee - royalty`
+- if `use_split_router = true`, the royalty is sent to `split-router`
+- if `use_split_router = false`, the royalty is paid directly to the `payment_address` from `pg721`
 
-Queries utiles:
+Useful queries:
 
 - `CanTrade { collection }`
 - `PreviewSale { collection, price }`
 - `Ask { collection, token_id }`
 - `CollectionStats { collection }`
 
-## 7. Camino de auction con `auction-english`
+## 7. Auction path with `auction-english`
 
-`auction-english` tambien es secondary sale, pero custodial.
+`auction-english` is also for secondary sales, but it is custodial.
 
-### 7.1 Instanciar el auction
+### 7.1 Instantiate the auction contract
 
-Campos importantes:
+Important fields:
 
 - `admin`
 - `denom`
@@ -242,62 +249,62 @@ Campos importantes:
 - `extend_duration`
 - `require_registration`
 
-Uso recomendado:
+Recommended usage:
 
 - `require_registration = true`
 - `registry = <registry>`
 - `split_router = <split-router>`
 - `use_split_router = true`
 
-### 7.2 Aprobar el auction en `pg721`
+### 7.2 Approve the auction contract in `pg721`
 
-El owner debe aprobar el contrato de auction en la coleccion `pg721`.
+The owner must approve the auction contract in the `pg721` collection.
 
-Metodos relevantes:
+Relevant methods:
 
 - `Approve`
 - `ApproveAll`
 
-### 7.3 Crear la subasta
+### 7.3 Create the auction
 
-Mensaje:
+Message:
 
 - `CreateAuction { collection, token_id, reserve_price, duration, seller_funds_recipient }`
 
-Importante:
+Important:
 
-- el NFT se transfiere al contrato de auction al crear la subasta
-- antes del primer bid, el seller todavia puede:
+- the NFT is transferred into the auction contract when the auction is created
+- before the first bid, the seller can still:
   - `UpdateReservePrice`
   - `CancelAuction`
 
-### 7.4 Recibir bids
+### 7.4 Receive bids
 
-Mensaje:
+Message:
 
 - `PlaceBid { collection, token_id }`
 
-Comportamiento:
+Behavior:
 
-- el primer bid inicia el reloj de cierre
-- bids posteriores deben respetar `min_bid_increment_percent`
-- si faltan pocos segundos, la subasta se extiende usando `extend_duration`
+- the first bid starts the closing timer
+- later bids must respect `min_bid_increment_percent`
+- if little time remains, the auction extends using `extend_duration`
 
-### 7.5 Cerrar y liquidar
+### 7.5 Close and settle
 
-Mensaje:
+Message:
 
 - `SettleAuction { collection, token_id }`
 
-Comportamiento:
+Behavior:
 
-- cualquiera puede ejecutar el settle despues del cierre
-- se paga `trading_fee` al `fee_collector`
-- se paga seller proceeds al seller o a `seller_funds_recipient`
-- el royalty va a `split-router` si esta activado
-- el NFT se transfiere al ganador
+- anyone can settle after the auction has ended
+- `trading_fee` is paid to the `fee_collector`
+- seller proceeds are paid to the seller or to `seller_funds_recipient`
+- the royalty goes to `split-router` if enabled
+- the NFT is transferred to the winner
 
-Queries utiles:
+Useful queries:
 
 - `CanTrade { collection }`
 - `Auction { collection, token_id }`
@@ -305,48 +312,48 @@ Queries utiles:
 - `AuctionsBySeller`
 - `AuctionsByEndTime`
 
-## 8. Camino opcional de venta primaria con `minter-v2`
+## 8. Optional primary sale path with `minter-v2`
 
-Este camino es distinto. `minter-v2` despliega su propia coleccion `pg721`.
+This path is different. `minter-v2` deploys its own `pg721` collection.
 
-Flujo recomendado:
+Recommended flow:
 
-1. Instancia `minter-v2`.
-2. Espera el `reply` o consulta `Config {}` para obtener `cw721_address`.
-3. Registra esa coleccion en `registry` con `RegisterExistingCollection`.
-4. Autoriza el minter con `AuthorizeMinter { collection_address, minter_address }`.
-5. Opcionalmente guarda el puntero con `UpdateCollection { minter: Some(...) }`.
-6. Crea la regla de `split-router` para esa coleccion.
-7. Abre mint con `start_time` y luego usa `Mint` o `BatchMint`.
+1. Instantiate `minter-v2`.
+2. Wait for `reply` or query `Config {}` to obtain `cw721_address`.
+3. Register that collection in `registry` with `RegisterExistingCollection`.
+4. Authorize the minter with `AuthorizeMinter { collection_address, minter_address }`.
+5. Optionally save the runtime pointer with `UpdateCollection { minter: Some(...) }`.
+6. Create the `split-router` rule for that collection.
+7. Open minting with `start_time` and then use `Mint` or `BatchMint`.
 
-Sin los pasos 3 y 4, `minter-v2` puede quedar bloqueado si `registry` esta configurado, porque valida:
+Without steps 3 and 4, `minter-v2` can be blocked if `registry` is configured, because it validates:
 
-- que la coleccion exista en `registry`
-- que el minter este autorizado en `registry`
+- that the collection exists in `registry`
+- that the minter is authorized in `registry`
 
-## 9. Checklist minima para salir a produccion
+## 9. Minimum production checklist
 
-### Fixed price sale
+### Fixed-price sale
 
-1. `registry` operativo
-2. coleccion registrada en `registry`
-3. `split-router` con regla para la coleccion
-4. `marketplace-v3` instanciado
-5. coleccion registrada en `marketplace-v3`
-6. owner aprobando el marketplace en `pg721`
+1. `registry` deployed and operational
+2. collection registered in `registry`
+3. `split-router` rule created for the collection
+4. `marketplace-v3` instantiated
+5. collection registered in `marketplace-v3`
+6. owner approved the marketplace in `pg721`
 7. `SetAsk`
 
 ### Auction
 
-1. `registry` operativo
-2. coleccion registrada en `registry`
-3. `split-router` con regla para la coleccion
-4. `auction-english` instanciado
-5. owner aprobando el auction en `pg721`
+1. `registry` deployed and operational
+2. collection registered in `registry`
+3. `split-router` rule created for the collection
+4. `auction-english` instantiated
+5. owner approved the auction contract in `pg721`
 6. `CreateAuction`
 7. bids
 8. `SettleAuction`
 
-Para mensajes exactos en JSON, usa tambien:
+For exact JSON messages, also use:
 
 - `03-json-examples.md`

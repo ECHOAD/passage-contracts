@@ -24,11 +24,14 @@ pub enum ContractError {
     #[error("Ecosystem name cannot be empty")]
     EmptyEcosystemName {},
 
-    #[error("Ecosystem detail cannot be empty")]
-    EmptyEcosystemDetail {},
+    #[error("Ecosystem description cannot be empty")]
+    EmptyEcosystemDescription {},
 
     #[error("At least one image is required")]
     EmptyImages {},
+
+    #[error("Creator is not allowed to create ecosystems")]
+    EcosystemCreationNotAllowed {},
 
     #[error("Ecosystem creation request already pending for id: {id}")]
     RequestAlreadyPending { id: String },

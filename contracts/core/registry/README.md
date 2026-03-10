@@ -20,10 +20,10 @@ Ecosystem
 
 ### Ecosystem management
 
-- Register ecosystems with metadata (gated/approved creators only).
+- Register approved ecosystems from `ecosystem-factory`.
 - Update ecosystem metadata/admin.
-- Approve/revoke ecosystem creators.
 - Approve/revoke ecosystem members (team) who can add collections.
+- Apply creator, ecosystem, and collection moderation.
 
 ### Collection registration
 
@@ -44,16 +44,23 @@ Ecosystem
 ```json
 {
   "admin": "passage1...",
-  "operators": ["passage1..."]
+  "operators": ["passage1..."],
+  "recovery_council": ["passage1..."],
+  "ecosystem_factory": null
 }
 ```
+
+After deployment, wire the authorized factory with `UpdateConfig { ecosystem_factory }`. Direct ecosystem creation is not supported.
 
 ### Execute
 
 - `UpdateConfig`
-- `ApproveEcosystemCreator { creator }`
-- `RevokeEcosystemCreator { creator }`
-- `RegisterEcosystem`
+- `UpdateCreatorModeration`
+- `UpdateEcosystemModeration`
+- `UpdateCollectionModeration`
+- `SetEcosystemRecoveryPolicy`
+- `SetCollectionRecoveryPolicy`
+- `RegisterEcosystemFromFactory`
 - `UpdateEcosystem`
 - `ApproveEcosystemMember { ecosystem_id, member }`
 - `RevokeEcosystemMember { ecosystem_id, member }`
@@ -63,6 +70,10 @@ Ecosystem
 - `TransferCollectionOwnership`
 - `AuthorizeMinter`
 - `RevokeMinter`
+- `UpdateRecoveryConfig`
+- `OpenRecoveryCase`
+- `ContestRecoveryCase`
+- `ResolveRecoveryCase`
 
 ### Query
 
@@ -72,7 +83,10 @@ Config {}
 Ecosystem { id }
 Ecosystems { start_after, limit }
 EcosystemsByAdmin { admin, start_after, limit }
-IsEcosystemCreatorApproved { creator }
+CanCreateEcosystem { creator }
+CreatorModeration { creator }
+EcosystemModeration { ecosystem_id }
+EcosystemRecoveryPolicy { ecosystem_id }
 IsEcosystemMember { ecosystem_id, member }
 
 Collection { address }
@@ -80,24 +94,32 @@ Collections { start_after, limit }
 CollectionsByEcosystem { ecosystem_id, start_after, limit }
 CollectionsByCreator { creator, start_after, limit }
 IsCollectionVerified { address }
+CanMintCollection { address }
+CanTradeCollection { address }
+CollectionModeration { address }
+CollectionRecoveryPolicy { address }
 
 IsMinterAuthorized { collection_address, minter_address }
 AuthorizedMinters { collection_address, start_after, limit }
+
+RecoveryConfig {}
+RecoveryCase { case_id }
+RecoveryCases { status, start_after, limit }
 ```
 
 ## Access control
 
 | Action | Who can execute |
 |--------|-----------------|
-| Register Ecosystem | Contract admin/operators or approved ecosystem creator |
+| Register Ecosystem | Configured `ecosystem-factory` only |
 | Update Ecosystem | Ecosystem admin or contract admin |
-| Approve Ecosystem Creator | Contract admin |
 | Approve Ecosystem Member | Ecosystem admin or contract admin |
 | Register Collection | Ecosystem admin, approved ecosystem member, or contract admin |
 | Register Existing Collection | Contract admin only |
 | Update Collection | Collection creator or contract admin |
 | Set verified status | Contract admin only |
 | Authorize/Revoke minter | Collection creator or contract admin |
+| Resolve Recovery Case | Recovery council or contract admin |
 
 ## Migration strategy
 
@@ -110,6 +132,8 @@ See [`MIGRATION.md`](./MIGRATION.md).
 Config {
     admin: Addr,
     operators: Vec<Addr>,
+    recovery_council: Vec<Addr>,
+    ecosystem_factory: Option<Addr>,
     paused: bool,
 }
 
@@ -117,7 +141,7 @@ Ecosystem {
     id: String,
     name: String,
     admin: Addr,
-    detail: String,
+    description: String,
     image_urls: Vec<String>,
     animation_url: Option<String>,
     url: Option<String>,

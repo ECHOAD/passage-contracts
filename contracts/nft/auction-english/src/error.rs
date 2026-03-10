@@ -19,6 +19,9 @@ pub enum ContractError {
     #[error("Collection not registered: {collection}")]
     CollectionNotRegistered { collection: String },
 
+    #[error("Trading is disabled for collection: {collection}")]
+    CollectionTradingDisabled { collection: String },
+
     #[error("Trading fee exceeds maximum: {fee_bps} > {max_bps}")]
     TradingFeeExceedsMax { fee_bps: u64, max_bps: u64 },
 

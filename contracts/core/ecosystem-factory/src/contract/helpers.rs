@@ -11,7 +11,7 @@ pub(super) fn is_admin_or_operator(config: &Config, addr: &Addr) -> bool {
 pub(super) fn validate_request_input(
     id: &str,
     name: &str,
-    detail: &str,
+    description: &str,
     image_urls: &[String],
 ) -> Result<(), ContractError> {
     if id.trim().is_empty() {
@@ -20,8 +20,8 @@ pub(super) fn validate_request_input(
     if name.trim().is_empty() {
         return Err(ContractError::EmptyEcosystemName {});
     }
-    if detail.trim().is_empty() {
-        return Err(ContractError::EmptyEcosystemDetail {});
+    if description.trim().is_empty() {
+        return Err(ContractError::EmptyEcosystemDescription {});
     }
     if image_urls.is_empty() || image_urls.iter().any(|img| img.trim().is_empty()) {
         return Err(ContractError::EmptyImages {});

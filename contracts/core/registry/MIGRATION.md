@@ -5,18 +5,16 @@
 ## Upgrade Steps
 
 1. Deploy a new registry instance.
-2. Approve ecosystem creators (if non-admin teams will register ecosystems) with `ApproveEcosystemCreator`.
-3. Recreate ecosystems with `RegisterEcosystem` using required metadata:
-   - `name`
-   - `detail`
-   - `image_urls` (at least one image URL)
-4. Approve ecosystem team members with `ApproveEcosystemMember` when they must register collections.
-5. Backfill existing collections with `RegisterExistingCollection` (now requires `ecosystem_id`).
-6. Re-link runtime metadata per collection with `UpdateCollection`:
+2. Deploy a new `ecosystem-factory` pointing at the new registry with the correct `collection_factory_code_id` and `collection_code_id`.
+3. Wire the new factory into the registry with `UpdateConfig { ecosystem_factory }`.
+4. Recreate ecosystems by approving requests in `ecosystem-factory`, which will deploy a dedicated `collection-factory` and call `RegisterEcosystemFromFactory`.
+5. Approve ecosystem team members with `ApproveEcosystemMember` when they must register collections.
+6. Backfill existing collections with `RegisterExistingCollection` (now requires `ecosystem_id`).
+7. Re-link runtime metadata per collection with `UpdateCollection`:
    - `minter`
    - `marketplace`
-7. Re-apply minter permissions with `AuthorizeMinter`.
-8. Switch indexer/backend read path to new registry.
+8. Re-apply minter permissions with `AuthorizeMinter`.
+9. Switch indexer/backend read path to new registry.
 
 ## Verification Queries
 

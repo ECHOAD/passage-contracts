@@ -22,47 +22,99 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             admin,
             operators,
+            recovery_council,
             ecosystem_factory,
             paused,
-        } => execute_update_config(deps, info, admin, operators, ecosystem_factory, paused),
-        ExecuteMsg::ApproveEcosystemCreator { creator } => {
-            execute_approve_ecosystem_creator(deps, info, creator)
-        }
-        ExecuteMsg::RevokeEcosystemCreator { creator } => {
-            execute_revoke_ecosystem_creator(deps, info, creator)
-        }
-
-        // Ecosystem operations
-        ExecuteMsg::RegisterEcosystem {
-            id,
-            name,
-            ecosystem_type,
-            collection_creation_policy,
-            collection_factory,
-            detail,
-            image_urls,
-            animation_url,
-            url,
-        } => execute_register_ecosystem(
+        } => execute_update_config(
             deps,
             env,
             info,
-            id,
-            name,
-            ecosystem_type,
-            collection_creation_policy,
-            collection_factory,
-            detail,
-            image_urls,
-            animation_url,
-            url,
+            admin,
+            operators,
+            recovery_council,
+            ecosystem_factory,
+            paused,
         ),
+        ExecuteMsg::UpdateCreatorModeration {
+            creator,
+            ecosystem_creation_enabled,
+            collection_creation_enabled,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        } => execute_update_creator_moderation(
+            deps,
+            env,
+            info,
+            creator,
+            ecosystem_creation_enabled,
+            collection_creation_enabled,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        ),
+        ExecuteMsg::UpdateEcosystemModeration {
+            ecosystem_id,
+            collection_creation_enabled,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        } => execute_update_ecosystem_moderation(
+            deps,
+            env,
+            info,
+            ecosystem_id,
+            collection_creation_enabled,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        ),
+        ExecuteMsg::UpdateCollectionModeration {
+            address,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        } => execute_update_collection_moderation(
+            deps,
+            env,
+            info,
+            address,
+            mint_enabled,
+            trade_enabled,
+            reason,
+        ),
+        ExecuteMsg::SetEcosystemRecoveryPolicy {
+            ecosystem_id,
+            delegate,
+            designated_successor,
+        } => execute_set_ecosystem_recovery_policy(
+            deps,
+            env,
+            info,
+            ecosystem_id,
+            delegate,
+            designated_successor,
+        ),
+        ExecuteMsg::SetCollectionRecoveryPolicy {
+            address,
+            delegate,
+            designated_successor,
+        } => execute_set_collection_recovery_policy(
+            deps,
+            env,
+            info,
+            address,
+            delegate,
+            designated_successor,
+        ),
+
+        // Ecosystem operations
         ExecuteMsg::RegisterEcosystemFromFactory {
             id,
             name,
             creator,
             collection_factory,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
@@ -74,46 +126,15 @@ pub fn execute(
             name,
             creator,
             collection_factory,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
         ),
-        ExecuteMsg::SubmitEcosystemCreationRequest {
-            id,
-            name,
-            ecosystem_type,
-            collection_creation_policy,
-            collection_factory,
-            detail,
-            image_urls,
-            animation_url,
-            url,
-        } => execute_submit_ecosystem_creation_request(
-            deps,
-            env,
-            info,
-            id,
-            name,
-            ecosystem_type,
-            collection_creation_policy,
-            collection_factory,
-            detail,
-            image_urls,
-            animation_url,
-            url,
-        ),
-        ExecuteMsg::ResolveEcosystemCreationRequest {
-            request_id,
-            approved,
-            note,
-        } => {
-            execute_resolve_ecosystem_creation_request(deps, env, info, request_id, approved, note)
-        }
         ExecuteMsg::UpdateEcosystem {
             id,
             name,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
@@ -127,7 +148,7 @@ pub fn execute(
             info,
             id,
             name,
-            detail,
+            description,
             image_urls,
             animation_url,
             url,
@@ -227,43 +248,50 @@ pub fn execute(
             minter_address,
         } => execute_revoke_minter(deps, info, collection_address, minter_address),
 
-        // Dead project recovery governance
+        // Ownership recovery governance
         ExecuteMsg::UpdateRecoveryConfig {
-            inactivity_period_secs,
+            abandonment_inactivity_period_secs,
             contest_period_secs,
-        } => {
-            execute_update_recovery_config(deps, info, inactivity_period_secs, contest_period_secs)
-        }
-        ExecuteMsg::OpenDeadProjectCase {
+        } => execute_update_recovery_config(
+            deps,
+            info,
+            abandonment_inactivity_period_secs,
+            contest_period_secs,
+        ),
+        ExecuteMsg::OpenRecoveryCase {
+            case_kind,
             target,
             reason,
             evidence_url,
             proposed_replacement,
-        } => execute_open_dead_project_case(
+        } => execute_open_recovery_case(
             deps,
             env,
             info,
+            case_kind,
             target,
             reason,
             evidence_url,
             proposed_replacement,
         ),
-        ExecuteMsg::ContestDeadProjectCase { case_id, note } => {
-            execute_contest_dead_project_case(deps, env, info, case_id, note)
+        ExecuteMsg::ContestRecoveryCase { case_id, note } => {
+            execute_contest_recovery_case(deps, env, info, case_id, note)
         }
-        ExecuteMsg::ResolveDeadProjectCase {
+        ExecuteMsg::ResolveRecoveryCase {
             case_id,
             approved,
             note,
-        } => execute_resolve_dead_project_case(deps, env, info, case_id, approved, note),
+        } => execute_resolve_recovery_case(deps, env, info, case_id, approved, note),
     }
 }
 
 fn execute_update_config(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     admin: Option<String>,
     operators: Option<Vec<String>>,
+    recovery_council: Option<Vec<String>>,
     ecosystem_factory: Option<String>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
@@ -282,6 +310,19 @@ fn execute_update_config(
             .iter()
             .map(|o| deps.api.addr_validate(o))
             .collect::<StdResult<Vec<Addr>>>()?;
+        for operator in &config.operators {
+            touch_creator_activity(deps.storage, operator, env.block.time.seconds())?;
+        }
+    }
+
+    if let Some(new_recovery_council) = recovery_council {
+        config.recovery_council = new_recovery_council
+            .iter()
+            .map(|o| deps.api.addr_validate(o))
+            .collect::<StdResult<Vec<Addr>>>()?;
+        for member in &config.recovery_council {
+            touch_creator_activity(deps.storage, member, env.block.time.seconds())?;
+        }
     }
 
     if let Some(new_factory) = ecosystem_factory {
@@ -295,121 +336,262 @@ fn execute_update_config(
         config.paused = new_paused;
     }
 
+    touch_creator_activity(deps.storage, &config.admin, env.block.time.seconds())?;
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-fn execute_approve_ecosystem_creator(
-    deps: DepsMut,
-    info: MessageInfo,
-    creator: String,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if !is_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let creator_addr = deps.api.addr_validate(&creator)?;
-    APPROVED_ECOSYSTEM_CREATORS.save(deps.storage, creator_addr.clone(), &true)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "approve_ecosystem_creator")
-        .add_attribute("creator", creator_addr))
-}
-
-fn execute_revoke_ecosystem_creator(
-    deps: DepsMut,
-    info: MessageInfo,
-    creator: String,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if !is_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let creator_addr = deps.api.addr_validate(&creator)?;
-    APPROVED_ECOSYSTEM_CREATORS.remove(deps.storage, creator_addr.clone());
-
-    Ok(Response::new()
-        .add_attribute("action", "revoke_ecosystem_creator")
-        .add_attribute("creator", creator_addr))
-}
-
-fn execute_register_ecosystem(
+#[allow(clippy::too_many_arguments)]
+fn execute_update_creator_moderation(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: String,
-    name: String,
-    ecosystem_type: Option<EcosystemType>,
-    collection_creation_policy: Option<CollectionCreationPolicy>,
-    collection_factory: Option<String>,
-    detail: String,
-    image_urls: Vec<String>,
-    animation_url: Option<String>,
-    url: Option<String>,
+    creator: String,
+    ecosystem_creation_enabled: Option<bool>,
+    collection_creation_enabled: Option<bool>,
+    mint_enabled: Option<bool>,
+    trade_enabled: Option<bool>,
+    reason: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-
-    // Direct registration is reserved for cross-ecosystem admins.
-    // Non-admin creators must use the ecosystem creation request flow.
-    if !is_cross_ecosystem_admin(&config, &info.sender) {
+    if !is_admin_or_operator(&config, &info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
-    validate_id(&id)?;
-    if name.is_empty() {
-        return Err(ContractError::EmptyName {});
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let mut moderation = creator_moderation(deps.storage, &creator_addr)?;
+    if let Some(value) = ecosystem_creation_enabled {
+        moderation.ecosystem_creation_enabled = value;
     }
-    if detail.is_empty() {
-        return Err(ContractError::EmptyDescription {});
+    if let Some(value) = collection_creation_enabled {
+        moderation.collection_creation_enabled = value;
     }
-    if image_urls.is_empty() || image_urls.iter().any(|img| img.is_empty()) {
-        return Err(ContractError::EmptyImages {});
+    if let Some(value) = mint_enabled {
+        moderation.mint_enabled = value;
     }
-
-    // Check if ecosystem already exists
-    if ECOSYSTEMS.has(deps.storage, id.clone()) {
-        return Err(ContractError::EcosystemAlreadyExists { id });
+    if let Some(value) = trade_enabled {
+        moderation.trade_enabled = value;
     }
+    moderation.reason = normalize_reason(reason);
+    moderation.moderated_by = Some(info.sender.clone());
+    moderation.moderated_at = Some(env.block.time.seconds());
 
-    let ecosystem_type = ecosystem_type.unwrap_or_default();
-    let collection_creation_policy = collection_creation_policy
-        .unwrap_or_else(|| CollectionCreationPolicy::default_for_type(&ecosystem_type));
-    validate_ecosystem_policy(&ecosystem_type, &collection_creation_policy)?;
-    let collection_factory = collection_factory
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
-
-    let ecosystem = Ecosystem {
-        id: id.clone(),
-        name,
-        admin: info.sender.clone(),
-        ecosystem_type,
-        collection_creation_policy,
-        collection_factory,
-        detail,
-        image_urls,
-        animation_url,
-        url,
-        created_at: env.block.time.seconds(),
-        updated_at: env.block.time.seconds(),
-    };
-
-    ECOSYSTEMS.save(deps.storage, id.clone(), &ecosystem)?;
-    ECOSYSTEM_MEMBERS.save(deps.storage, (id.clone(), info.sender.clone()), &true)?;
-
-    let count = ECOSYSTEM_COUNT.load(deps.storage)?;
-    ECOSYSTEM_COUNT.save(deps.storage, &(count + 1))?;
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+    CREATOR_MODERATION.save(deps.storage, creator_addr.clone(), &moderation)?;
 
     Ok(Response::new()
-        .add_attribute("action", "register_ecosystem")
-        .add_attribute("ecosystem_id", id)
-        .add_attribute("admin", info.sender))
+        .add_attribute("action", "update_creator_moderation")
+        .add_attribute("creator", creator_addr)
+        .add_attribute(
+            "ecosystem_creation_enabled",
+            moderation.ecosystem_creation_enabled.to_string(),
+        )
+        .add_attribute(
+            "collection_creation_enabled",
+            moderation.collection_creation_enabled.to_string(),
+        )
+        .add_attribute("mint_enabled", moderation.mint_enabled.to_string())
+        .add_attribute("trade_enabled", moderation.trade_enabled.to_string()))
+}
+
+fn execute_update_ecosystem_moderation(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    ecosystem_id: String,
+    collection_creation_enabled: Option<bool>,
+    mint_enabled: Option<bool>,
+    trade_enabled: Option<bool>,
+    reason: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if !is_admin_or_operator(&config, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if !ECOSYSTEMS.has(deps.storage, ecosystem_id.clone()) {
+        return Err(ContractError::EcosystemNotFound { id: ecosystem_id });
+    }
+
+    let mut moderation = ecosystem_moderation(deps.storage, &ecosystem_id)?;
+    if let Some(value) = collection_creation_enabled {
+        moderation.collection_creation_enabled = value;
+    }
+    if let Some(value) = mint_enabled {
+        moderation.mint_enabled = value;
+    }
+    if let Some(value) = trade_enabled {
+        moderation.trade_enabled = value;
+    }
+    moderation.reason = normalize_reason(reason);
+    moderation.moderated_by = Some(info.sender.clone());
+    moderation.moderated_at = Some(env.block.time.seconds());
+
+    ECOSYSTEM_MODERATION.save(deps.storage, ecosystem_id.clone(), &moderation)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_ecosystem_moderation")
+        .add_attribute("ecosystem_id", ecosystem_id)
+        .add_attribute(
+            "collection_creation_enabled",
+            moderation.collection_creation_enabled.to_string(),
+        )
+        .add_attribute("mint_enabled", moderation.mint_enabled.to_string())
+        .add_attribute("trade_enabled", moderation.trade_enabled.to_string()))
+}
+
+fn execute_update_collection_moderation(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+    mint_enabled: Option<bool>,
+    trade_enabled: Option<bool>,
+    reason: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if !is_admin_or_operator(&config, &info.sender) {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let collection_addr = deps.api.addr_validate(&address)?;
+    if !collections().has(deps.storage, collection_addr.clone()) {
+        return Err(ContractError::CollectionNotFound { address });
+    }
+
+    let mut moderation = collection_moderation(deps.storage, &collection_addr)?;
+    if let Some(value) = mint_enabled {
+        moderation.mint_enabled = value;
+    }
+    if let Some(value) = trade_enabled {
+        moderation.trade_enabled = value;
+    }
+    moderation.reason = normalize_reason(reason);
+    moderation.moderated_by = Some(info.sender.clone());
+    moderation.moderated_at = Some(env.block.time.seconds());
+
+    COLLECTION_MODERATION.save(deps.storage, collection_addr.clone(), &moderation)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_collection_moderation")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("mint_enabled", moderation.mint_enabled.to_string())
+        .add_attribute("trade_enabled", moderation.trade_enabled.to_string()))
+}
+
+fn execute_set_ecosystem_recovery_policy(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    ecosystem_id: String,
+    delegate: Option<String>,
+    designated_successor: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let ecosystem = ECOSYSTEMS
+        .load(deps.storage, ecosystem_id.clone())
+        .map_err(|_| ContractError::EcosystemNotFound {
+            id: ecosystem_id.clone(),
+        })?;
+
+    if !can_manage_ecosystem(&config, &ecosystem, &info.sender) {
+        if is_cross_ecosystem_admin(&config, &info.sender)
+            && is_owner_controlled_ecosystem(&config, &ecosystem)
+        {
+            return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
+        }
+        return Err(ContractError::NotEcosystemAdmin {});
+    }
+
+    let policy = RecoveryPolicy {
+        delegate: delegate
+            .as_ref()
+            .map(|addr| deps.api.addr_validate(addr))
+            .transpose()?,
+        designated_successor: designated_successor
+            .as_ref()
+            .map(|addr| deps.api.addr_validate(addr))
+            .transpose()?,
+        updated_by: Some(info.sender.clone()),
+        updated_at: Some(env.block.time.seconds()),
+    };
+
+    ECOSYSTEM_RECOVERY_POLICIES.save(deps.storage, ecosystem_id.clone(), &policy)?;
+    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+
+    let delegate_attr = policy
+        .delegate
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "none".to_string());
+    let successor_attr = policy
+        .designated_successor
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "none".to_string());
+
+    Ok(Response::new()
+        .add_attribute("action", "set_ecosystem_recovery_policy")
+        .add_attribute("ecosystem_id", ecosystem_id)
+        .add_attribute("delegate", delegate_attr)
+        .add_attribute("designated_successor", successor_attr))
+}
+
+fn execute_set_collection_recovery_policy(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+    delegate: Option<String>,
+    designated_successor: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let collection_addr = deps.api.addr_validate(&address)?;
+    let collection = collections()
+        .load(deps.storage, collection_addr.clone())
+        .map_err(|_| ContractError::CollectionNotFound {
+            address: address.clone(),
+        })?;
+
+    if !can_manage_collection(deps.storage, &config, &collection, &info.sender)? {
+        if is_cross_ecosystem_admin(&config, &info.sender) {
+            return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
+        }
+        return Err(ContractError::NotCollectionCreator {});
+    }
+
+    let policy = RecoveryPolicy {
+        delegate: delegate
+            .as_ref()
+            .map(|addr| deps.api.addr_validate(addr))
+            .transpose()?,
+        designated_successor: designated_successor
+            .as_ref()
+            .map(|addr| deps.api.addr_validate(addr))
+            .transpose()?,
+        updated_by: Some(info.sender.clone()),
+        updated_at: Some(env.block.time.seconds()),
+    };
+
+    COLLECTION_RECOVERY_POLICIES.save(deps.storage, collection_addr.clone(), &policy)?;
+    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+
+    let delegate_attr = policy
+        .delegate
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "none".to_string());
+    let successor_attr = policy
+        .designated_successor
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "none".to_string());
+
+    Ok(Response::new()
+        .add_attribute("action", "set_collection_recovery_policy")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("delegate", delegate_attr)
+        .add_attribute("designated_successor", successor_attr))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -421,7 +603,7 @@ fn execute_register_ecosystem_from_factory(
     name: String,
     creator: String,
     collection_factory: String,
-    detail: String,
+    description: String,
     image_urls: Vec<String>,
     animation_url: Option<String>,
     url: Option<String>,
@@ -440,7 +622,7 @@ fn execute_register_ecosystem_from_factory(
     if name.trim().is_empty() {
         return Err(ContractError::EmptyName {});
     }
-    if detail.trim().is_empty() {
+    if description.trim().is_empty() {
         return Err(ContractError::EmptyDescription {});
     }
     if image_urls.is_empty() || image_urls.iter().any(|img| img.trim().is_empty()) {
@@ -451,6 +633,9 @@ fn execute_register_ecosystem_from_factory(
     }
 
     let creator_addr = deps.api.addr_validate(&creator)?;
+    if !can_create_ecosystem(deps.storage, &creator_addr)? {
+        return Err(ContractError::CreatorCannotCreateEcosystem { creator });
+    }
     let collection_factory_addr = deps.api.addr_validate(&collection_factory)?;
 
     // All ecosystems from factory are Private with Permissioned policy
@@ -464,7 +649,7 @@ fn execute_register_ecosystem_from_factory(
         ecosystem_type,
         collection_creation_policy,
         collection_factory: Some(collection_factory_addr.clone()),
-        detail,
+        description,
         image_urls,
         animation_url,
         url,
@@ -488,170 +673,13 @@ fn execute_register_ecosystem_from_factory(
         .add_attribute("factory", info.sender))
 }
 
-#[allow(clippy::too_many_arguments)]
-fn execute_submit_ecosystem_creation_request(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    id: String,
-    name: String,
-    ecosystem_type: Option<EcosystemType>,
-    collection_creation_policy: Option<CollectionCreationPolicy>,
-    collection_factory: Option<String>,
-    detail: String,
-    image_urls: Vec<String>,
-    animation_url: Option<String>,
-    url: Option<String>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if config.ecosystem_factory.is_some() {
-        return Err(ContractError::EcosystemFactoryFlowRequired {});
-    }
-
-    if is_cross_ecosystem_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    validate_id(&id)?;
-    if name.trim().is_empty() {
-        return Err(ContractError::EmptyName {});
-    }
-    if detail.trim().is_empty() {
-        return Err(ContractError::EmptyDescription {});
-    }
-    if image_urls.is_empty() || image_urls.iter().any(|img| img.trim().is_empty()) {
-        return Err(ContractError::EmptyImages {});
-    }
-    if ECOSYSTEMS.has(deps.storage, id.clone()) {
-        return Err(ContractError::EcosystemAlreadyExists { id });
-    }
-    if PENDING_ECOSYSTEM_REQUEST_BY_ID.has(deps.storage, id.clone()) {
-        return Err(ContractError::EcosystemCreationRequestAlreadyPending { id });
-    }
-
-    let ecosystem_type = ecosystem_type.unwrap_or_default();
-    let collection_creation_policy = collection_creation_policy
-        .unwrap_or_else(|| CollectionCreationPolicy::default_for_type(&ecosystem_type));
-    validate_ecosystem_policy(&ecosystem_type, &collection_creation_policy)?;
-    let collection_factory = collection_factory
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
-
-    let request_id = NEXT_ECOSYSTEM_REQUEST_ID.load(deps.storage)?;
-    NEXT_ECOSYSTEM_REQUEST_ID.save(deps.storage, &(request_id + 1))?;
-
-    let request = EcosystemCreationRequest {
-        request_id,
-        creator: info.sender.clone(),
-        id: id.clone(),
-        name,
-        ecosystem_type,
-        collection_creation_policy,
-        collection_factory,
-        detail,
-        image_urls,
-        animation_url,
-        url,
-        status: EcosystemCreationRequestStatus::Pending,
-        submitted_at: env.block.time.seconds(),
-        reviewed_at: None,
-        reviewed_by: None,
-        review_note: None,
-    };
-
-    ECOSYSTEM_CREATION_REQUESTS.save(deps.storage, request_id, &request)?;
-    PENDING_ECOSYSTEM_REQUEST_BY_ID.save(deps.storage, id.clone(), &request_id)?;
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-
-    Ok(Response::new()
-        .add_attribute("action", "submit_ecosystem_creation_request")
-        .add_attribute("request_id", request_id.to_string())
-        .add_attribute("ecosystem_id", id)
-        .add_attribute("creator", info.sender))
-}
-
-fn execute_resolve_ecosystem_creation_request(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    request_id: u64,
-    approved: bool,
-    note: Option<String>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if !is_cross_ecosystem_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let mut request = ECOSYSTEM_CREATION_REQUESTS
-        .may_load(deps.storage, request_id)?
-        .ok_or(ContractError::EcosystemCreationRequestNotFound { request_id })?;
-
-    if request.status != EcosystemCreationRequestStatus::Pending {
-        return Err(ContractError::EcosystemCreationRequestAlreadyResolved { request_id });
-    }
-
-    if approved {
-        if ECOSYSTEMS.has(deps.storage, request.id.clone()) {
-            return Err(ContractError::EcosystemAlreadyExists { id: request.id });
-        }
-
-        let ecosystem = Ecosystem {
-            id: request.id.clone(),
-            name: request.name.clone(),
-            admin: request.creator.clone(),
-            ecosystem_type: request.ecosystem_type.clone(),
-            collection_creation_policy: request.collection_creation_policy.clone(),
-            collection_factory: request.collection_factory.clone(),
-            detail: request.detail.clone(),
-            image_urls: request.image_urls.clone(),
-            animation_url: request.animation_url.clone(),
-            url: request.url.clone(),
-            created_at: env.block.time.seconds(),
-            updated_at: env.block.time.seconds(),
-        };
-
-        ECOSYSTEMS.save(deps.storage, request.id.clone(), &ecosystem)?;
-        ECOSYSTEM_MEMBERS.save(
-            deps.storage,
-            (request.id.clone(), request.creator.clone()),
-            &true,
-        )?;
-
-        let count = ECOSYSTEM_COUNT.load(deps.storage)?;
-        ECOSYSTEM_COUNT.save(deps.storage, &(count + 1))?;
-        touch_creator_activity(deps.storage, &request.creator, env.block.time.seconds())?;
-    }
-
-    request.status = if approved {
-        EcosystemCreationRequestStatus::Approved
-    } else {
-        EcosystemCreationRequestStatus::Rejected
-    };
-    request.reviewed_at = Some(env.block.time.seconds());
-    request.reviewed_by = Some(info.sender.clone());
-    request.review_note = note;
-
-    ECOSYSTEM_CREATION_REQUESTS.save(deps.storage, request_id, &request)?;
-    PENDING_ECOSYSTEM_REQUEST_BY_ID.remove(deps.storage, request.id.clone());
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-
-    Ok(Response::new()
-        .add_attribute("action", "resolve_ecosystem_creation_request")
-        .add_attribute("request_id", request_id.to_string())
-        .add_attribute("ecosystem_id", request.id)
-        .add_attribute("creator", request.creator)
-        .add_attribute("approved", approved.to_string()))
-}
-
 fn execute_update_ecosystem(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     id: String,
     name: Option<String>,
-    detail: Option<String>,
+    description: Option<String>,
     image_urls: Option<Vec<String>>,
     animation_url: Option<String>,
     url: Option<String>,
@@ -681,11 +709,11 @@ fn execute_update_ecosystem(
         ecosystem.name = new_name;
     }
 
-    if let Some(new_detail) = detail {
-        if new_detail.is_empty() {
+    if let Some(new_description) = description {
+        if new_description.is_empty() {
             return Err(ContractError::EmptyDescription {});
         }
-        ecosystem.detail = new_detail;
+        ecosystem.description = new_description;
     }
 
     if let Some(new_image_urls) = image_urls {
@@ -822,6 +850,12 @@ fn execute_submit_collection_creation_request(
 
     if ecosystem.collection_creation_policy != CollectionCreationPolicy::ApprovalRequired {
         return Err(ContractError::CollectionCreationRequestNotAllowed { ecosystem_id });
+    }
+
+    if !creator_moderation(deps.storage, &info.sender)?.collection_creation_enabled
+        || !ecosystem_moderation(deps.storage, &ecosystem.id)?.collection_creation_enabled
+    {
+        return Err(ContractError::CollectionCreationDisabled { ecosystem_id });
     }
 
     if can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &info.sender) {
@@ -1010,10 +1044,13 @@ fn execute_register_collection_from_factory(
             id: ecosystem_id.clone(),
         })?;
 
-    let authorized_factory = ecosystem
-        .collection_factory
-        .clone()
-        .ok_or(ContractError::EcosystemFactoryNotConfigured {})?;
+    let authorized_factory =
+        ecosystem
+            .collection_factory
+            .clone()
+            .ok_or(ContractError::CollectionFactoryRequired {
+                ecosystem_id: ecosystem_id.clone(),
+            })?;
 
     if info.sender != authorized_factory {
         if !can_cross_admin_manage_ecosystem(&config, &ecosystem, &info.sender) {
@@ -1317,7 +1354,7 @@ fn execute_revoke_minter(
 fn execute_update_recovery_config(
     deps: DepsMut,
     info: MessageInfo,
-    inactivity_period_secs: Option<u64>,
+    abandonment_inactivity_period_secs: Option<u64>,
     contest_period_secs: Option<u64>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
@@ -1327,11 +1364,11 @@ fn execute_update_recovery_config(
 
     let mut recovery_config = RECOVERY_CONFIG.load(deps.storage)?;
 
-    if let Some(inactivity) = inactivity_period_secs {
+    if let Some(inactivity) = abandonment_inactivity_period_secs {
         if inactivity == 0 {
             return Err(ContractError::InvalidRecoveryConfig {});
         }
-        recovery_config.inactivity_period_secs = inactivity;
+        recovery_config.abandonment_inactivity_period_secs = inactivity;
     }
 
     if let Some(contest) = contest_period_secs {
@@ -1346,8 +1383,10 @@ fn execute_update_recovery_config(
     Ok(Response::new()
         .add_attribute("action", "update_recovery_config")
         .add_attribute(
-            "inactivity_period_secs",
-            recovery_config.inactivity_period_secs.to_string(),
+            "abandonment_inactivity_period_secs",
+            recovery_config
+                .abandonment_inactivity_period_secs
+                .to_string(),
         )
         .add_attribute(
             "contest_period_secs",
@@ -1355,10 +1394,11 @@ fn execute_update_recovery_config(
         ))
 }
 
-fn execute_open_dead_project_case(
+fn execute_open_recovery_case(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    case_kind: RecoveryCaseKind,
     target: RecoveryTargetInput,
     reason: String,
     evidence_url: Option<String>,
@@ -1371,9 +1411,12 @@ fn execute_open_dead_project_case(
     }
 
     let recovery_config = RECOVERY_CONFIG.load(deps.storage)?;
-    if recovery_config.inactivity_period_secs == 0 || recovery_config.contest_period_secs == 0 {
+    if recovery_config.abandonment_inactivity_period_secs == 0
+        || recovery_config.contest_period_secs == 0
+    {
         return Err(ContractError::InvalidRecoveryConfig {});
     }
+    let config = CONFIG.load(deps.storage)?;
 
     let target = match target {
         RecoveryTargetInput::Ecosystem { ecosystem_id } => {
@@ -1384,34 +1427,61 @@ fn execute_open_dead_project_case(
         },
     };
 
+    let target_key = recovery_target_key(&target);
     let (target_admin, last_activity_at) =
         resolve_target_admin_and_last_activity(deps.as_ref(), &target)?;
-    let inactive_until = last_activity_at + recovery_config.inactivity_period_secs;
-    let inactivity_threshold_met = now >= inactive_until;
-
     if has_open_case_for_target(deps.as_ref(), &target)? {
-        return Err(ContractError::DeadProjectCaseAlreadyOpen {
-            target: recovery_target_key(&target),
-        });
+        return Err(ContractError::RecoveryCaseAlreadyOpen { target: target_key });
     }
 
-    let proposed_replacement = proposed_replacement
+    let policy = recovery_policy_for_target(deps.storage, &target)?;
+    let replacement_candidate = proposed_replacement
         .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
+        .transpose()?
+        .or(policy.designated_successor.clone())
+        .ok_or(ContractError::RecoveryReplacementRequired {})?;
 
-    let case_id = DEAD_PROJECT_CASE_COUNT.load(deps.storage)? + 1;
-    DEAD_PROJECT_CASE_COUNT.save(deps.storage, &case_id)?;
+    match case_kind {
+        RecoveryCaseKind::Abandonment => {
+            let inactive_until =
+                last_activity_at + recovery_config.abandonment_inactivity_period_secs;
+            if now < inactive_until {
+                return Err(ContractError::RecoveryAbandonmentThresholdNotMet {
+                    target: recovery_target_key(&target),
+                });
+            }
+        }
+        RecoveryCaseKind::LostAccess => {
+            let is_policy_actor = policy.delegate.as_ref() == Some(&info.sender)
+                || policy.designated_successor.as_ref() == Some(&info.sender);
+            if policy.delegate.is_none()
+                && policy.designated_successor.is_none()
+                && !is_recovery_council(&config, &info.sender)
+            {
+                return Err(ContractError::LostAccessRecoveryNotConfigured {
+                    target: recovery_target_key(&target),
+                });
+            }
+            if !is_policy_actor && !is_recovery_council(&config, &info.sender) {
+                return Err(ContractError::Unauthorized {});
+            }
+        }
+    }
 
-    let case = DeadProjectCase {
+    let case_id = RECOVERY_CASE_COUNT.load(deps.storage)? + 1;
+    RECOVERY_CASE_COUNT.save(deps.storage, &case_id)?;
+
+    let case = RecoveryCase {
         case_id,
+        kind: case_kind.clone(),
         target: target.clone(),
         target_admin: target_admin.clone(),
-        reporter: info.sender.clone(),
+        opened_by: info.sender.clone(),
         reason,
         evidence_url,
-        proposed_replacement,
+        replacement_candidate: replacement_candidate.clone(),
         last_target_activity_at: last_activity_at,
-        status: DeadProjectStatus::Open,
+        status: RecoveryCaseStatus::Open,
         opened_at: now,
         contest_deadline: now + recovery_config.contest_period_secs,
         contested_at: None,
@@ -1423,24 +1493,28 @@ fn execute_open_dead_project_case(
         resolution_note: None,
     };
 
-    DEAD_PROJECT_CASES.save(deps.storage, case_id, &case)?;
+    RECOVERY_CASES.save(deps.storage, case_id, &case)?;
     touch_creator_activity(deps.storage, &info.sender, now)?;
 
-    Ok(Response::new()
-        .add_attribute("action", "open_dead_project_case")
+    let mut response = Response::new()
+        .add_attribute("action", "open_recovery_case")
         .add_attribute("case_id", case_id.to_string())
+        .add_attribute("case_kind", format!("{case_kind:?}"))
         .add_attribute("target", recovery_target_key(&target))
         .add_attribute("target_admin", target_admin)
         .add_attribute("last_target_activity_at", last_activity_at.to_string())
-        .add_attribute("inactive_until", inactive_until.to_string())
-        .add_attribute(
-            "inactivity_threshold_met",
-            inactivity_threshold_met.to_string(),
-        )
-        .add_attribute("contest_deadline", case.contest_deadline.to_string()))
+        .add_attribute("replacement_candidate", replacement_candidate)
+        .add_attribute("contest_deadline", case.contest_deadline.to_string());
+
+    if case_kind == RecoveryCaseKind::Abandonment {
+        let inactive_until = last_activity_at + recovery_config.abandonment_inactivity_period_secs;
+        response = response.add_attribute("inactive_until", inactive_until.to_string());
+    }
+
+    Ok(response)
 }
 
-fn execute_contest_dead_project_case(
+fn execute_contest_recovery_case(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -1448,32 +1522,32 @@ fn execute_contest_dead_project_case(
     note: Option<String>,
 ) -> Result<Response, ContractError> {
     let now = env.block.time.seconds();
-    let mut case = DEAD_PROJECT_CASES
+    let mut case = RECOVERY_CASES
         .may_load(deps.storage, case_id)?
-        .ok_or(ContractError::DeadProjectCaseNotFound { case_id })?;
+        .ok_or(ContractError::RecoveryCaseNotFound { case_id })?;
 
-    if case.status != DeadProjectStatus::Open || now > case.contest_deadline {
-        return Err(ContractError::DeadProjectCaseNotContestable { case_id });
+    if case.status != RecoveryCaseStatus::Open || now > case.contest_deadline {
+        return Err(ContractError::RecoveryCaseNotContestable { case_id });
     }
 
     if info.sender != case.target_admin {
-        return Err(ContractError::OnlyTargetAdminCanContest {});
+        return Err(ContractError::OnlyTargetAdminCanContestRecoveryCase {});
     }
 
-    case.status = DeadProjectStatus::Contested;
+    case.status = RecoveryCaseStatus::Contested;
     case.contested_at = Some(now);
     case.contested_by = Some(info.sender.clone());
     case.contest_note = note;
 
-    DEAD_PROJECT_CASES.save(deps.storage, case_id, &case)?;
+    RECOVERY_CASES.save(deps.storage, case_id, &case)?;
     touch_creator_activity(deps.storage, &info.sender, now)?;
 
     Ok(Response::new()
-        .add_attribute("action", "contest_dead_project_case")
+        .add_attribute("action", "contest_recovery_case")
         .add_attribute("case_id", case_id.to_string()))
 }
 
-fn execute_resolve_dead_project_case(
+fn execute_resolve_recovery_case(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -1482,20 +1556,23 @@ fn execute_resolve_dead_project_case(
     note: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    if !is_admin_or_operator(&config, &info.sender) {
+    if !is_recovery_council(&config, &info.sender) {
         return Err(ContractError::Unauthorized {});
     }
 
     let now = env.block.time.seconds();
-    let mut case = DEAD_PROJECT_CASES
+    let mut case = RECOVERY_CASES
         .may_load(deps.storage, case_id)?
-        .ok_or(ContractError::DeadProjectCaseNotFound { case_id })?;
+        .ok_or(ContractError::RecoveryCaseNotFound { case_id })?;
 
-    if case.status == DeadProjectStatus::Resolved {
-        return Err(ContractError::DeadProjectCaseAlreadyResolved { case_id });
+    if case.status == RecoveryCaseStatus::Resolved {
+        return Err(ContractError::RecoveryCaseAlreadyResolved { case_id });
+    }
+    if now <= case.contest_deadline {
+        return Err(ContractError::RecoveryCaseContestWindowOpen { case_id });
     }
 
-    case.status = DeadProjectStatus::Resolved;
+    case.status = RecoveryCaseStatus::Resolved;
     case.resolved_at = Some(now);
     case.resolved_by = Some(info.sender.clone());
     case.resolution_approved = Some(approved);
@@ -1503,10 +1580,7 @@ fn execute_resolve_dead_project_case(
 
     let mut replacement_attr = None;
     if approved {
-        let replacement = case
-            .proposed_replacement
-            .clone()
-            .ok_or(ContractError::RecoveryReplacementRequired {})?;
+        let replacement = case.replacement_candidate.clone();
 
         match &case.target {
             RecoveryTarget::Ecosystem { ecosystem_id } => {
@@ -1541,11 +1615,11 @@ fn execute_resolve_dead_project_case(
         replacement_attr = Some(replacement);
     }
 
-    DEAD_PROJECT_CASES.save(deps.storage, case_id, &case)?;
+    RECOVERY_CASES.save(deps.storage, case_id, &case)?;
     touch_creator_activity(deps.storage, &info.sender, now)?;
 
     let mut response = Response::new()
-        .add_attribute("action", "resolve_dead_project_case")
+        .add_attribute("action", "resolve_recovery_case")
         .add_attribute("case_id", case_id.to_string())
         .add_attribute("approved", approved.to_string());
 
@@ -1587,102 +1661,12 @@ fn resolve_target_admin_and_last_activity(
 }
 
 fn has_open_case_for_target(deps: Deps, target: &RecoveryTarget) -> StdResult<bool> {
-    let cases = DEAD_PROJECT_CASES.range(deps.storage, None, None, Order::Ascending);
+    let cases = RECOVERY_CASES.range(deps.storage, None, None, Order::Ascending);
     for item in cases {
         let (_, case) = item?;
-        if case.target == *target && case.status != DeadProjectStatus::Resolved {
+        if case.target == *target && case.status != RecoveryCaseStatus::Resolved {
             return Ok(true);
         }
     }
     Ok(false)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-
-    #[test]
-    fn approved_dead_project_case_transfers_collection_creator() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        CONFIG
-            .save(
-                deps.as_mut().storage,
-                &Config {
-                    admin: Addr::unchecked("admin"),
-                    operators: vec![],
-                    ecosystem_factory: Some(Addr::unchecked("factory")),
-                    paused: false,
-                },
-            )
-            .unwrap();
-
-        collections()
-            .save(
-                deps.as_mut().storage,
-                Addr::unchecked("collection"),
-                &Collection {
-                    address: Addr::unchecked("collection"),
-                    ecosystem_id: "eco".to_string(),
-                    name: "Collection".to_string(),
-                    creator: Addr::unchecked("old_creator"),
-                    verified: false,
-                    minter: None,
-                    marketplace: None,
-                    created_at: 1,
-                    updated_at: 1,
-                },
-            )
-            .unwrap();
-
-        DEAD_PROJECT_CASES
-            .save(
-                deps.as_mut().storage,
-                1,
-                &DeadProjectCase {
-                    case_id: 1,
-                    target: RecoveryTarget::Collection {
-                        address: Addr::unchecked("collection"),
-                    },
-                    target_admin: Addr::unchecked("old_creator"),
-                    reporter: Addr::unchecked("reporter"),
-                    reason: "inactive".to_string(),
-                    evidence_url: None,
-                    proposed_replacement: Some(Addr::unchecked("new_creator")),
-                    last_target_activity_at: 1,
-                    status: DeadProjectStatus::Open,
-                    opened_at: 1,
-                    contest_deadline: 100,
-                    contested_at: None,
-                    contested_by: None,
-                    contest_note: None,
-                    resolved_at: None,
-                    resolved_by: None,
-                    resolution_approved: None,
-                    resolution_note: None,
-                },
-            )
-            .unwrap();
-
-        let res = execute_resolve_dead_project_case(
-            deps.as_mut(),
-            env,
-            mock_info("admin", &[]),
-            1,
-            true,
-            None,
-        )
-        .unwrap();
-
-        let collection = collections()
-            .load(deps.as_ref().storage, Addr::unchecked("collection"))
-            .unwrap();
-        assert_eq!(collection.creator, Addr::unchecked("new_creator"));
-        assert!(res
-            .attributes
-            .iter()
-            .any(|attr| attr.key == "replacement" && attr.value == "new_creator"));
-    }
 }

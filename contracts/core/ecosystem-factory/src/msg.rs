@@ -25,7 +25,7 @@ pub enum ExecuteMsg {
     SubmitEcosystemCreationRequest {
         id: String,
         name: String,
-        detail: String,
+        description: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,
         url: Option<String>,
@@ -88,7 +88,7 @@ pub enum RegistryExecuteMsg {
         name: String,
         creator: String,
         collection_factory: String,
-        detail: String,
+        description: String,
         image_urls: Vec<String>,
         animation_url: Option<String>,
         url: Option<String>,
@@ -98,6 +98,7 @@ pub enum RegistryExecuteMsg {
 #[cw_serde]
 pub enum RegistryQueryMsg {
     IsCrossEcosystemAdmin { address: String },
+    CanCreateEcosystem { creator: String },
 }
 
 #[cw_serde]

@@ -8,20 +8,21 @@ pub(super) use cw_storage_plus::Bound;
 pub(super) use crate::error::ContractError;
 pub(super) use crate::msg::{
     ApprovalStatusResponse, AuthorizedMintersResponse, CollectionCreationRequestResponse,
-    CollectionCreationRequestsResponse, CollectionResponse, CollectionsResponse, ConfigResponse,
-    DeadProjectCaseResponse, DeadProjectCasesResponse, EcosystemCreationRequestResponse,
-    EcosystemCreationRequestsResponse, EcosystemResponse, EcosystemsResponse, ExecuteMsg,
-    InstantiateMsg, IsMinterAuthorizedResponse, IsVerifiedResponse, LastCreatorActivityResponse,
-    QueryMsg, RecoveryConfigResponse, RecoveryTargetInput,
+    CollectionCreationRequestsResponse, CollectionModerationResponse, CollectionResponse,
+    CollectionsResponse, ConfigResponse, CreatorModerationResponse, EcosystemModerationResponse,
+    EcosystemResponse, EcosystemsResponse, ExecuteMsg, InstantiateMsg, IsMinterAuthorizedResponse,
+    IsVerifiedResponse, LastCreatorActivityResponse, QueryMsg, RecoveryCaseResponse,
+    RecoveryCasesResponse, RecoveryConfigResponse, RecoveryPolicyResponse, RecoveryTargetInput,
 };
 pub(super) use crate::state::{
     collections, AuthorizedMinter, Collection, CollectionCreationPolicy, CollectionCreationRequest,
-    CollectionCreationRequestStatus, Config, DeadProjectCase, DeadProjectStatus, Ecosystem,
-    EcosystemCreationRequest, EcosystemCreationRequestStatus, EcosystemType, RecoveryConfig,
-    RecoveryTarget, APPROVED_ECOSYSTEM_CREATORS, AUTHORIZED_MINTERS, COLLECTION_CREATION_REQUESTS,
-    CONFIG, DEAD_PROJECT_CASES, DEAD_PROJECT_CASE_COUNT, ECOSYSTEMS, ECOSYSTEM_COUNT,
-    ECOSYSTEM_CREATION_REQUESTS, ECOSYSTEM_MEMBERS, LAST_CREATOR_ACTIVITY,
-    NEXT_ECOSYSTEM_REQUEST_ID, PENDING_ECOSYSTEM_REQUEST_BY_ID, RECOVERY_CONFIG,
+    CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
+    EcosystemModeration, EcosystemType, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
+    RecoveryConfig, RecoveryPolicy, RecoveryTarget, AUTHORIZED_MINTERS,
+    COLLECTION_CREATION_REQUESTS, COLLECTION_MODERATION, COLLECTION_RECOVERY_POLICIES, CONFIG,
+    CREATOR_MODERATION, ECOSYSTEMS, ECOSYSTEM_COUNT, ECOSYSTEM_MEMBERS, ECOSYSTEM_MODERATION,
+    ECOSYSTEM_RECOVERY_POLICIES, LAST_CREATOR_ACTIVITY, RECOVERY_CASES, RECOVERY_CASE_COUNT,
+    RECOVERY_CONFIG,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-registry";
