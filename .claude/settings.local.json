@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b \"D:\\\\Projects\\\\Nodefleet\\\\Passage\\\\contracts test\\\\passage contracts\")",
+      "Bash(mkdir:*)",
+      "Bash(cargo check:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(dir /s /b \"D:\\\\Projects\\\\Nodefleet\\\\Passage\\\\contracts test\\\\passage contracts\\\\passage-contracts\\\\contracts\")",
+      "Bash(findstr:*)"
+    ]
+  }
+}
