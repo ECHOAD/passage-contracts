@@ -1,4 +1,8 @@
+use super::helpers::{
+    get_active_whitelist_config, get_public_mint_price, validate_registry_requirements,
+};
 use super::*;
+use cosmwasm_std::StdError;
 
 // ========== Query ==========
 
@@ -39,15 +43,8 @@ fn query_start_time(deps: Deps) -> StdResult<StartTimeResponse> {
 
 fn query_mint_price(deps: Deps, _env: Env) -> StdResult<MintPriceResponse> {
     let config = CONFIG.load(deps.storage)?;
-
-    // TODO: Query whitelist for whitelist price if active
-    let whitelist_price = None;
-
-    Ok(MintPriceResponse {
-        public_price: config.unit_price.clone(),
-        whitelist_price,
-        current_price: config.unit_price,
-    })
+    get_public_mint_price(deps, &_env, &config)
+        .map_err(|err| cosmwasm_std::StdError::generic_err(err.to_string()))
 }
 
 fn query_mint_count(deps: Deps, address: String) -> StdResult<MintCountResponse> {
@@ -67,10 +64,18 @@ fn query_can_mint(deps: Deps, env: Env, address: String) -> StdResult<CanMintRes
         });
     }
 
-    if env.block.time < config.start_time {
+    if let Err(err) = validate_registry_requirements(deps, &config, &env.contract.address) {
         return Ok(CanMintResponse {
             can_mint: false,
-            reason: Some("Minting has not started".to_string()),
+            reason: Some(match err {
+                ContractError::CollectionNotRegistered {} => {
+                    "Collection is not registered in registry".to_string()
+                }
+                ContractError::MinterNotAuthorized {} => {
+                    "Minter is not authorized in registry".to_string()
+                }
+                _ => "Registry validation failed".to_string(),
+            }),
         });
     }
 
@@ -82,12 +87,51 @@ fn query_can_mint(deps: Deps, env: Env, address: String) -> StdResult<CanMintRes
         });
     }
 
-    let count = MINTER_ADDRS.may_load(deps.storage, &addr)?.unwrap_or(0);
-    if count >= config.per_address_limit {
-        return Ok(CanMintResponse {
-            can_mint: false,
-            reason: Some("Address has reached mint limit".to_string()),
-        });
+    let whitelist_config = get_active_whitelist_config(deps, &config)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    if let Some(wl_config) = whitelist_config {
+        let member: HasMemberResponse = deps.querier.query_wasm_smart(
+            config
+                .whitelist
+                .clone()
+                .expect("active whitelist must exist")
+                .to_string(),
+            &WhitelistQueryMsg::HasMember {
+                member: addr.to_string(),
+            },
+        )?;
+
+        if !member.has_member {
+            return Ok(CanMintResponse {
+                can_mint: false,
+                reason: Some(
+                    "Whitelist minting is active but address is not whitelisted".to_string(),
+                ),
+            });
+        }
+
+        let count = MINTER_ADDRS.may_load(deps.storage, &addr)?.unwrap_or(0);
+        if count >= wl_config.per_address_limit {
+            return Ok(CanMintResponse {
+                can_mint: false,
+                reason: Some("Address has reached mint limit".to_string()),
+            });
+        }
+    } else {
+        if env.block.time < config.start_time {
+            return Ok(CanMintResponse {
+                can_mint: false,
+                reason: Some("Minting has not started".to_string()),
+            });
+        }
+
+        let count = MINTER_ADDRS.may_load(deps.storage, &addr)?.unwrap_or(0);
+        if count >= config.per_address_limit {
+            return Ok(CanMintResponse {
+                can_mint: false,
+                reason: Some("Address has reached mint limit".to_string()),
+            });
+        }
     }
 
     Ok(CanMintResponse {
@@ -111,7 +155,25 @@ fn query_is_minting_active(deps: Deps, env: Env) -> StdResult<IsMintingActiveRes
         });
     }
 
-    if env.block.time < config.start_time {
+    if let Err(err) = validate_registry_requirements(deps, &config, &env.contract.address) {
+        return Ok(IsMintingActiveResponse {
+            is_active: false,
+            reason: Some(match err {
+                ContractError::CollectionNotRegistered {} => {
+                    "Collection is not registered in registry".to_string()
+                }
+                ContractError::MinterNotAuthorized {} => {
+                    "Minter is not authorized in registry".to_string()
+                }
+                _ => "Registry validation failed".to_string(),
+            }),
+        });
+    }
+
+    let whitelist_active = get_active_whitelist_config(deps, &config)
+        .map_err(|err| StdError::generic_err(err.to_string()))?
+        .is_some();
+    if !whitelist_active && env.block.time < config.start_time {
         return Ok(IsMintingActiveResponse {
             is_active: false,
             reason: Some("Minting has not started".to_string()),

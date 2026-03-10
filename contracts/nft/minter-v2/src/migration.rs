@@ -1,7 +1,7 @@
 //! Migration module for minter v1 to minter-v2
 //!
 //! This module handles the state migration from the legacy minter
-//! to minter-v2 with Revenue Router support.
+//! to minter-v2 with Split Router support.
 
 use std::collections::BTreeSet;
 
@@ -66,20 +66,20 @@ pub fn migrate_state(
     storage: &mut dyn Storage,
     source_contract: &str,
     registry: Option<Addr>,
-    revenue_router: Option<Addr>,
-    use_revenue_router: bool,
+    split_router: Option<Addr>,
+    use_split_router: bool,
     base_token_uri: Option<String>,
 ) -> StdResult<MigrationResult> {
     if source_contract.contains("passage-minter-metadata-onchain") {
         migrate_from_metadata_onchain(
             storage,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             base_token_uri,
         )
     } else if source_contract.ends_with("passage-minter") {
-        migrate_from_minter_v1(storage, registry, revenue_router, use_revenue_router)
+        migrate_from_minter_v1(storage, registry, split_router, use_split_router)
     } else {
         Err(StdError::generic_err(format!(
             "unsupported migration source contract: {source_contract}"
@@ -90,8 +90,8 @@ pub fn migrate_state(
 fn migrate_from_minter_v1(
     storage: &mut dyn Storage,
     registry: Option<Addr>,
-    revenue_router: Option<Addr>,
-    use_revenue_router: bool,
+    split_router: Option<Addr>,
+    use_split_router: bool,
 ) -> StdResult<MigrationResult> {
     let config_v1 = CONFIG_V1.load(storage)?;
     let cw721_address = CW721_ADDRESS_V1.load(storage)?;
@@ -107,8 +107,8 @@ fn migrate_from_minter_v1(
         start_time: config_v1.start_time,
         whitelist: config_v1.whitelist,
         registry,
-        revenue_router: revenue_router.clone(),
-        use_revenue_router,
+        split_router: split_router.clone(),
+        use_split_router,
         metadata_mode: MetadataMode::OffChain,
         native_asset_template: vec![],
         paused: false,
@@ -152,15 +152,15 @@ fn migrate_from_minter_v1(
         tokens_migrated: config_v2.num_tokens,
         mintable_remaining,
         unique_minters,
-        revenue_router_enabled: use_revenue_router,
+        split_router_enabled: use_split_router,
     })
 }
 
 fn migrate_from_metadata_onchain(
     storage: &mut dyn Storage,
     registry: Option<Addr>,
-    revenue_router: Option<Addr>,
-    use_revenue_router: bool,
+    split_router: Option<Addr>,
+    use_split_router: bool,
     base_token_uri: Option<String>,
 ) -> StdResult<MigrationResult> {
     let config_v1 = CONFIG_METADATA_ONCHAIN_V1.load(storage)?;
@@ -182,8 +182,8 @@ fn migrate_from_metadata_onchain(
         start_time: config_v1.start_time,
         whitelist: config_v1.whitelist,
         registry,
-        revenue_router: revenue_router.clone(),
-        use_revenue_router,
+        split_router: split_router.clone(),
+        use_split_router,
         metadata_mode: MetadataMode::OffChain,
         native_asset_template: vec![],
         paused: false,
@@ -228,7 +228,7 @@ fn migrate_from_metadata_onchain(
         tokens_migrated: config_v2.num_tokens,
         mintable_remaining,
         unique_minters,
-        revenue_router_enabled: use_revenue_router,
+        split_router_enabled: use_split_router,
     })
 }
 
@@ -238,5 +238,5 @@ pub struct MigrationResult {
     pub tokens_migrated: u32,
     pub mintable_remaining: u32,
     pub unique_minters: u32,
-    pub revenue_router_enabled: bool,
+    pub split_router_enabled: bool,
 }

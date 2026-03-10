@@ -32,5 +32,3 @@ thiserror = { version = "1.0" }
 cosmwasm-schema = { version = "1.0.0-beta3" }
 cw-multi-test = "0.13"
 
-[profile.release]
-overflow-checks = true

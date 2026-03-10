@@ -92,8 +92,8 @@ pub enum ContractError {
     #[error("No collection bid units remaining")]
     NoCollectionBidUnits {},
 
-    #[error("Revenue Router not configured")]
-    RevenueRouterNotConfigured {},
+    #[error("Split Router not configured")]
+    SplitRouterNotConfigured {},
 
     #[error("Failed to query NFT ownership")]
     NftQueryFailed {},

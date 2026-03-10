@@ -9,10 +9,6 @@ use cosmwasm_std::{Addr, Decimal, Uint128};
 pub struct InstantiateMsg {
     /// Admin address
     pub admin: Option<String>,
-    /// Platform fee collector address
-    pub platform_fee_collector: String,
-    /// Default platform fee (e.g., "0.025" for 2.5%)
-    pub default_platform_fee: Decimal,
     /// Registry contract address
     pub registry: Option<String>,
 }
@@ -23,8 +19,6 @@ pub enum ExecuteMsg {
     /// Update contract configuration
     UpdateConfig {
         admin: Option<String>,
-        platform_fee_collector: Option<String>,
-        default_platform_fee: Option<Decimal>,
         registry: Option<String>,
         paused: Option<bool>,
     },
@@ -35,18 +29,14 @@ pub enum ExecuteMsg {
         collection: String,
         creator: String,
         creator_share: Decimal,
-        platform_fee: Option<Decimal>,
         collaborators: Option<Vec<CollaboratorInput>>,
-        royalty_pool: Option<String>,
     },
     /// Update existing distribution rule
     UpdateDistributionRule {
         collection: String,
         creator: Option<String>,
         creator_share: Option<Decimal>,
-        platform_fee: Option<Decimal>,
         collaborators: Option<Vec<CollaboratorInput>>,
-        royalty_pool: Option<String>,
         active: Option<bool>,
     },
     /// Remove distribution rule
@@ -65,17 +55,9 @@ pub enum ExecuteMsg {
     RoutePrimarySale { collection: String },
     /// Route revenue for a secondary sale (marketplace)
     /// Funds must be sent with this message
-    RouteSecondarySale {
-        collection: String,
-        seller: String,
-        royalty_amount: Uint128,
-    },
+    RouteSecondaryRoyalty { collection: String },
     /// Route revenue for an auction sale
-    RouteAuctionSale {
-        collection: String,
-        seller: String,
-        royalty_amount: Uint128,
-    },
+    RouteAuctionRoyalty { collection: String },
     /// Generic route funds with custom type
     RouteRevenue {
         collection: String,
@@ -199,10 +181,8 @@ pub struct EcosystemConfigResponse {
 #[cw_serde]
 pub struct DistributionPreviewResponse {
     pub total_amount: Uint128,
-    pub platform_fee: Uint128,
     pub creator_amount: Uint128,
     pub collaborator_amounts: Vec<(Addr, Uint128)>,
-    pub royalty_amount: Option<Uint128>,
 }
 
 #[cw_serde]
@@ -223,4 +203,21 @@ pub struct SplitWalletResponse {
 #[cw_serde]
 pub struct SplitWalletsResponse {
     pub wallets: Vec<SplitWallet>,
+}
+
+// ========== Registry Query ==========
+
+#[cw_serde]
+pub enum RegistryQueryMsg {
+    Collection { address: String },
+}
+
+#[cw_serde]
+pub struct RegistryCollectionResponse {
+    pub collection: Option<RegistryCollection>,
+}
+
+#[cw_serde]
+pub struct RegistryCollection {
+    pub creator: String,
 }

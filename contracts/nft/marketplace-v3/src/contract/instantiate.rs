@@ -27,8 +27,8 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let revenue_router = msg
-        .revenue_router
+    let split_router = msg
+        .split_router
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
@@ -39,7 +39,9 @@ pub fn instantiate(
         .map(|o| deps.api.addr_validate(o))
         .collect::<StdResult<Vec<Addr>>>()?;
 
-    let max_trading_fee_bps = msg.max_trading_fee_bps.unwrap_or(DEFAULT_MAX_TRADING_FEE_BPS);
+    let max_trading_fee_bps = msg
+        .max_trading_fee_bps
+        .unwrap_or(DEFAULT_MAX_TRADING_FEE_BPS);
 
     // Validate trading fee doesn't exceed max
     if msg.trading_fee_bps > max_trading_fee_bps {
@@ -57,8 +59,8 @@ pub fn instantiate(
         max_trading_fee_bps,
         fee_collector,
         registry,
-        revenue_router: revenue_router.clone(),
-        use_revenue_router: msg.use_revenue_router.unwrap_or(revenue_router.is_some()),
+        split_router: split_router.clone(),
+        use_split_router: msg.use_split_router.unwrap_or(split_router.is_some()),
         operators,
         paused: false,
         require_registration: msg.require_registration.unwrap_or(true),
@@ -70,5 +72,8 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "marketplace-v3")
-        .add_attribute("require_registration", config.require_registration.to_string()))
+        .add_attribute(
+            "require_registration",
+            config.require_registration.to_string(),
+        ))
 }

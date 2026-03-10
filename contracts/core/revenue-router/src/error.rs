@@ -30,9 +30,6 @@ pub enum ContractError {
     #[error("Total collaborator shares exceed 100%")]
     CollaboratorSharesExceedLimit {},
 
-    #[error("Platform fee exceeds maximum allowed: {max}%")]
-    PlatformFeeExceedsMax { max: String },
-
     #[error("Split wallet not found: {id}")]
     SplitWalletNotFound { id: String },
 

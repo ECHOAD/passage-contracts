@@ -24,8 +24,8 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             metadata_mode,
             paused,
         } => execute_update_config(
@@ -36,8 +36,8 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             metadata_mode,
             paused,
         ),
@@ -92,9 +92,9 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     // Handle payment routing
     let mut messages: Vec<CosmosMsg> = vec![mint_msg];
 
-    if config.use_revenue_router {
-        if let Some(router) = &config.revenue_router {
-            let route_msg = RevenueRouterExecuteMsg::RoutePrimarySale {
+    if config.use_split_router {
+        if let Some(router) = &config.split_router {
+            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
                 collection: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -103,6 +103,8 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
                 funds: vec![mint_price.clone()],
             }));
             stats.total_routed += mint_price.amount;
+        } else {
+            return Err(ContractError::SplitRouterNotConfigured {});
         }
     }
 
@@ -253,9 +255,9 @@ fn execute_batch_mint(
     stats.total_revenue += total_price.amount;
 
     // Handle payment routing
-    if config.use_revenue_router {
-        if let Some(router) = &config.revenue_router {
-            let route_msg = RevenueRouterExecuteMsg::RoutePrimarySale {
+    if config.use_split_router {
+        if let Some(router) = &config.split_router {
+            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
                 collection: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -264,6 +266,8 @@ fn execute_batch_mint(
                 funds: vec![total_price.clone()],
             }));
             stats.total_routed += total_price.amount;
+        } else {
+            return Err(ContractError::SplitRouterNotConfigured {});
         }
     }
 
@@ -288,8 +292,8 @@ fn execute_update_config(
     unit_price: Option<Coin>,
     whitelist: Option<String>,
     registry: Option<String>,
-    revenue_router: Option<String>,
-    use_revenue_router: Option<bool>,
+    split_router: Option<String>,
+    use_split_router: Option<bool>,
     metadata_mode: Option<MetadataMode>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
@@ -319,12 +323,12 @@ fn execute_update_config(
         config.registry = Some(deps.api.addr_validate(&reg)?);
     }
 
-    if let Some(router) = revenue_router {
-        config.revenue_router = Some(deps.api.addr_validate(&router)?);
+    if let Some(router) = split_router {
+        config.split_router = Some(deps.api.addr_validate(&router)?);
     }
 
-    if let Some(use_router) = use_revenue_router {
-        config.use_revenue_router = use_router;
+    if let Some(use_router) = use_split_router {
+        config.use_split_router = use_router;
     }
 
     if let Some(mode) = metadata_mode {
@@ -491,8 +495,8 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_revenue_router {
-        return Err(ContractError::CannotWithdrawWithRevenueRouter {});
+    if config.use_split_router {
+        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let balance = deps
@@ -527,8 +531,8 @@ fn execute_withdraw_to(
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_revenue_router {
-        return Err(ContractError::CannotWithdrawWithRevenueRouter {});
+    if config.use_split_router {
+        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;

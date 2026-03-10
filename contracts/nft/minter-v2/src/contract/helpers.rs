@@ -12,6 +12,13 @@ enum Pg721ExecuteMsg {
     },
 }
 
+#[derive(Debug)]
+pub(super) struct MintContext {
+    pub price: Coin,
+    pub per_address_limit: u32,
+    pub is_whitelist: bool,
+}
+
 // ========== Helpers ==========
 
 pub(super) fn validate_mint_conditions(
@@ -20,42 +27,201 @@ pub(super) fn validate_mint_conditions(
     info: &MessageInfo,
     config: &Config,
 ) -> Result<(), ContractError> {
+    let _ = resolve_mint_context(
+        deps.as_ref(),
+        env,
+        &info.sender,
+        config,
+        &env.contract.address,
+    )?;
+    Ok(())
+}
+
+pub(super) fn get_current_price(
+    deps: &DepsMut,
+    env: &Env,
+    info: &MessageInfo,
+    config: &Config,
+) -> Result<(Coin, bool), ContractError> {
+    let context = resolve_mint_context(
+        deps.as_ref(),
+        env,
+        &info.sender,
+        config,
+        &env.contract.address,
+    )?;
+    Ok((context.price, context.is_whitelist))
+}
+
+pub(super) fn get_effective_per_address_limit(
+    deps: Deps,
+    env: &Env,
+    sender: &Addr,
+    config: &Config,
+    minter_addr: &Addr,
+) -> Result<u32, ContractError> {
+    Ok(resolve_mint_context(deps, env, sender, config, minter_addr)?.per_address_limit)
+}
+
+pub(super) fn validate_registry_requirements(
+    deps: Deps,
+    config: &Config,
+    minter_addr: &Addr,
+) -> Result<(), ContractError> {
+    let Some(registry) = &config.registry else {
+        return Ok(());
+    };
+
+    let collection: RegistryCollectionResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::Collection {
+                address: config.cw721_address.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::CollectionNotRegistered {})?;
+
+    if collection.collection.is_none() {
+        return Err(ContractError::CollectionNotRegistered {});
+    }
+
+    let minter_auth: RegistryMinterAuthorizedResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::IsMinterAuthorized {
+                collection_address: config.cw721_address.to_string(),
+                minter_address: minter_addr.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::MinterNotAuthorized {})?;
+
+    if !minter_auth.is_authorized {
+        return Err(ContractError::MinterNotAuthorized {});
+    }
+
+    Ok(())
+}
+
+pub(super) fn get_public_mint_price(
+    deps: Deps,
+    env: &Env,
+    config: &Config,
+) -> Result<MintPriceResponse, ContractError> {
+    let whitelist_price = if let Some(whitelist) = &config.whitelist {
+        let wl_config: WhitelistConfigResponse = deps
+            .querier
+            .query_wasm_smart(whitelist.to_string(), &WhitelistQueryMsg::Config {})?;
+        Some(wl_config.unit_price)
+    } else {
+        None
+    };
+
+    let current_price = match get_active_whitelist_config(deps, config)? {
+        Some(wl_config) => wl_config.unit_price,
+        None => config.unit_price.clone(),
+    };
+
+    let _ = env;
+
+    Ok(MintPriceResponse {
+        public_price: config.unit_price.clone(),
+        whitelist_price,
+        current_price,
+    })
+}
+
+fn resolve_mint_context(
+    deps: Deps,
+    env: &Env,
+    sender: &Addr,
+    config: &Config,
+    minter_addr: &Addr,
+) -> Result<MintContext, ContractError> {
     if config.paused {
         return Err(ContractError::MintingPaused {});
     }
 
-    if env.block.time < config.start_time {
-        return Err(ContractError::MintingNotStarted {
-            start_time: config.start_time.to_string(),
-        });
-    }
+    validate_registry_requirements(deps, config, minter_addr)?;
 
     let remaining = MINTABLE_NUM_TOKENS.load(deps.storage)?;
     if remaining == 0 {
         return Err(ContractError::SoldOut {});
     }
 
-    let count = MINTER_ADDRS
-        .may_load(deps.storage, &info.sender)?
-        .unwrap_or(0);
-    if count >= config.per_address_limit {
+    let whitelist_config = get_active_whitelist_config(deps, config)?;
+    let context = if let Some(wl_config) = whitelist_config {
+        ensure_whitelist_member(deps, config, sender)?;
+        MintContext {
+            price: wl_config.unit_price,
+            per_address_limit: wl_config.per_address_limit,
+            is_whitelist: true,
+        }
+    } else {
+        if env.block.time < config.start_time {
+            return Err(ContractError::MintingNotStarted {
+                start_time: config.start_time.to_string(),
+            });
+        }
+
+        MintContext {
+            price: config.unit_price.clone(),
+            per_address_limit: config.per_address_limit,
+            is_whitelist: false,
+        }
+    };
+
+    let count = MINTER_ADDRS.may_load(deps.storage, sender)?.unwrap_or(0);
+    if count >= context.per_address_limit {
         return Err(ContractError::MaxMintLimitReached {
-            limit: config.per_address_limit,
+            limit: context.per_address_limit,
         });
     }
 
-    Ok(())
+    Ok(context)
 }
 
-pub(super) fn get_current_price(
-    _deps: &DepsMut,
-    _env: &Env,
-    _info: &MessageInfo,
+pub(super) fn get_active_whitelist_config(
+    deps: Deps,
     config: &Config,
-) -> Result<(Coin, bool), ContractError> {
-    // TODO: Check whitelist for special pricing
-    // For now, return public price
-    Ok((config.unit_price.clone(), false))
+) -> Result<Option<WhitelistConfigResponse>, ContractError> {
+    let Some(whitelist) = &config.whitelist else {
+        return Ok(None);
+    };
+
+    let wl_config: WhitelistConfigResponse = deps
+        .querier
+        .query_wasm_smart(whitelist.to_string(), &WhitelistQueryMsg::Config {})?;
+
+    if wl_config.is_active {
+        Ok(Some(wl_config))
+    } else {
+        Ok(None)
+    }
+}
+
+fn ensure_whitelist_member(
+    deps: Deps,
+    config: &Config,
+    sender: &Addr,
+) -> Result<(), ContractError> {
+    let Some(whitelist) = &config.whitelist else {
+        return Ok(());
+    };
+
+    let member: HasMemberResponse = deps.querier.query_wasm_smart(
+        whitelist.to_string(),
+        &WhitelistQueryMsg::HasMember {
+            member: sender.to_string(),
+        },
+    )?;
+
+    if !member.has_member {
+        return Err(ContractError::NotWhitelisted {});
+    }
+
+    Ok(())
 }
 
 pub(super) fn validate_payment(info: &MessageInfo, expected: &Coin) -> Result<(), ContractError> {
@@ -164,7 +330,6 @@ pub(super) fn increment_mint_count(
     let count = MINTER_ADDRS.may_load(storage, addr)?.unwrap_or(0);
     MINTER_ADDRS.save(storage, addr, &(count + 1))?;
 
-    // Update unique minters count if this is first mint
     if count == 0 {
         let mut stats = MINT_STATS.load(storage)?;
         stats.unique_minters += 1;
@@ -172,4 +337,160 @@ pub(super) fn increment_mint_count(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::msg::RegistryCollection;
+    use cosmwasm_std::{
+        from_json,
+        testing::{mock_dependencies, mock_env},
+        ContractResult, OwnedDeps, SystemError, SystemResult, Timestamp, WasmQuery,
+    };
+
+    fn mock_queries(
+        deps: &mut OwnedDeps<
+            cosmwasm_std::testing::MockStorage,
+            cosmwasm_std::testing::MockApi,
+            cosmwasm_std::testing::MockQuerier,
+        >,
+        whitelist_addr: &'static str,
+        registry_addr: &'static str,
+        whitelist_active: bool,
+        has_member: bool,
+        collection_registered: bool,
+        minter_authorized: bool,
+    ) {
+        deps.querier.update_wasm(move |query| match query {
+            WasmQuery::Smart { contract_addr, msg } if contract_addr == whitelist_addr => {
+                let parsed: WhitelistQueryMsg = from_json(msg).unwrap();
+                let bin = match parsed {
+                    WhitelistQueryMsg::Config {} => to_json_binary(&WhitelistConfigResponse {
+                        per_address_limit: 1,
+                        member_limit: 10,
+                        start_time: Timestamp::from_seconds(100),
+                        end_time: Timestamp::from_seconds(200),
+                        unit_price: Coin::new(50u128, "upasg"),
+                        is_active: whitelist_active,
+                    })
+                    .unwrap(),
+                    WhitelistQueryMsg::HasMember { .. } => {
+                        to_json_binary(&HasMemberResponse { has_member }).unwrap()
+                    }
+                };
+
+                SystemResult::Ok(ContractResult::Ok(bin))
+            }
+            WasmQuery::Smart { contract_addr, msg } if contract_addr == registry_addr => {
+                let parsed: RegistryQueryMsg = from_json(msg).unwrap();
+                let bin = match parsed {
+                    RegistryQueryMsg::Collection { .. } => {
+                        to_json_binary(&RegistryCollectionResponse {
+                            collection: collection_registered.then(|| RegistryCollection {
+                                creator: "creator".to_string(),
+                            }),
+                        })
+                        .unwrap()
+                    }
+                    RegistryQueryMsg::IsMinterAuthorized { .. } => {
+                        to_json_binary(&RegistryMinterAuthorizedResponse {
+                            is_authorized: minter_authorized,
+                        })
+                        .unwrap()
+                    }
+                };
+
+                SystemResult::Ok(ContractResult::Ok(bin))
+            }
+            WasmQuery::Smart { .. } => SystemResult::Err(SystemError::NoSuchContract {
+                addr: "unknown".to_string(),
+            }),
+            _ => SystemResult::Err(SystemError::UnsupportedRequest {
+                kind: "unsupported wasm query".to_string(),
+            }),
+        });
+    }
+
+    fn sample_config() -> Config {
+        Config {
+            admin: Addr::unchecked("admin"),
+            cw721_address: Addr::unchecked("collection"),
+            cw721_code_id: 1,
+            base_token_uri: "ipfs://base".to_string(),
+            num_tokens: 10,
+            unit_price: Coin::new(100u128, "upasg"),
+            per_address_limit: 5,
+            start_time: Timestamp::from_seconds(1_000),
+            whitelist: Some(Addr::unchecked("whitelist")),
+            registry: None,
+            split_router: None,
+            use_split_router: false,
+            metadata_mode: MetadataMode::OffChain,
+            native_asset_template: vec![],
+            paused: false,
+        }
+    }
+
+    #[test]
+    fn whitelist_context_applies_before_public_start() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let sender = Addr::unchecked("buyer");
+        let config = sample_config();
+
+        MINTABLE_NUM_TOKENS
+            .save(deps.as_mut().storage, &10)
+            .unwrap();
+        mock_queries(&mut deps, "whitelist", "registry", true, true, true, true);
+
+        let ctx =
+            resolve_mint_context(deps.as_ref(), &env, &sender, &config, &env.contract.address)
+                .unwrap();
+
+        assert!(ctx.is_whitelist);
+        assert_eq!(ctx.price, Coin::new(50u128, "upasg"));
+        assert_eq!(ctx.per_address_limit, 1);
+    }
+
+    #[test]
+    fn active_whitelist_requires_membership() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let sender = Addr::unchecked("buyer");
+        let config = sample_config();
+
+        MINTABLE_NUM_TOKENS
+            .save(deps.as_mut().storage, &10)
+            .unwrap();
+        mock_queries(&mut deps, "whitelist", "registry", true, false, true, true);
+
+        let err =
+            resolve_mint_context(deps.as_ref(), &env, &sender, &config, &env.contract.address)
+                .unwrap_err();
+
+        assert_eq!(err, ContractError::NotWhitelisted {});
+    }
+
+    #[test]
+    fn registry_authorization_is_enforced_when_configured() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let sender = Addr::unchecked("buyer");
+        let mut config = sample_config();
+        config.whitelist = None;
+        config.registry = Some(Addr::unchecked("registry"));
+        config.start_time = Timestamp::from_seconds(0);
+
+        MINTABLE_NUM_TOKENS
+            .save(deps.as_mut().storage, &10)
+            .unwrap();
+        mock_queries(&mut deps, "whitelist", "registry", false, true, true, false);
+
+        let err =
+            resolve_mint_context(deps.as_ref(), &env, &sender, &config, &env.contract.address)
+                .unwrap_err();
+
+        assert_eq!(err, ContractError::MinterNotAuthorized {});
+    }
 }

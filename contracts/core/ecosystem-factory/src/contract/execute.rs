@@ -39,7 +39,17 @@ pub fn execute(
             image_urls,
             animation_url,
             url,
-        } => execute_submit_request(deps, env, info, id, name, detail, image_urls, animation_url, url),
+        } => execute_submit_request(
+            deps,
+            env,
+            info,
+            id,
+            name,
+            detail,
+            image_urls,
+            animation_url,
+            url,
+        ),
         ExecuteMsg::ResolveEcosystemCreationRequest {
             request_id,
             approved,

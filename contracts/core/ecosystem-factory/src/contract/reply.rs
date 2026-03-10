@@ -17,8 +17,12 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         )))
     })?;
 
-    let instantiate_data = res.data.ok_or(ContractError::ReplyParseError {})?;
-    let parsed = parse_instantiate_response_data(&instantiate_data)
+    let instantiate_data = res
+        .msg_responses
+        .first()
+        .map(|response| response.value.clone())
+        .ok_or(ContractError::ReplyParseError {})?;
+    let parsed = parse_instantiate_response_data(instantiate_data.as_slice())
         .map_err(|_| ContractError::ReplyParseError {})?;
 
     let collection_factory_addr = deps.api.addr_validate(&parsed.contract_address)?;

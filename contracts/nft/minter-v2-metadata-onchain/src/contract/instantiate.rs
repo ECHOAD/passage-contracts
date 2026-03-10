@@ -26,12 +26,12 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let revenue_router = msg
-        .revenue_router
+    let split_router = msg
+        .split_router
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let use_revenue_router = msg.use_revenue_router.unwrap_or(revenue_router.is_some());
+    let use_split_router = msg.use_split_router.unwrap_or(split_router.is_some());
 
     // Create initial config (cw721_address will be set in reply)
     let config = Config {
@@ -45,8 +45,8 @@ pub fn instantiate(
         start_time: msg.start_time,
         whitelist,
         registry,
-        revenue_router,
-        use_revenue_router,
+        split_router,
+        use_split_router,
         metadata_mode: MetadataMode::OnChain,
         native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,

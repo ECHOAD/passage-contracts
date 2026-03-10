@@ -1501,13 +1501,59 @@ fn execute_resolve_dead_project_case(
     case.resolution_approved = Some(approved);
     case.resolution_note = note;
 
+    let mut replacement_attr = None;
+    if approved {
+        let replacement = case
+            .proposed_replacement
+            .clone()
+            .ok_or(ContractError::RecoveryReplacementRequired {})?;
+
+        match &case.target {
+            RecoveryTarget::Ecosystem { ecosystem_id } => {
+                let mut ecosystem = ECOSYSTEMS
+                    .load(deps.storage, ecosystem_id.clone())
+                    .map_err(|_| ContractError::EcosystemNotFound {
+                        id: ecosystem_id.clone(),
+                    })?;
+                ecosystem.admin = replacement.clone();
+                ecosystem.updated_at = now;
+                ECOSYSTEMS.save(deps.storage, ecosystem_id.clone(), &ecosystem)?;
+                ECOSYSTEM_MEMBERS.save(
+                    deps.storage,
+                    (ecosystem_id.clone(), replacement.clone()),
+                    &true,
+                )?;
+            }
+            RecoveryTarget::Collection { address } => {
+                let mut collection =
+                    collections()
+                        .load(deps.storage, address.clone())
+                        .map_err(|_| ContractError::CollectionNotFound {
+                            address: address.to_string(),
+                        })?;
+                collection.creator = replacement.clone();
+                collection.updated_at = now;
+                collections().save(deps.storage, address.clone(), &collection)?;
+            }
+        }
+
+        touch_creator_activity(deps.storage, &replacement, now)?;
+        replacement_attr = Some(replacement);
+    }
+
     DEAD_PROJECT_CASES.save(deps.storage, case_id, &case)?;
     touch_creator_activity(deps.storage, &info.sender, now)?;
 
-    Ok(Response::new()
+    let mut response = Response::new()
         .add_attribute("action", "resolve_dead_project_case")
         .add_attribute("case_id", case_id.to_string())
-        .add_attribute("approved", approved.to_string()))
+        .add_attribute("approved", approved.to_string());
+
+    if let Some(replacement) = replacement_attr {
+        response = response.add_attribute("replacement", replacement);
+    }
+
+    Ok(response)
 }
 
 fn resolve_target_admin_and_last_activity(
@@ -1549,4 +1595,94 @@ fn has_open_case_for_target(deps: Deps, target: &RecoveryTarget) -> StdResult<bo
         }
     }
     Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+
+    #[test]
+    fn approved_dead_project_case_transfers_collection_creator() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        CONFIG
+            .save(
+                deps.as_mut().storage,
+                &Config {
+                    admin: Addr::unchecked("admin"),
+                    operators: vec![],
+                    ecosystem_factory: Some(Addr::unchecked("factory")),
+                    paused: false,
+                },
+            )
+            .unwrap();
+
+        collections()
+            .save(
+                deps.as_mut().storage,
+                Addr::unchecked("collection"),
+                &Collection {
+                    address: Addr::unchecked("collection"),
+                    ecosystem_id: "eco".to_string(),
+                    name: "Collection".to_string(),
+                    creator: Addr::unchecked("old_creator"),
+                    verified: false,
+                    minter: None,
+                    marketplace: None,
+                    created_at: 1,
+                    updated_at: 1,
+                },
+            )
+            .unwrap();
+
+        DEAD_PROJECT_CASES
+            .save(
+                deps.as_mut().storage,
+                1,
+                &DeadProjectCase {
+                    case_id: 1,
+                    target: RecoveryTarget::Collection {
+                        address: Addr::unchecked("collection"),
+                    },
+                    target_admin: Addr::unchecked("old_creator"),
+                    reporter: Addr::unchecked("reporter"),
+                    reason: "inactive".to_string(),
+                    evidence_url: None,
+                    proposed_replacement: Some(Addr::unchecked("new_creator")),
+                    last_target_activity_at: 1,
+                    status: DeadProjectStatus::Open,
+                    opened_at: 1,
+                    contest_deadline: 100,
+                    contested_at: None,
+                    contested_by: None,
+                    contest_note: None,
+                    resolved_at: None,
+                    resolved_by: None,
+                    resolution_approved: None,
+                    resolution_note: None,
+                },
+            )
+            .unwrap();
+
+        let res = execute_resolve_dead_project_case(
+            deps.as_mut(),
+            env,
+            mock_info("admin", &[]),
+            1,
+            true,
+            None,
+        )
+        .unwrap();
+
+        let collection = collections()
+            .load(deps.as_ref().storage, Addr::unchecked("collection"))
+            .unwrap();
+        assert_eq!(collection.creator, Addr::unchecked("new_creator"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "replacement" && attr.value == "new_creator"));
+    }
 }

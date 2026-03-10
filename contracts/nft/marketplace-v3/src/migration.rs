@@ -151,8 +151,8 @@ pub fn migrate_state(
     storage: &mut dyn Storage,
     collection: Addr,
     registry: Option<Addr>,
-    revenue_router: Option<Addr>,
-    use_revenue_router: bool,
+    split_router: Option<Addr>,
+    use_split_router: bool,
     additional_collections: Vec<Addr>,
     current_time: u64,
 ) -> StdResult<MigrationStats> {
@@ -183,8 +183,8 @@ pub fn migrate_state(
         max_trading_fee_bps: DEFAULT_MAX_TRADING_FEE_BPS,
         fee_collector: config_v2.collector_address,
         registry,
-        revenue_router: revenue_router.clone(),
-        use_revenue_router,
+        split_router: split_router.clone(),
+        use_split_router,
         operators: config_v2.operators,
         paused: false,
         require_registration: true, // Enable registration for migrated contracts
@@ -199,7 +199,7 @@ pub fn migrate_state(
             active: true,
             blacklisted: false,
             blacklist_reason: None,
-            trading_fee_bps: None, // Use default
+            trading_fee_bps: None,                // Use default
             denom: Some(config_v2.denom.clone()), // Preserve original denom
             registered_by: config_v3.admin.clone(),
             registered_at: current_time,

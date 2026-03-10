@@ -11,19 +11,19 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let revenue_router = msg
-        .revenue_router
+    let split_router = msg
+        .split_router
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let use_revenue_router = msg.use_revenue_router.unwrap_or(revenue_router.is_some());
+    let use_split_router = msg.use_split_router.unwrap_or(split_router.is_some());
 
     let result = migrate_state(
         deps.storage,
         &prev_version.contract,
         registry,
-        revenue_router,
-        use_revenue_router,
+        split_router,
+        use_split_router,
         msg.base_token_uri,
     )?;
 
@@ -39,8 +39,8 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         .add_attribute("mintable_remaining", result.mintable_remaining.to_string())
         .add_attribute("unique_minters", result.unique_minters.to_string())
         .add_attribute(
-            "revenue_router_enabled",
-            result.revenue_router_enabled.to_string(),
+            "split_router_enabled",
+            result.split_router_enabled.to_string(),
         );
 
     Ok(Response::new()

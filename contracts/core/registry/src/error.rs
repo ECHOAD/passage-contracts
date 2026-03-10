@@ -121,4 +121,7 @@ pub enum ContractError {
 
     #[error("Only target admin can contest dead project case")]
     OnlyTargetAdminCanContest {},
+
+    #[error("Approved dead project recovery requires a proposed replacement")]
+    RecoveryReplacementRequired {},
 }

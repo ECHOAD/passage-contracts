@@ -24,8 +24,8 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             metadata_mode,
             paused,
         } => execute_update_config(
@@ -36,8 +36,8 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             metadata_mode,
             paused,
         ),
@@ -64,10 +64,7 @@ pub fn execute(
 fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // Validate minting conditions
     validate_mint_conditions(&deps, &env, &info, &config)?;
-
-    // Get and validate payment
     let (mint_price, is_whitelist) = get_current_price(&deps, &env, &info, &config)?;
     validate_payment(&info, &mint_price)?;
 
@@ -92,9 +89,9 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     // Handle payment routing
     let mut messages: Vec<CosmosMsg> = vec![mint_msg];
 
-    if config.use_revenue_router {
-        if let Some(router) = &config.revenue_router {
-            let route_msg = RevenueRouterExecuteMsg::RoutePrimarySale {
+    if config.use_split_router {
+        if let Some(router) = &config.split_router {
+            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
                 collection: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -130,6 +127,8 @@ fn execute_mint_to(
         return Err(ContractError::Unauthorized {});
     }
 
+    validate_registry_requirements(deps.as_ref(), &config, &env.contract.address)?;
+
     let recipient_addr = deps.api.addr_validate(&recipient)?;
 
     // Get random available token
@@ -159,7 +158,7 @@ fn execute_mint_to(
 
 fn execute_mint_for(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     token_id: u32,
     recipient: String,
@@ -170,6 +169,8 @@ fn execute_mint_for(
     if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
+
+    validate_registry_requirements(deps.as_ref(), &config, &env.contract.address)?;
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;
 
@@ -208,7 +209,6 @@ fn execute_batch_mint(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // Validate minting conditions
     validate_mint_conditions(&deps, &env, &info, &config)?;
 
     let remaining = MINTABLE_NUM_TOKENS.load(deps.storage)?;
@@ -216,11 +216,17 @@ fn execute_batch_mint(
         return Err(ContractError::BatchExceedsAvailable {});
     }
 
-    // Check per-address limit
     let current_count = MINTER_ADDRS
         .may_load(deps.storage, &info.sender)?
         .unwrap_or(0);
-    if current_count + count > config.per_address_limit {
+    let effective_limit = get_effective_per_address_limit(
+        deps.as_ref(),
+        &env,
+        &info.sender,
+        &config,
+        &env.contract.address,
+    )?;
+    if current_count + count > effective_limit {
         return Err(ContractError::BatchExceedsLimit {});
     }
 
@@ -253,9 +259,9 @@ fn execute_batch_mint(
     stats.total_revenue += total_price.amount;
 
     // Handle payment routing
-    if config.use_revenue_router {
-        if let Some(router) = &config.revenue_router {
-            let route_msg = RevenueRouterExecuteMsg::RoutePrimarySale {
+    if config.use_split_router {
+        if let Some(router) = &config.split_router {
+            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
                 collection: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -288,8 +294,8 @@ fn execute_update_config(
     unit_price: Option<Coin>,
     whitelist: Option<String>,
     registry: Option<String>,
-    revenue_router: Option<String>,
-    use_revenue_router: Option<bool>,
+    split_router: Option<String>,
+    use_split_router: Option<bool>,
     metadata_mode: Option<MetadataMode>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
@@ -319,12 +325,12 @@ fn execute_update_config(
         config.registry = Some(deps.api.addr_validate(&reg)?);
     }
 
-    if let Some(router) = revenue_router {
-        config.revenue_router = Some(deps.api.addr_validate(&router)?);
+    if let Some(router) = split_router {
+        config.split_router = Some(deps.api.addr_validate(&router)?);
     }
 
-    if let Some(use_router) = use_revenue_router {
-        config.use_revenue_router = use_router;
+    if let Some(use_router) = use_split_router {
+        config.use_split_router = use_router;
     }
 
     if let Some(mode) = metadata_mode {
@@ -488,8 +494,8 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_revenue_router {
-        return Err(ContractError::CannotWithdrawWithRevenueRouter {});
+    if config.use_split_router {
+        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let balance = deps
@@ -524,8 +530,8 @@ fn execute_withdraw_to(
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_revenue_router {
-        return Err(ContractError::CannotWithdrawWithRevenueRouter {});
+    if config.use_split_router {
+        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;

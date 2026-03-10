@@ -79,25 +79,22 @@ fn query_preview_distribution(
     amount: Uint128,
     _event_type: RevenueEventType,
 ) -> StdResult<DistributionPreviewResponse> {
-    let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
     let rule = DISTRIBUTION_RULES.may_load(deps.storage, collection_addr)?;
 
     match rule {
         Some(r) => {
-            let platform_fee_rate = r.platform_fee.unwrap_or(config.default_platform_fee);
-            let platform_fee = amount.multiply_ratio(
-                platform_fee_rate.atomics().u128(),
+            let creator_base = amount.multiply_ratio(
+                r.creator_share.atomics().u128(),
                 10u128.pow(Decimal::DECIMAL_PLACES),
             );
-            let remaining = amount - platform_fee;
 
             let mut collaborator_amounts: Vec<(Addr, Uint128)> = vec![];
-            let mut creator_remaining = remaining;
+            let mut creator_remaining = amount;
 
             for collab in &r.collaborators {
-                let collab_amount = remaining.multiply_ratio(
+                let collab_amount = creator_base.multiply_ratio(
                     collab.share.atomics().u128(),
                     10u128.pow(Decimal::DECIMAL_PLACES),
                 );
@@ -107,18 +104,14 @@ fn query_preview_distribution(
 
             Ok(DistributionPreviewResponse {
                 total_amount: amount,
-                platform_fee,
                 creator_amount: creator_remaining,
                 collaborator_amounts,
-                royalty_amount: None,
             })
         }
         None => Ok(DistributionPreviewResponse {
             total_amount: amount,
-            platform_fee: Uint128::zero(),
             creator_amount: amount,
             collaborator_amounts: vec![],
-            royalty_amount: None,
         }),
     }
 }

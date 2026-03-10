@@ -21,28 +21,16 @@ pub fn execute(
         // Admin operations
         ExecuteMsg::UpdateConfig {
             admin,
-            platform_fee_collector,
-            default_platform_fee,
             registry,
             paused,
-        } => execute_update_config(
-            deps,
-            info,
-            admin,
-            platform_fee_collector,
-            default_platform_fee,
-            registry,
-            paused,
-        ),
+        } => execute_update_config(deps, info, admin, registry, paused),
 
         // Distribution rules
         ExecuteMsg::SetDistributionRule {
             collection,
             creator,
             creator_share,
-            platform_fee,
             collaborators,
-            royalty_pool,
         } => execute_set_distribution_rule(
             deps,
             env,
@@ -50,17 +38,13 @@ pub fn execute(
             collection,
             creator,
             creator_share,
-            platform_fee,
             collaborators,
-            royalty_pool,
         ),
         ExecuteMsg::UpdateDistributionRule {
             collection,
             creator,
             creator_share,
-            platform_fee,
             collaborators,
-            royalty_pool,
             active,
         } => execute_update_distribution_rule(
             deps,
@@ -69,9 +53,7 @@ pub fn execute(
             collection,
             creator,
             creator_share,
-            platform_fee,
             collaborators,
-            royalty_pool,
             active,
         ),
         ExecuteMsg::RemoveDistributionRule { collection } => {
@@ -88,16 +70,12 @@ pub fn execute(
         ExecuteMsg::RoutePrimarySale { collection } => {
             execute_route_primary_sale(deps, env, info, collection)
         }
-        ExecuteMsg::RouteSecondarySale {
-            collection,
-            seller,
-            royalty_amount,
-        } => execute_route_secondary_sale(deps, env, info, collection, seller, royalty_amount),
-        ExecuteMsg::RouteAuctionSale {
-            collection,
-            seller,
-            royalty_amount,
-        } => execute_route_auction_sale(deps, env, info, collection, seller, royalty_amount),
+        ExecuteMsg::RouteSecondaryRoyalty { collection } => {
+            execute_route_secondary_sale(deps, env, info, collection)
+        }
+        ExecuteMsg::RouteAuctionRoyalty { collection } => {
+            execute_route_auction_sale(deps, env, info, collection)
+        }
         ExecuteMsg::RouteRevenue {
             collection,
             event_type,
@@ -120,8 +98,6 @@ fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
     admin: Option<String>,
-    platform_fee_collector: Option<String>,
-    default_platform_fee: Option<Decimal>,
     registry: Option<String>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
@@ -133,20 +109,6 @@ fn execute_update_config(
 
     if let Some(new_admin) = admin {
         config.admin = deps.api.addr_validate(&new_admin)?;
-    }
-
-    if let Some(new_collector) = platform_fee_collector {
-        config.platform_fee_collector = deps.api.addr_validate(&new_collector)?;
-    }
-
-    if let Some(new_fee) = default_platform_fee {
-        let max_fee: Decimal = MAX_PLATFORM_FEE.parse().unwrap();
-        if new_fee > max_fee {
-            return Err(ContractError::PlatformFeeExceedsMax {
-                max: MAX_PLATFORM_FEE.to_string(),
-            });
-        }
-        config.default_platform_fee = new_fee;
     }
 
     if let Some(new_registry) = registry {
@@ -162,6 +124,46 @@ fn execute_update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
+fn ensure_can_manage_distribution_rule(
+    deps: Deps,
+    config: &Config,
+    sender: &Addr,
+    collection: &Addr,
+) -> Result<(), ContractError> {
+    if config.admin == *sender {
+        return Ok(());
+    }
+
+    let registry = config
+        .registry
+        .clone()
+        .ok_or(ContractError::Unauthorized {})?;
+    let response: RegistryCollectionResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::Collection {
+                address: collection.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        })?;
+
+    let collection_info = response
+        .collection
+        .ok_or(ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        })?;
+
+    let creator = deps.api.addr_validate(&collection_info.creator)?;
+    if creator != *sender {
+        return Err(ContractError::NotCollectionCreator {});
+    }
+
+    Ok(())
+}
+
 fn execute_set_distribution_rule(
     deps: DepsMut,
     env: Env,
@@ -169,18 +171,12 @@ fn execute_set_distribution_rule(
     collection: String,
     creator: String,
     creator_share: Decimal,
-    platform_fee: Option<Decimal>,
     collaborators: Option<Vec<CollaboratorInput>>,
-    royalty_pool: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Check authorization (admin or collection creator via registry)
-    if config.admin != info.sender {
-        // TODO: Query registry to verify sender is collection creator
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure_can_manage_distribution_rule(deps.as_ref(), &config, &info.sender, &collection_addr)?;
 
     // Check if rule already exists
     if DISTRIBUTION_RULES.has(deps.storage, collection_addr.clone()) {
@@ -192,16 +188,6 @@ fn execute_set_distribution_rule(
         return Err(ContractError::InvalidShare {});
     }
 
-    // Validate platform fee
-    if let Some(fee) = platform_fee {
-        let max_fee: Decimal = MAX_PLATFORM_FEE.parse().unwrap();
-        if fee > max_fee {
-            return Err(ContractError::PlatformFeeExceedsMax {
-                max: MAX_PLATFORM_FEE.to_string(),
-            });
-        }
-    }
-
     // Process collaborators
     let collab_list = process_collaborators(deps.as_ref(), collaborators)?;
 
@@ -211,17 +197,11 @@ fn execute_set_distribution_rule(
         return Err(ContractError::CollaboratorSharesExceedLimit {});
     }
 
-    let royalty_pool_addr = royalty_pool
-        .map(|r| deps.api.addr_validate(&r))
-        .transpose()?;
-
     let rule = DistributionRule {
         collection: collection_addr.clone(),
-        platform_fee,
         creator: deps.api.addr_validate(&creator)?,
         creator_share,
         collaborators: collab_list,
-        royalty_pool: royalty_pool_addr,
         active: true,
         created_at: env.block.time.seconds(),
         updated_at: env.block.time.seconds(),
@@ -241,18 +221,13 @@ fn execute_update_distribution_rule(
     collection: String,
     creator: Option<String>,
     creator_share: Option<Decimal>,
-    platform_fee: Option<Decimal>,
     collaborators: Option<Vec<CollaboratorInput>>,
-    royalty_pool: Option<String>,
     active: Option<bool>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Check authorization
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure_can_manage_distribution_rule(deps.as_ref(), &config, &info.sender, &collection_addr)?;
 
     let mut rule = DISTRIBUTION_RULES
         .load(deps.storage, collection_addr.clone())
@@ -271,22 +246,8 @@ fn execute_update_distribution_rule(
         rule.creator_share = new_share;
     }
 
-    if let Some(new_fee) = platform_fee {
-        let max_fee: Decimal = MAX_PLATFORM_FEE.parse().unwrap();
-        if new_fee > max_fee {
-            return Err(ContractError::PlatformFeeExceedsMax {
-                max: MAX_PLATFORM_FEE.to_string(),
-            });
-        }
-        rule.platform_fee = Some(new_fee);
-    }
-
     if let Some(new_collabs) = collaborators {
         rule.collaborators = process_collaborators(deps.as_ref(), Some(new_collabs))?;
-    }
-
-    if let Some(new_pool) = royalty_pool {
-        rule.royalty_pool = Some(deps.api.addr_validate(&new_pool)?);
     }
 
     if let Some(new_active) = active {
@@ -308,12 +269,8 @@ fn execute_remove_distribution_rule(
     collection: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
     let collection_addr = deps.api.addr_validate(&collection)?;
+    ensure_can_manage_distribution_rule(deps.as_ref(), &config, &info.sender, &collection_addr)?;
 
     if !DISTRIBUTION_RULES.has(deps.storage, collection_addr.clone()) {
         return Err(ContractError::DistributionRuleNotFound { collection });
@@ -357,15 +314,7 @@ fn execute_route_primary_sale(
     info: MessageInfo,
     collection: String,
 ) -> Result<Response, ContractError> {
-    route_revenue_internal(
-        deps,
-        env,
-        info,
-        collection,
-        RevenueEventType::PrimarySale,
-        None,
-        None,
-    )
+    route_revenue_internal(deps, env, info, collection, RevenueEventType::PrimarySale)
 }
 
 fn execute_route_secondary_sale(
@@ -373,18 +322,13 @@ fn execute_route_secondary_sale(
     env: Env,
     info: MessageInfo,
     collection: String,
-    seller: String,
-    royalty_amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let seller_addr = deps.api.addr_validate(&seller)?;
     route_revenue_internal(
         deps,
         env,
         info,
         collection,
-        RevenueEventType::SecondarySale,
-        Some(seller_addr),
-        Some(royalty_amount),
+        RevenueEventType::SecondaryRoyalty,
     )
 }
 
@@ -393,18 +337,13 @@ fn execute_route_auction_sale(
     env: Env,
     info: MessageInfo,
     collection: String,
-    seller: String,
-    royalty_amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let seller_addr = deps.api.addr_validate(&seller)?;
     route_revenue_internal(
         deps,
         env,
         info,
         collection,
-        RevenueEventType::Auction,
-        Some(seller_addr),
-        Some(royalty_amount),
+        RevenueEventType::AuctionRoyalty,
     )
 }
 
@@ -416,7 +355,7 @@ fn execute_route_revenue(
     event_type: RevenueEventType,
     _custom_recipients: Option<Vec<RecipientInput>>,
 ) -> Result<Response, ContractError> {
-    route_revenue_internal(deps, env, info, collection, event_type, None, None)
+    route_revenue_internal(deps, env, info, collection, event_type)
 }
 
 fn route_revenue_internal(
@@ -425,10 +364,7 @@ fn route_revenue_internal(
     info: MessageInfo,
     collection: String,
     event_type: RevenueEventType,
-    seller: Option<Addr>,
-    royalty_amount: Option<Uint128>,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
     // Get funds sent with message
@@ -451,70 +387,17 @@ fn route_revenue_internal(
         return Err(ContractError::DistributionRuleNotFound { collection });
     }
 
-    // Calculate distributions
-    let platform_fee_rate = rule.platform_fee.unwrap_or(config.default_platform_fee);
-    let platform_fee = total_amount.multiply_ratio(
-        platform_fee_rate.atomics().u128(),
-        10u128.pow(Decimal::DECIMAL_PLACES),
-    );
-
     let mut messages: Vec<CosmosMsg> = vec![];
-    let remaining = total_amount - platform_fee;
-
-    // Platform fee
-    if !platform_fee.is_zero() {
-        messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.platform_fee_collector.to_string(),
-            amount: vec![Coin {
-                denom: denom.clone(),
-                amount: platform_fee,
-            }],
-        }));
-    }
-
-    // For secondary sales, handle seller payment and royalties
     let creator_amount;
     let mut collaborator_amounts: Vec<(Addr, Uint128)> = vec![];
 
-    match event_type {
-        RevenueEventType::SecondarySale | RevenueEventType::Auction => {
-            // Royalty goes to creator/collaborators
-            let royalty = royalty_amount.unwrap_or(Uint128::zero());
-            let seller_amount = remaining - royalty;
-
-            // Pay seller
-            if let Some(seller_addr) = seller {
-                if !seller_amount.is_zero() {
-                    messages.push(CosmosMsg::Bank(BankMsg::Send {
-                        to_address: seller_addr.to_string(),
-                        amount: vec![Coin {
-                            denom: denom.clone(),
-                            amount: seller_amount,
-                        }],
-                    }));
-                }
-            }
-
-            // Distribute royalty
-            creator_amount = distribute_to_creator_and_collaborators(
-                &rule,
-                royalty,
-                &denom,
-                &mut messages,
-                &mut collaborator_amounts,
-            );
-        }
-        _ => {
-            // Primary sale - all goes to creator/collaborators
-            creator_amount = distribute_to_creator_and_collaborators(
-                &rule,
-                remaining,
-                &denom,
-                &mut messages,
-                &mut collaborator_amounts,
-            );
-        }
-    }
+    creator_amount = distribute_to_creator_and_collaborators(
+        &rule,
+        total_amount,
+        &denom,
+        &mut messages,
+        &mut collaborator_amounts,
+    );
 
     // Record event
     let event_id = record_revenue_event(
@@ -524,7 +407,6 @@ fn route_revenue_internal(
         &event_type,
         total_amount,
         &denom,
-        platform_fee,
         creator_amount,
         collaborator_amounts.clone(),
         &info.sender,
@@ -536,7 +418,6 @@ fn route_revenue_internal(
         &collection_addr,
         &event_type,
         total_amount,
-        platform_fee,
         creator_amount,
     )?;
 
@@ -546,7 +427,6 @@ fn route_revenue_internal(
         .add_attribute("collection", collection_addr)
         .add_attribute("event_type", format!("{:?}", event_type))
         .add_attribute("total_amount", total_amount)
-        .add_attribute("platform_fee", platform_fee)
         .add_attribute("creator_amount", creator_amount)
         .add_attribute("event_id", event_id.to_string()))
 }
@@ -559,10 +439,14 @@ fn distribute_to_creator_and_collaborators(
     collaborator_amounts: &mut Vec<(Addr, Uint128)>,
 ) -> Uint128 {
     let mut remaining = amount;
+    let creator_base = amount.multiply_ratio(
+        rule.creator_share.atomics().u128(),
+        10u128.pow(Decimal::DECIMAL_PLACES),
+    );
 
-    // Pay collaborators first (from creator's share)
+    // Pay collaborators from the creator-governed portion, then the creator receives the remainder.
     for collab in &rule.collaborators {
-        let collab_amount = amount.multiply_ratio(
+        let collab_amount = creator_base.multiply_ratio(
             collab.share.atomics().u128(),
             10u128.pow(Decimal::DECIMAL_PLACES),
         );
@@ -746,4 +630,121 @@ fn execute_remove_split_wallet(
     Ok(Response::new()
         .add_attribute("action", "remove_split_wallet")
         .add_attribute("id", id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::{
+        from_json,
+        testing::{message_info, mock_dependencies, mock_env},
+        ContractResult, Decimal, OwnedDeps, SystemError, SystemResult, WasmQuery,
+    };
+
+    fn mock_registry_collection(
+        deps: &mut OwnedDeps<
+            cosmwasm_std::testing::MockStorage,
+            cosmwasm_std::testing::MockApi,
+            cosmwasm_std::testing::MockQuerier,
+        >,
+        registry: &str,
+        creator: &str,
+    ) {
+        let registry = registry.to_string();
+        let creator = creator.to_string();
+
+        deps.querier.update_wasm(move |query| match query {
+            WasmQuery::Smart { contract_addr, msg } if contract_addr == &registry => {
+                let parsed: RegistryQueryMsg = from_json(msg).unwrap();
+                match parsed {
+                    RegistryQueryMsg::Collection { .. } => SystemResult::Ok(ContractResult::Ok(
+                        to_json_binary(&RegistryCollectionResponse {
+                            collection: Some(crate::msg::RegistryCollection {
+                                creator: creator.to_string(),
+                            }),
+                        })
+                        .unwrap(),
+                    )),
+                }
+            }
+            WasmQuery::Smart { .. } => SystemResult::Err(SystemError::NoSuchContract {
+                addr: "unknown".to_string(),
+            }),
+            _ => SystemResult::Err(SystemError::UnsupportedRequest {
+                kind: "unsupported wasm query".to_string(),
+            }),
+        });
+    }
+
+    #[test]
+    fn collection_creator_can_set_rule_via_registry() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let admin = deps.api.addr_make("admin");
+        let registry = deps.api.addr_make("registry");
+        let creator = deps.api.addr_make("creator");
+        let collection = deps.api.addr_make("collection");
+        let creator_wallet = deps.api.addr_make("creator-wallet");
+
+        CONFIG
+            .save(
+                deps.as_mut().storage,
+                &Config {
+                    admin: admin.clone(),
+                    registry: Some(registry.clone()),
+                    paused: false,
+                },
+            )
+            .unwrap();
+        REVENUE_EVENT_COUNT.save(deps.as_mut().storage, &0).unwrap();
+        mock_registry_collection(&mut deps, registry.as_str(), creator.as_str());
+
+        let res = execute_set_distribution_rule(
+            deps.as_mut(),
+            env,
+            message_info(&creator, &[]),
+            collection.to_string(),
+            creator_wallet.to_string(),
+            Decimal::percent(90),
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            res.attributes[0],
+            cosmwasm_std::attr("action", "set_distribution_rule")
+        );
+        assert!(DISTRIBUTION_RULES.has(deps.as_ref().storage, collection));
+    }
+
+    #[test]
+    fn collaborators_are_calculated_from_creator_share_base() {
+        let rule = DistributionRule {
+            collection: Addr::unchecked("collection"),
+            creator: Addr::unchecked("creator"),
+            creator_share: Decimal::percent(50),
+            collaborators: vec![Collaborator {
+                address: Addr::unchecked("collab"),
+                share: Decimal::percent(50),
+                name: None,
+            }],
+            active: true,
+            created_at: 0,
+            updated_at: 0,
+        };
+
+        let mut messages = Vec::new();
+        let mut collaborator_amounts = Vec::new();
+        let creator_amount = distribute_to_creator_and_collaborators(
+            &rule,
+            Uint128::new(1_000),
+            "upasg",
+            &mut messages,
+            &mut collaborator_amounts,
+        );
+
+        assert_eq!(creator_amount, Uint128::new(750));
+        assert_eq!(collaborator_amounts[0].1, Uint128::new(250));
+        assert_eq!(messages.len(), 2);
+    }
 }

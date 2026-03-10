@@ -7,10 +7,11 @@ pub(super) use cw2::{get_contract_version, set_contract_version};
 pub(super) use crate::error::ContractError;
 pub(super) use crate::migration::migrate_state;
 pub(super) use crate::msg::{
-    CanMintResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, IsMintingActiveResponse,
-    MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse, MintableNumTokensResponse,
-    NativeAssetTemplateResponse, QueryMsg, RevenueRouterExecuteMsg, StartTimeResponse,
-    TokenNativeAssetsResponse,
+    CanMintResponse, ConfigResponse, ExecuteMsg, HasMemberResponse, InstantiateMsg,
+    IsMintingActiveResponse, MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse,
+    MintableNumTokensResponse, NativeAssetTemplateResponse, QueryMsg, RegistryCollectionResponse,
+    RegistryMinterAuthorizedResponse, RegistryQueryMsg, SplitRouterExecuteMsg, StartTimeResponse,
+    TokenNativeAssetsResponse, WhitelistConfigResponse, WhitelistQueryMsg,
 };
 pub(super) use crate::state::{
     Config, Extension, MetadataMode, MintStats, NativeAsset, TokenMetadata, CONFIG,

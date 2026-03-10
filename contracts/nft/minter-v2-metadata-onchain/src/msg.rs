@@ -7,10 +7,10 @@ use cosmwasm_std::{Coin, Timestamp};
 pub struct MigrateMsg {
     /// Registry contract address for collection verification
     pub registry: Option<String>,
-    /// Revenue Router address for automatic fund distribution
-    pub revenue_router: Option<String>,
-    /// Whether to use Revenue Router (default: true if revenue_router is set)
-    pub use_revenue_router: Option<bool>,
+    /// Split Router address for automatic fund distribution
+    pub split_router: Option<String>,
+    /// Whether to use Split Router (default: true if split_router is set)
+    pub use_split_router: Option<bool>,
     /// Required only for `passage-minter-metadata-onchain` migrations
     /// because that legacy state does not store a base token URI.
     pub base_token_uri: Option<String>,
@@ -36,10 +36,10 @@ pub struct InstantiateMsg {
     pub whitelist: Option<String>,
     /// Registry contract address
     pub registry: Option<String>,
-    /// Revenue Router address for automatic fund distribution
-    pub revenue_router: Option<String>,
-    /// Whether to use Revenue Router (default: true if revenue_router is set)
-    pub use_revenue_router: Option<bool>,
+    /// Split Router address for automatic fund distribution
+    pub split_router: Option<String>,
+    /// Whether to use Split Router (default: true if split_router is set)
+    pub use_split_router: Option<bool>,
     /// Metadata mode: off-chain by default, on-chain optional.
     pub metadata_mode: Option<MetadataMode>,
     /// Optional default native assets template for every minted token.
@@ -66,8 +66,8 @@ pub enum ExecuteMsg {
         unit_price: Option<Coin>,
         whitelist: Option<String>,
         registry: Option<String>,
-        revenue_router: Option<String>,
-        use_revenue_router: Option<bool>,
+        split_router: Option<String>,
+        use_split_router: Option<bool>,
         metadata_mode: Option<MetadataMode>,
         paused: Option<bool>,
     },
@@ -79,7 +79,7 @@ pub enum ExecuteMsg {
     RemoveWhitelist {},
 
     // ========== Legacy Compatibility ==========
-    /// Withdraw accumulated funds (only works if use_revenue_router is false)
+    /// Withdraw accumulated funds (only works if use_split_router is false)
     Withdraw {},
     /// Withdraw to specific address
     WithdrawTo { recipient: String },
@@ -150,8 +150,8 @@ pub struct ConfigResponse {
     pub unit_price: Coin,
     pub whitelist: Option<String>,
     pub registry: Option<String>,
-    pub revenue_router: Option<String>,
-    pub use_revenue_router: bool,
+    pub split_router: Option<String>,
+    pub use_split_router: bool,
     pub metadata_mode: MetadataMode,
     pub native_asset_template: Vec<NativeAsset>,
     pub paused: bool,
@@ -170,8 +170,8 @@ impl From<Config> for ConfigResponse {
             unit_price: config.unit_price,
             whitelist: config.whitelist.map(|w| w.to_string()),
             registry: config.registry.map(|r| r.to_string()),
-            revenue_router: config.revenue_router.map(|r| r.to_string()),
-            use_revenue_router: config.use_revenue_router,
+            split_router: config.split_router.map(|r| r.to_string()),
+            use_split_router: config.use_split_router,
             metadata_mode: config.metadata_mode,
             native_asset_template: config.native_asset_template,
             paused: config.paused,
@@ -231,10 +231,10 @@ pub struct TokenNativeAssetsResponse {
     pub native_assets: Vec<NativeAsset>,
 }
 
-// ========== Revenue Router Messages ==========
+// ========== Split Router Messages ==========
 
 #[cw_serde]
-pub enum RevenueRouterExecuteMsg {
+pub enum SplitRouterExecuteMsg {
     RoutePrimarySale { collection: String },
 }
 

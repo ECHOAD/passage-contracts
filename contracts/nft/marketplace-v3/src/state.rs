@@ -20,10 +20,10 @@ pub struct Config {
     pub fee_collector: Addr,
     /// Registry contract address (required for collection verification)
     pub registry: Option<Addr>,
-    /// Revenue Router address (preferred over fee_collector)
-    pub revenue_router: Option<Addr>,
-    /// Whether to use Revenue Router
-    pub use_revenue_router: bool,
+    /// Split Router address for creator-side royalty routing
+    pub split_router: Option<Addr>,
+    /// Whether to use Split Router
+    pub use_split_router: bool,
     /// Operators who can update ask states and manage collections
     pub operators: Vec<Addr>,
     /// Whether the contract is paused
@@ -67,7 +67,9 @@ impl CollectionConfig {
 
     /// Get the effective denom for this collection
     pub fn get_denom(&self, default_denom: &str) -> String {
-        self.denom.clone().unwrap_or_else(|| default_denom.to_string())
+        self.denom
+            .clone()
+            .unwrap_or_else(|| default_denom.to_string())
     }
 
     /// Check if collection can be traded
@@ -268,7 +270,7 @@ pub const ROYALTY_CACHE: Map<Addr, CachedRoyaltyInfo> = Map::new("royalty_cache"
 pub struct MarketStats {
     pub total_sales: u64,
     pub total_volume: Uint128,
-    pub total_fees: Uint128,
+    pub total_trading_fees: Uint128,
     pub total_royalties: Uint128,
 }
 

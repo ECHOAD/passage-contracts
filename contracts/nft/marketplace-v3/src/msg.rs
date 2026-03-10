@@ -1,4 +1,6 @@
-use crate::state::{Ask, Bid, CollectionBid, CollectionConfig, CollectionStats, Config, MarketStats, TokenId};
+use crate::state::{
+    Ask, Bid, CollectionBid, CollectionConfig, CollectionStats, Config, MarketStats, TokenId,
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 
@@ -10,10 +12,10 @@ pub struct MigrateMsg {
     pub collection: String,
     /// Optional: Registry contract address
     pub registry: Option<String>,
-    /// Optional: Revenue Router address for new fee distribution
-    pub revenue_router: Option<String>,
-    /// Whether to use Revenue Router (default: true if revenue_router is set)
-    pub use_revenue_router: Option<bool>,
+    /// Optional: Split Router address for creator-side royalty distribution
+    pub split_router: Option<String>,
+    /// Whether to use Split Router (default: true if split_router is set)
+    pub use_split_router: Option<bool>,
     /// Additional collections to support (besides the migrated one)
     pub additional_collections: Option<Vec<String>>,
     /// Optional per-collection denom overrides
@@ -42,10 +44,10 @@ pub struct InstantiateMsg {
     pub fee_collector: String,
     /// Registry contract address (for collection verification)
     pub registry: Option<String>,
-    /// Revenue Router address
-    pub revenue_router: Option<String>,
-    /// Whether to use Revenue Router
-    pub use_revenue_router: Option<bool>,
+    /// Split Router address
+    pub split_router: Option<String>,
+    /// Whether to use Split Router
+    pub use_split_router: Option<bool>,
     /// Operator addresses
     pub operators: Option<Vec<String>>,
     /// Whether to require collection registration (default: true)
@@ -64,8 +66,8 @@ pub enum ExecuteMsg {
         max_trading_fee_bps: Option<u64>,
         fee_collector: Option<String>,
         registry: Option<String>,
-        revenue_router: Option<String>,
-        use_revenue_router: Option<bool>,
+        split_router: Option<String>,
+        use_split_router: Option<bool>,
         operators: Option<Vec<String>>,
         paused: Option<bool>,
         require_registration: Option<bool>,
@@ -97,18 +99,11 @@ pub enum ExecuteMsg {
         reason: Option<String>,
     },
     /// Reactivate a previously deactivated collection
-    ReactivateCollection {
-        collection: String,
-    },
+    ReactivateCollection { collection: String },
     /// Blacklist a collection (moderation action - admin only)
-    BlacklistCollection {
-        collection: String,
-        reason: String,
-    },
+    BlacklistCollection { collection: String, reason: String },
     /// Remove blacklist from a collection (admin only)
-    UnblacklistCollection {
-        collection: String,
-    },
+    UnblacklistCollection { collection: String },
 
     // ========== Listing Operations ==========
     /// Create a listing (ask) for an NFT
@@ -312,8 +307,8 @@ pub struct ConfigResponse {
     pub max_trading_fee_bps: u64,
     pub fee_collector: String,
     pub registry: Option<String>,
-    pub revenue_router: Option<String>,
-    pub use_revenue_router: bool,
+    pub split_router: Option<String>,
+    pub use_split_router: bool,
     pub operators: Vec<String>,
     pub paused: bool,
     pub require_registration: bool,
@@ -329,8 +324,8 @@ impl From<Config> for ConfigResponse {
             max_trading_fee_bps: c.max_trading_fee_bps,
             fee_collector: c.fee_collector.to_string(),
             registry: c.registry.map(|a| a.to_string()),
-            revenue_router: c.revenue_router.map(|a| a.to_string()),
-            use_revenue_router: c.use_revenue_router,
+            split_router: c.split_router.map(|a| a.to_string()),
+            use_split_router: c.use_split_router,
             operators: c.operators.iter().map(|a| a.to_string()).collect(),
             paused: c.paused,
             require_registration: c.require_registration,
@@ -418,7 +413,7 @@ pub struct CollectionStatsResponse {
 #[cw_serde]
 pub struct SalePreviewResponse {
     pub sale_price: Uint128,
-    pub platform_fee: Uint128,
+    pub trading_fee: Uint128,
     pub royalty: Uint128,
     pub seller_proceeds: Uint128,
 }
@@ -426,12 +421,8 @@ pub struct SalePreviewResponse {
 // ========== External Messages ==========
 
 #[cw_serde]
-pub enum RevenueRouterExecuteMsg {
-    RouteSecondarySale {
-        collection: String,
-        seller: String,
-        royalty_amount: Uint128,
-    },
+pub enum SplitRouterExecuteMsg {
+    RouteSecondaryRoyalty { collection: String },
 }
 
 #[cw_serde]

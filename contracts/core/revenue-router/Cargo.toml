@@ -1,8 +1,8 @@
 [package]
-name = "revenue-router"
+name = "split-router"
 version = "1.0.0"
 edition.workspace = true
-description = "Passage Revenue Router - Configurable revenue distribution for minting and sales"
+description = "Passage Split Router - Configurable creator-side split routing for minting and royalties"
 license.workspace = true
 repository.workspace = true
 authors.workspace = true

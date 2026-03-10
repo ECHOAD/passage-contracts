@@ -41,5 +41,3 @@ cw721-base = { version = "0.13.1", features = ["library"] }
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta7" }
 
-[profile.release]
-overflow-checks = true

@@ -2,6 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AuctionResponse",
   "type": "object",
+  "required": [
+    "can_settle"
+  ],
   "properties": {
     "auction": {
       "anyOf": [
@@ -13,7 +16,20 @@
         }
       ]
     },
-    "auction_status": {
+    "can_settle": {
+      "type": "boolean"
+    },
+    "min_bid": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Coin"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
       "anyOf": [
         {
           "$ref": "#/definitions/AuctionStatus"
@@ -22,44 +38,75 @@
           "type": "null"
         }
       ]
-    },
-    "is_reserve_price_met": {
-      "type": [
-        "boolean",
-        "null"
-      ]
-    },
-    "next_bid_min": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/Uint128"
-        },
-        {
-          "type": "null"
-        }
-      ]
     }
   },
+  "additionalProperties": false,
   "definitions": {
     "Addr": {
       "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
       "type": "string"
     },
     "Auction": {
-      "description": "Represents an auction on the marketplace",
       "type": "object",
       "required": [
-        "end_time",
+        "collection",
+        "created_at",
+        "duration",
+        "reserve_price",
         "seller",
-        "start_time",
-        "starting_price",
         "token_id"
       ],
       "properties": {
-        "end_time": {
-          "$ref": "#/definitions/Timestamp"
+        "collection": {
+          "$ref": "#/definitions/Addr"
         },
-        "funds_recipient": {
+        "created_at": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "duration": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "end_time": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "first_bid_time": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "high_bid": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HighBid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reserve_price": {
+          "$ref": "#/definitions/Coin"
+        },
+        "seller": {
+          "$ref": "#/definitions/Addr"
+        },
+        "seller_funds_recipient": {
           "anyOf": [
             {
               "$ref": "#/definitions/Addr"
@@ -69,63 +116,18 @@
             }
           ]
         },
-        "highest_bid": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/AuctionBid"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "reserve_price": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Coin"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "seller": {
-          "$ref": "#/definitions/Addr"
-        },
-        "start_time": {
-          "$ref": "#/definitions/Timestamp"
-        },
-        "starting_price": {
-          "$ref": "#/definitions/Coin"
-        },
         "token_id": {
           "type": "string"
         }
-      }
-    },
-    "AuctionBid": {
-      "description": "Represents a bid (offer) on an auction in the marketplace",
-      "type": "object",
-      "required": [
-        "bidder",
-        "price"
-      ],
-      "properties": {
-        "bidder": {
-          "$ref": "#/definitions/Addr"
-        },
-        "price": {
-          "$ref": "#/definitions/Coin"
-        }
-      }
+      },
+      "additionalProperties": false
     },
     "AuctionStatus": {
       "type": "string",
       "enum": [
-        "Pending",
-        "Open",
-        "Closed",
-        "Expired"
+        "created",
+        "active",
+        "ended"
       ]
     },
     "Coin": {
@@ -141,7 +143,28 @@
         "denom": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    "HighBid": {
+      "type": "object",
+      "required": [
+        "bidder",
+        "coin",
+        "placed_at"
+      ],
+      "properties": {
+        "bidder": {
+          "$ref": "#/definitions/Addr"
+        },
+        "coin": {
+          "$ref": "#/definitions/Coin"
+        },
+        "placed_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "additionalProperties": false
     },
     "Timestamp": {
       "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",

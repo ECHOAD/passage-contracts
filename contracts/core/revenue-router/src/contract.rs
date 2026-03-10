@@ -9,8 +9,8 @@ pub(super) use crate::error::ContractError;
 pub(super) use crate::msg::{
     CollaboratorInput, CollectionStatsResponse, ConfigResponse, DistributionPreviewResponse,
     DistributionRuleResponse, DistributionRulesResponse, EcosystemConfigResponse, ExecuteMsg,
-    InstantiateMsg, QueryMsg, RecipientInput, RevenueEventsResponse, SplitRecipientInput,
-    SplitWalletResponse, SplitWalletsResponse,
+    InstantiateMsg, QueryMsg, RecipientInput, RegistryCollectionResponse, RegistryQueryMsg,
+    RevenueEventsResponse, SplitRecipientInput, SplitWalletResponse, SplitWalletsResponse,
 };
 pub(super) use crate::state::{
     Collaborator, Config, DistributionRule, EcosystemConfig, RevenueEvent, RevenueEventType,
@@ -18,12 +18,11 @@ pub(super) use crate::state::{
     REVENUE_EVENTS, REVENUE_EVENT_COUNT, SPLIT_WALLETS,
 };
 
-pub(super) const CONTRACT_NAME: &str = "crates.io:passage-revenue-router";
+pub(super) const CONTRACT_NAME: &str = "crates.io:passage-split-router";
 pub(super) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(super) const DEFAULT_LIMIT: u32 = 10;
 pub(super) const MAX_LIMIT: u32 = 100;
-pub(super) const MAX_PLATFORM_FEE: &str = "0.10"; // 10% max platform fee
 pub(super) const MAX_EVENTS_STORED: u64 = 1000;
 
 mod execute;

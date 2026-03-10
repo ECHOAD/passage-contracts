@@ -8,6 +8,9 @@ repository = "https://github.com/envadiv/passage-contracts"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+library = []
+
 [dependencies]
 cosmwasm-std = "1.1.9"
 cosmwasm-schema = "1.1.9"

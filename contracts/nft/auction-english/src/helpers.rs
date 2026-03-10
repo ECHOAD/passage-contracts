@@ -1,276 +1,282 @@
-use crate::error::ContractError;
-use crate::state::{Auction, Config, TokenId};
-use cosmwasm_std::{
-    coin, to_json_binary, Addr, Api, BankMsg, Coin, Decimal, Deps, Event, MessageInfo, Order,
-    Response, StdResult, SubMsg, Timestamp, Uint128, WasmMsg,
+use crate::{
+    error::ContractError,
+    msg::{
+        CollectionInfoResponse, Cw721ExecuteMsg, Cw721QueryMsg, OwnerOfResponse, Pg721QueryMsg,
+        RegistryCollectionResponse, RegistryQueryMsg, RoyaltyInfoResponse,
+    },
+    state::{Auction, Config},
 };
-use cw721::Cw721ExecuteMsg;
-use cw721_base::helpers::Cw721Contract;
-use pg721::msg::{CollectionInfoResponse, QueryMsg as Pg721QueryMsg};
+use cosmwasm_std::{
+    to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo, QueryRequest,
+    StdResult, Uint128, WasmMsg, WasmQuery,
+};
 
-pub fn map_validate(api: &dyn Api, addresses: &[String]) -> StdResult<Vec<Addr>> {
-    addresses
-        .iter()
-        .map(|addr| api.addr_validate(addr))
-        .collect()
-}
-
-pub fn option_bool_to_order(descending: Option<bool>) -> Order {
-    match descending {
-        Some(_descending) => {
-            if _descending {
-                Order::Descending
-            } else {
-                Order::Ascending
-            }
-        }
-        _ => Order::Ascending,
-    }
-}
-
-/// Transfers funds and NFT, updates bid
-pub fn finalize_sale(
-    deps: Deps,
-    bidder: &Addr,
-    token_id: &TokenId,
-    payment_amount: Uint128,
-    payment_recipient: &Addr,
-    config: &Config,
-    res: &mut Response,
-) -> StdResult<()> {
-    payout(deps, payment_amount, payment_recipient, &config, res)?;
-
-    transfer_nft(&token_id, bidder, &config.cw721_address, res)?;
-
-    let event = Event::new("finalize-sale")
-        .add_attribute("collection", config.cw721_address.to_string())
-        .add_attribute("buyer", bidder.to_string())
-        .add_attribute("token_id", token_id.to_string())
-        .add_attribute("payment_amount", payment_amount.to_string())
-        .add_attribute("payment_recipient", payment_recipient.to_string());
-    res.events.push(event);
-
-    Ok(())
-}
-
-/// Payout a bid
-fn payout(
-    deps: Deps,
-    payment_amount: Uint128,
-    payment_recipient: &Addr,
-    config: &Config,
-    response: &mut Response,
-) -> StdResult<()> {
-    let cw721_address = config.cw721_address.to_string();
-
-    // Charge market fee
-    let market_fee = payment_amount * config.trading_fee_percent / Uint128::from(100u128);
-    if market_fee > Uint128::zero() {
-        transfer_token(
-            coin(market_fee.u128(), &config.denom),
-            config.collector_address.to_string(),
-            "payout-market",
-            response,
-        )?;
-    }
-
-    // Query royalties
-    let collection_info: CollectionInfoResponse = deps
-        .querier
-        .query_wasm_smart(&cw721_address, &Pg721QueryMsg::CollectionInfo {})?;
-
-    // Charge royalties if they exist
-    let royalties = match &collection_info.royalty_info {
-        Some(royalty) => Some((payment_amount * royalty.share, &royalty.payment_address)),
-        None => None,
-    };
-    if let Some(_royalties) = &royalties {
-        if _royalties.0 > Uint128::zero() {
-            transfer_token(
-                coin(_royalties.0.u128(), &config.denom),
-                _royalties.1.to_string(),
-                "payout-royalty",
-                response,
-            )?;
-        }
-    };
-
-    // Pay seller
-    let mut seller_amount = payment_amount - market_fee;
-    if let Some(_royalties) = &royalties {
-        seller_amount -= _royalties.0;
-    };
-
-    transfer_token(
-        coin(seller_amount.u128(), &config.denom),
-        payment_recipient.to_string(),
-        "payout-seller",
-        response,
-    )?;
-
-    Ok(())
-}
-
-// Validate Bid or Ask price
-pub fn price_validate(price: &Coin, config: &Config) -> Result<(), ContractError> {
-    if price.amount.is_zero() || price.denom != config.denom || price.amount < config.min_price {
-        return Err(ContractError::InvalidPrice {});
-    }
-
-    Ok(())
-}
-
-/// Checks to enforce only NFT owner can call
-pub fn only_owner(
-    deps: Deps,
-    info: &MessageInfo,
-    collection: &Addr,
-    token_id: &str,
-) -> Result<(), ContractError> {
-    let res = Cw721Contract(collection.clone()).owner_of(&deps.querier, token_id, false)?;
-    if res.owner != info.sender {
-        return Err(ContractError::Unauthorized(String::from(
-            "only the owner can call this function",
-        )));
-    }
-    Ok(())
-}
-
-/// Checks to enforce only Ask seller can call
-pub fn only_seller(info: &MessageInfo, seller: &Addr) -> Result<(), ContractError> {
-    if &info.sender != seller {
-        return Err(ContractError::Unauthorized(String::from(
-            "only the seller can call this function",
-        )));
-    }
-    Ok(())
-}
-
-/// Checks to enforce only privileged operators
-pub fn only_operator(info: &MessageInfo, config: &Config) -> Result<Addr, ContractError> {
-    if !config
-        .operators
-        .iter()
-        .any(|a| a.as_ref() == info.sender.as_ref())
-    {
-        return Err(ContractError::Unauthorized(String::from(
-            "only an operator can call this function",
-        )));
-    }
-
-    Ok(info.sender.clone())
-}
-
-pub fn transfer_nft(
-    token_id: &TokenId,
-    recipient: &Addr,
-    collection: &Addr,
-    response: &mut Response,
-) -> StdResult<()> {
-    let cw721_transfer_msg = Cw721ExecuteMsg::TransferNft {
-        token_id: token_id.to_string(),
-        recipient: recipient.to_string(),
-    };
-
-    let exec_cw721_transfer = SubMsg::new(WasmMsg::Execute {
-        contract_addr: collection.to_string(),
-        msg: to_json_binary(&cw721_transfer_msg)?,
-        funds: vec![],
-    });
-    response.messages.push(exec_cw721_transfer);
-
-    let event = Event::new("transfer-nft")
-        .add_attribute("collection", collection.to_string())
-        .add_attribute("token_id", token_id.to_string())
-        .add_attribute("recipient", recipient.to_string());
-    response.events.push(event);
-
-    Ok(())
-}
-
-pub fn transfer_token(
-    coin_send: Coin,
-    recipient: String,
-    event_label: &str,
-    response: &mut Response,
-) -> StdResult<()> {
-    let token_transfer_msg = BankMsg::Send {
-        to_address: recipient.clone(),
-        amount: vec![coin_send.clone()],
-    };
-    response.messages.push(SubMsg::new(token_transfer_msg));
-
-    let event = Event::new(event_label)
-        .add_attribute("coin", coin_send.to_string())
-        .add_attribute("recipient", recipient.to_string());
-    response.events.push(event);
-
-    Ok(())
-}
-
-pub fn validate_auction_times(
-    auction: &Auction,
-    config: &Config,
-    now: &Timestamp,
-) -> Result<(), ContractError> {
-    if &auction.start_time <= now {
-        return Err(ContractError::InvalidStartEndTime(String::from(
-            "start time must be in the future",
-        )));
-    }
-    if &auction.start_time.plus_seconds(config.min_duration) > &auction.end_time {
-        return Err(ContractError::InvalidStartEndTime(String::from(
-            "duration is below minimum",
-        )));
-    }
-    if &auction.start_time.plus_seconds(config.max_duration) < &auction.end_time {
-        return Err(ContractError::InvalidStartEndTime(String::from(
-            "duration is above maximum",
-        )));
-    }
-    Ok(())
+pub struct RoyaltyPayout {
+    pub recipient: Addr,
+    pub amount: Uint128,
 }
 
 pub fn validate_config(config: &Config) -> Result<(), ContractError> {
-    if config.trading_fee_percent > Decimal::percent(10000) {
-        return Err(ContractError::InvalidConfig(String::from(
-            "trading_fee_percent must be less than or equal to 100",
-        )));
+    if config.trading_fee_bps > config.max_trading_fee_bps {
+        return Err(ContractError::TradingFeeExceedsMax {
+            fee_bps: config.trading_fee_bps,
+            max_bps: config.max_trading_fee_bps,
+        });
     }
-    if config.operators.is_empty() {
-        return Err(ContractError::InvalidConfig(String::from(
-            "operators must be non-empty",
-        )));
+
+    if config.max_trading_fee_bps > 10_000 {
+        return Err(ContractError::InvalidConfig {
+            reason: "max_trading_fee_bps cannot exceed 10000".to_string(),
+        });
     }
+
     if config.min_price.is_zero() {
-        return Err(ContractError::InvalidConfig(String::from(
-            "min_price must be greater than zero",
-        )));
+        return Err(ContractError::InvalidConfig {
+            reason: "min_price must be greater than zero".to_string(),
+        });
     }
-    if config.min_bid_increment.is_zero() {
-        return Err(ContractError::InvalidConfig(String::from(
-            "min_bid_increment must be greater than zero",
-        )));
+
+    if config.min_bid_increment_percent.is_zero()
+        || config.min_bid_increment_percent >= Decimal::one()
+    {
+        return Err(ContractError::InvalidConfig {
+            reason: "min_bid_increment_percent must be greater than zero and less than one"
+                .to_string(),
+        });
     }
-    if config.min_duration == 0 {
-        return Err(ContractError::InvalidConfig(String::from(
-            "min_duration must be greater than zero",
-        )));
+
+    if config.min_duration == 0 || config.max_duration == 0 || config.extend_duration == 0 {
+        return Err(ContractError::InvalidConfig {
+            reason: "durations must be greater than zero".to_string(),
+        });
     }
-    if config.max_duration == 0 {
-        return Err(ContractError::InvalidConfig(String::from(
-            "max_duration must be greater than zero",
-        )));
-    }
+
     if config.min_duration > config.max_duration {
-        return Err(ContractError::InvalidConfig(String::from(
-            "max_duration must be greater than or equal to min_duration",
-        )));
+        return Err(ContractError::InvalidConfig {
+            reason: "min_duration cannot exceed max_duration".to_string(),
+        });
     }
-    if config.closed_duration == 0 {
-        return Err(ContractError::InvalidConfig(String::from(
-            "closed_duration must be greater than zero",
-        )));
+
+    if config.use_split_router && config.split_router.is_none() {
+        return Err(ContractError::InvalidConfig {
+            reason: "split_router must be set when use_split_router is true".to_string(),
+        });
     }
+
+    if config.require_registration && config.registry.is_none() {
+        return Err(ContractError::InvalidConfig {
+            reason: "registry must be set when require_registration is true".to_string(),
+        });
+    }
+
     Ok(())
+}
+
+pub fn validate_collection_registration(
+    deps: Deps,
+    config: &Config,
+    collection: &Addr,
+) -> Result<(), ContractError> {
+    if !config.require_registration {
+        return Ok(());
+    }
+
+    let registry = config
+        .registry
+        .as_ref()
+        .ok_or(ContractError::InvalidConfig {
+            reason: "registry must be configured when require_registration is true".to_string(),
+        })?;
+
+    let response: RegistryCollectionResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::Collection {
+                address: collection.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        })?;
+
+    if response.collection.is_none() {
+        return Err(ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+pub fn validate_reserve_price(config: &Config, reserve_price: &Coin) -> Result<(), ContractError> {
+    if reserve_price.denom != config.denom {
+        return Err(ContractError::InvalidPaymentDenom {
+            expected: config.denom.clone(),
+            received: reserve_price.denom.clone(),
+        });
+    }
+
+    if reserve_price.amount < config.min_price {
+        return Err(ContractError::InvalidReservePrice {
+            min_price: Coin {
+                denom: config.denom.clone(),
+                amount: config.min_price,
+            }
+            .to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+pub fn validate_duration(config: &Config, duration: u64) -> Result<(), ContractError> {
+    if duration < config.min_duration || duration > config.max_duration {
+        return Err(ContractError::InvalidDuration {
+            min: config.min_duration,
+            max: config.max_duration,
+            got: duration,
+        });
+    }
+
+    Ok(())
+}
+
+pub fn query_owner(
+    deps: Deps,
+    collection: &Addr,
+    token_id: &str,
+) -> Result<OwnerOfResponse, ContractError> {
+    let response: OwnerOfResponse = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: collection.to_string(),
+            msg: to_json_binary(&Cw721QueryMsg::OwnerOf {
+                token_id: token_id.to_string(),
+                include_expired: Some(false),
+            })?,
+        }))
+        .map_err(|_| ContractError::NftQueryFailed {})?;
+
+    Ok(response)
+}
+
+pub fn ensure_owner_and_approval(
+    deps: Deps,
+    env: &Env,
+    sender: &Addr,
+    collection: &Addr,
+    token_id: &str,
+) -> Result<(), ContractError> {
+    let owner_response = query_owner(deps, collection, token_id)?;
+    let owner = deps.api.addr_validate(&owner_response.owner)?;
+
+    if owner != *sender {
+        return Err(ContractError::NotTokenOwner {
+            token_id: token_id.to_string(),
+        });
+    }
+
+    let approved = owner_response
+        .approvals
+        .iter()
+        .any(|approval| approval.spender == env.contract.address.as_str());
+
+    if !approved {
+        return Err(ContractError::NftNotApproved {});
+    }
+
+    Ok(())
+}
+
+pub fn validate_bid_funds(info: &MessageInfo, denom: &str) -> Result<Uint128, ContractError> {
+    let Some(payment) = info.funds.first() else {
+        return Err(ContractError::InvalidPaymentDenom {
+            expected: denom.to_string(),
+            received: "none".to_string(),
+        });
+    };
+
+    if info.funds.len() != 1 {
+        return Err(ContractError::InvalidConfig {
+            reason: "bid payments must send exactly one coin".to_string(),
+        });
+    }
+
+    if payment.denom != denom {
+        return Err(ContractError::InvalidPaymentDenom {
+            expected: denom.to_string(),
+            received: payment.denom.clone(),
+        });
+    }
+
+    Ok(payment.amount)
+}
+
+pub fn build_transfer_nft_msg(
+    collection: &Addr,
+    token_id: &str,
+    recipient: &Addr,
+) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: collection.to_string(),
+        msg: to_json_binary(&Cw721ExecuteMsg::TransferNft {
+            recipient: recipient.to_string(),
+            token_id: token_id.to_string(),
+        })?,
+        funds: vec![],
+    }))
+}
+
+pub fn query_royalty_payout(
+    deps: Deps,
+    collection: &Addr,
+    amount: Uint128,
+) -> Result<Option<RoyaltyPayout>, ContractError> {
+    let result: Result<CollectionInfoResponse, _> =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: collection.to_string(),
+            msg: to_json_binary(&Pg721QueryMsg::CollectionInfo {})?,
+        }));
+
+    let Ok(collection_info) = result else {
+        return Ok(None);
+    };
+
+    let Some(RoyaltyInfoResponse {
+        payment_address,
+        share,
+    }) = collection_info.royalty_info
+    else {
+        return Ok(None);
+    };
+
+    let share: Decimal = share
+        .parse()
+        .map_err(|_| ContractError::RoyaltyQueryFailed {})?;
+    let recipient = deps
+        .api
+        .addr_validate(&payment_address)
+        .map_err(|_| ContractError::RoyaltyQueryFailed {})?;
+    let royalty_amount =
+        amount.multiply_ratio(share.atomics().u128(), 10u128.pow(Decimal::DECIMAL_PLACES));
+
+    Ok(Some(RoyaltyPayout {
+        recipient,
+        amount: royalty_amount,
+    }))
+}
+
+pub fn auction_is_settleable(auction: &Auction, now: cosmwasm_std::Timestamp) -> bool {
+    matches!(auction.status(now), crate::state::AuctionStatus::Ended) && auction.high_bid.is_some()
+}
+
+pub fn build_bank_send_msg(to: &Addr, denom: &str, amount: Uint128) -> CosmosMsg {
+    CosmosMsg::Bank(BankMsg::Send {
+        to_address: to.to_string(),
+        amount: vec![Coin {
+            denom: denom.to_string(),
+            amount,
+        }],
+    })
 }

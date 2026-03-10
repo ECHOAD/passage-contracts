@@ -1,167 +1,134 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint128, Uint256};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter, Result};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
-    /// The NFT contract
-    pub cw721_address: Addr,
-    /// The token used to pay for NFTs
+    pub admin: Addr,
     pub denom: String,
-    /// Marketplace fee collector address
-    pub collector_address: Addr,
-    /// Marketplace fee
-    pub trading_fee_percent: Decimal,
-    /// The operator addresses that have access to certain functionality
-    pub operators: Vec<Addr>,
-    /// Min value for an Auction starting price
     pub min_price: Uint128,
-    /// The minimum difference between incremental bids
-    pub min_bid_increment: Uint128,
-    /// The minimum duration of an auction
+    pub trading_fee_bps: u64,
+    pub max_trading_fee_bps: u64,
+    pub fee_collector: Addr,
+    pub registry: Option<Addr>,
+    pub split_router: Option<Addr>,
+    pub use_split_router: bool,
+    pub min_bid_increment_percent: Decimal,
     pub min_duration: u64,
-    /// The maximum duration of an auction
     pub max_duration: u64,
-    /// The duration the Auction remains in the Closed state
-    pub closed_duration: u64,
-    /// The duration an Auction is extended by when a bid is placed in the final minutes
-    pub buffer_duration: u64,
+    pub extend_duration: u64,
+    pub paused: bool,
+    pub require_registration: bool,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-pub type TokenId = String;
-
-/// Represents a bid (offer) on an auction in the marketplace
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct AuctionBid {
+#[cw_serde]
+pub struct HighBid {
     pub bidder: Addr,
-    pub price: Coin,
+    pub coin: Coin,
+    pub placed_at: Timestamp,
 }
 
-/// Represents an auction on the marketplace
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Auction {
-    pub token_id: TokenId,
+    pub collection: Addr,
+    pub token_id: String,
     pub seller: Addr,
-    pub start_time: Timestamp,
-    pub end_time: Timestamp,
-    pub starting_price: Coin,
-    pub reserve_price: Option<Coin>,
-    pub funds_recipient: Option<Addr>,
-    pub highest_bid: Option<AuctionBid>,
+    pub reserve_price: Coin,
+    pub duration: u64,
+    pub seller_funds_recipient: Option<Addr>,
+    pub high_bid: Option<HighBid>,
+    pub first_bid_time: Option<Timestamp>,
+    pub end_time: Option<Timestamp>,
+    pub created_at: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub enum AuctionStatus {
-    Pending,
-    Open,
-    Closed,
-    Expired,
-}
-
-impl Display for AuctionStatus {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:?}", self)
-    }
+    Created,
+    Active,
+    Ended,
 }
 
 impl Auction {
-    pub fn get_recipient(&self) -> Addr {
-        let self_cpy = self.clone();
-        self_cpy.funds_recipient.map_or(self_cpy.seller, |a| a)
-    }
-
-    pub fn get_auction_status(&self, now: &Timestamp, closed_duration: u64) -> AuctionStatus {
-        if now < &self.start_time {
-            AuctionStatus::Pending
-        } else if now < &self.end_time {
-            AuctionStatus::Open
-        } else if now < &self.end_time.plus_seconds(closed_duration) {
-            AuctionStatus::Closed
-        } else {
-            AuctionStatus::Expired
+    pub fn status(&self, now: Timestamp) -> AuctionStatus {
+        match self.end_time {
+            None => AuctionStatus::Created,
+            Some(end_time) if now < end_time => AuctionStatus::Active,
+            Some(_) => AuctionStatus::Ended,
         }
     }
 
-    pub fn get_next_bid_min(&self, min_bid_increment: Uint128) -> Uint128 {
-        if let Some(_highest_bid) = &self.highest_bid {
-            _highest_bid.price.amount + min_bid_increment
-        } else {
-            self.starting_price.amount
-        }
+    pub fn funds_recipient(&self) -> Addr {
+        self.seller_funds_recipient
+            .clone()
+            .unwrap_or_else(|| self.seller.clone())
     }
 
-    pub fn is_reserve_price_met(&self) -> bool {
-        self.reserve_price.as_ref().map_or(false, |r| {
-            self.highest_bid
-                .as_ref()
-                .map_or(false, |h| h.price.amount >= r.amount)
-        })
+    pub fn min_bid_coin(&self, min_bid_increment_percent: Decimal) -> Coin {
+        let amount = match &self.high_bid {
+            Some(high_bid) => mul_decimal_ceil(
+                high_bid.coin.amount,
+                Decimal::one() + min_bid_increment_percent,
+            ),
+            None => self.reserve_price.amount,
+        };
+
+        Coin {
+            denom: self.reserve_price.denom.clone(),
+            amount,
+        }
     }
 }
 
-/// Primary key for asks
-pub type AuctionKey = TokenId;
+fn mul_decimal_ceil(amount: Uint128, multiplier: Decimal) -> Uint128 {
+    let numerator = Uint256::from(amount) * Uint256::from(multiplier.atomics());
+    let denominator = Uint256::from(10u128.pow(Decimal::DECIMAL_PLACES));
+    let quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+    let rounded = if remainder.is_zero() {
+        quotient
+    } else {
+        quotient + Uint256::one()
+    };
 
-/// Defines indices for accessing Auctions
-pub struct AuctionIndices<'a> {
-    pub start_time: MultiIndex<'a, u64, Auction, AuctionKey>,
+    Uint128::try_from(rounded).expect("decimal multiplication overflow")
+}
+
+pub type AuctionKey = (Addr, String);
+
+pub struct AuctionIndexes<'a> {
+    pub collection: MultiIndex<'a, Addr, Auction, AuctionKey>,
+    pub seller: MultiIndex<'a, Addr, Auction, AuctionKey>,
     pub end_time: MultiIndex<'a, u64, Auction, AuctionKey>,
-    pub highest_bid_price: MultiIndex<'a, u128, Auction, AuctionKey>,
-    pub seller_end_time: MultiIndex<'a, (String, u64), Auction, AuctionKey>,
-    pub highest_bidder_end_time: MultiIndex<'a, (String, u64), Auction, AuctionKey>,
 }
 
-impl<'a> IndexList<Auction> for AuctionIndices<'a> {
+impl<'a> IndexList<Auction> for AuctionIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Auction>> + '_> {
-        let v: Vec<&dyn Index<Auction>> = vec![
-            &self.start_time,
-            &self.end_time,
-            &self.highest_bid_price,
-            &self.seller_end_time,
-            &self.highest_bidder_end_time,
-        ];
+        let v: Vec<&dyn Index<Auction>> = vec![&self.collection, &self.seller, &self.end_time];
         Box::new(v.into_iter())
     }
 }
 
-pub fn auctions<'a>() -> IndexedMap<'a, AuctionKey, Auction, AuctionIndices<'a>> {
-    let indexes = AuctionIndices {
-        start_time: MultiIndex::new(
-            |a: &Auction| a.start_time.seconds(),
+pub fn auctions<'a>() -> IndexedMap<AuctionKey, Auction, AuctionIndexes<'a>> {
+    let indexes = AuctionIndexes {
+        collection: MultiIndex::new(
+            |_pk: &[u8], auction: &Auction| auction.collection.clone(),
             "auctions",
-            "auctions__start_time",
+            "auctions__collection",
+        ),
+        seller: MultiIndex::new(
+            |_pk: &[u8], auction: &Auction| auction.seller.clone(),
+            "auctions",
+            "auctions__seller",
         ),
         end_time: MultiIndex::new(
-            |a: &Auction| a.end_time.seconds(),
+            |_pk: &[u8], auction: &Auction| auction.end_time.map_or(u64::MAX, |end| end.seconds()),
             "auctions",
             "auctions__end_time",
         ),
-        highest_bid_price: MultiIndex::new(
-            |a: &Auction| a.highest_bid.as_ref().map_or(0, |b| b.price.amount.u128()),
-            "auctions",
-            "auctions__highest_bid_price",
-        ),
-        seller_end_time: MultiIndex::new(
-            |a: &Auction| (a.seller.to_string(), a.end_time.seconds()),
-            "auctions",
-            "auctions__seller_end_time",
-        ),
-        highest_bidder_end_time: MultiIndex::new(
-            |a: &Auction| {
-                (
-                    a.highest_bid
-                        .as_ref()
-                        .map_or(String::from(""), |b| b.bidder.to_string()),
-                    a.end_time.seconds(),
-                )
-            },
-            "auctions",
-            "auctions__highest_bidder_end_time",
-        ),
     };
+
     IndexedMap::new("auctions", indexes)
 }

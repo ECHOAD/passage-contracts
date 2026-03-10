@@ -9,7 +9,7 @@ pub(super) use crate::migration::migrate_state;
 pub(super) use crate::msg::{
     CanMintResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, IsMintingActiveResponse,
     MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse, MintableNumTokensResponse,
-    NativeAssetTemplateResponse, QueryMsg, RevenueRouterExecuteMsg, StartTimeResponse,
+    NativeAssetTemplateResponse, QueryMsg, SplitRouterExecuteMsg, StartTimeResponse,
     TokenNativeAssetsResponse,
 };
 pub(super) use crate::state::{

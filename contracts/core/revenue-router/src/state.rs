@@ -8,10 +8,6 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// Admin address with full control
     pub admin: Addr,
-    /// Platform fee collector address (Passage treasury)
-    pub platform_fee_collector: Addr,
-    /// Default platform fee percentage (e.g., 0.025 = 2.5%)
-    pub default_platform_fee: Decimal,
     /// Registry contract address for verification
     pub registry: Option<Addr>,
     /// Whether the contract is paused
@@ -25,16 +21,12 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub struct DistributionRule {
     /// Collection address this rule applies to
     pub collection: Addr,
-    /// Platform fee override (if None, use default)
-    pub platform_fee: Option<Decimal>,
     /// Creator/primary recipient address
     pub creator: Addr,
-    /// Creator's share after platform fee (e.g., 0.95 = 95%)
+    /// Portion of routed funds used as the collaborator split base.
     pub creator_share: Decimal,
     /// Optional collaborator splits (shares from creator's portion)
     pub collaborators: Vec<Collaborator>,
-    /// Optional royalty pool address for secondary sales
-    pub royalty_pool: Option<Addr>,
     /// Whether this rule is active
     pub active: bool,
     /// Created timestamp
@@ -74,7 +66,6 @@ pub struct RevenueEvent {
     pub event_type: RevenueEventType,
     pub total_amount: Uint128,
     pub denom: String,
-    pub platform_fee: Uint128,
     pub creator_amount: Uint128,
     pub collaborator_amounts: Vec<(Addr, Uint128)>,
     pub timestamp: u64,
@@ -83,10 +74,9 @@ pub struct RevenueEvent {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum RevenueEventType {
-    PrimarySale,   // Minting
-    SecondarySale, // Marketplace
-    Auction,       // Auction sale
-    Royalty,       // Royalty payment
+    PrimarySale,      // Minting proceeds routed to creator split
+    SecondaryRoyalty, // Secondary-market royalty routed to creator split
+    AuctionRoyalty,   // Auction royalty routed to creator split
     Other,
 }
 
@@ -100,10 +90,8 @@ pub const REVENUE_EVENTS: Map<u64, RevenueEvent> = Map::new("rev_events");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct CollectionStats {
     pub total_primary_volume: Uint128,
-    pub total_secondary_volume: Uint128,
-    pub total_platform_fees: Uint128,
+    pub total_secondary_royalties: Uint128,
     pub total_creator_earnings: Uint128,
-    pub total_royalties: Uint128,
     pub event_count: u64,
 }
 

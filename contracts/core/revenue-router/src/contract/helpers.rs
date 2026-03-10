@@ -34,7 +34,6 @@ pub(super) fn record_revenue_event(
     event_type: &RevenueEventType,
     total_amount: Uint128,
     denom: &str,
-    platform_fee: Uint128,
     creator_amount: Uint128,
     collaborator_amounts: Vec<(Addr, Uint128)>,
     sender: &Addr,
@@ -54,7 +53,6 @@ pub(super) fn record_revenue_event(
         event_type: event_type.clone(),
         total_amount,
         denom: denom.to_string(),
-        platform_fee,
         creator_amount,
         collaborator_amounts,
         timestamp: env.block.time.seconds(),
@@ -72,7 +70,6 @@ pub(super) fn update_collection_stats(
     collection: &Addr,
     event_type: &RevenueEventType,
     total_amount: Uint128,
-    platform_fee: Uint128,
     creator_amount: Uint128,
 ) -> Result<(), ContractError> {
     let mut stats = COLLECTION_STATS
@@ -83,16 +80,12 @@ pub(super) fn update_collection_stats(
         RevenueEventType::PrimarySale => {
             stats.total_primary_volume += total_amount;
         }
-        RevenueEventType::SecondarySale | RevenueEventType::Auction => {
-            stats.total_secondary_volume += total_amount;
-        }
-        RevenueEventType::Royalty => {
-            stats.total_royalties += total_amount;
+        RevenueEventType::SecondaryRoyalty | RevenueEventType::AuctionRoyalty => {
+            stats.total_secondary_royalties += total_amount;
         }
         _ => {}
     }
 
-    stats.total_platform_fees += platform_fee;
     stats.total_creator_earnings += creator_amount;
     stats.event_count += 1;
 

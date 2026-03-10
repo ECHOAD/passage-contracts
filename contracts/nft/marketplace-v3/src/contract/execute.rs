@@ -27,8 +27,8 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             operators,
             paused,
             require_registration,
@@ -42,8 +42,8 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            revenue_router,
-            use_revenue_router,
+            split_router,
+            use_split_router,
             operators,
             paused,
             require_registration,
@@ -60,7 +60,15 @@ pub fn execute(
             active,
             trading_fee_bps,
             denom,
-        } => execute_update_collection_config(deps, env, info, collection, active, trading_fee_bps, denom),
+        } => execute_update_collection_config(
+            deps,
+            env,
+            info,
+            collection,
+            active,
+            trading_fee_bps,
+            denom,
+        ),
         ExecuteMsg::DeactivateCollection { collection, reason } => {
             execute_deactivate_collection(deps, env, info, collection, reason)
         }
@@ -157,8 +165,8 @@ fn execute_update_config(
     max_trading_fee_bps: Option<u64>,
     fee_collector: Option<String>,
     registry: Option<String>,
-    revenue_router: Option<String>,
-    use_revenue_router: Option<bool>,
+    split_router: Option<String>,
+    use_split_router: Option<bool>,
     operators: Option<Vec<String>>,
     paused: Option<bool>,
     require_registration: Option<bool>,
@@ -190,11 +198,11 @@ fn execute_update_config(
     if let Some(new_registry) = registry {
         config.registry = Some(deps.api.addr_validate(&new_registry)?);
     }
-    if let Some(new_router) = revenue_router {
-        config.revenue_router = Some(deps.api.addr_validate(&new_router)?);
+    if let Some(new_router) = split_router {
+        config.split_router = Some(deps.api.addr_validate(&new_router)?);
     }
-    if let Some(use_router) = use_revenue_router {
-        config.use_revenue_router = use_router;
+    if let Some(use_router) = use_split_router {
+        config.use_split_router = use_router;
     }
     if let Some(new_operators) = operators {
         config.operators = new_operators
@@ -656,7 +664,7 @@ fn execute_buy_now(
         deps.storage,
         &collection_addr,
         ask.price.amount,
-        sale_info.platform_fee,
+        sale_info.trading_fee,
         sale_info.royalty,
     )?;
 
@@ -827,7 +835,7 @@ fn execute_accept_bid(
         deps.storage,
         &collection_addr,
         bid.price.amount,
-        sale_info.platform_fee,
+        sale_info.trading_fee,
         sale_info.royalty,
     )?;
 
@@ -995,7 +1003,7 @@ fn execute_accept_collection_bid(
         deps.storage,
         &collection_addr,
         col_bid.price.amount,
-        sale_info.platform_fee,
+        sale_info.trading_fee,
         sale_info.royalty,
     )?;
 

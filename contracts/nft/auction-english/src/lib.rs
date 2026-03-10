@@ -1,11 +1,7 @@
-mod error;
+pub mod error;
 pub mod execute;
 mod helpers;
 pub mod msg;
-
-#[cfg(test)]
-mod multitest;
-
 pub mod query;
 pub mod state;
 

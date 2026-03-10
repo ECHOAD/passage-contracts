@@ -15,10 +15,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
             active_only,
-        } => to_json_binary(&query_collection_configs(deps, start_after, limit, active_only)?),
-        QueryMsg::CanTrade { collection } => {
-            to_json_binary(&query_can_trade(deps, collection)?)
-        }
+        } => to_json_binary(&query_collection_configs(
+            deps,
+            start_after,
+            limit,
+            active_only,
+        )?),
+        QueryMsg::CanTrade { collection } => to_json_binary(&query_can_trade(deps, collection)?),
         QueryMsg::CollectionDenom { collection } => {
             to_json_binary(&query_collection_denom(deps, collection)?)
         }
@@ -180,7 +183,8 @@ fn query_can_trade(deps: Deps, collection: String) -> StdResult<CanTradeResponse
                     can_trade: false,
                     reason: Some(format!(
                         "Collection blacklisted: {}",
-                        cfg.blacklist_reason.unwrap_or_else(|| "Unknown".to_string())
+                        cfg.blacklist_reason
+                            .unwrap_or_else(|| "Unknown".to_string())
                     )),
                 })
             } else if !cfg.active {
@@ -453,16 +457,16 @@ fn query_preview_sale(
     // Get effective trading fee for this collection
     let trading_fee_bps = resolve_collection_trading_fee(deps.storage, &config, &collection_addr)?;
 
-    let platform_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);
+    let trading_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);
 
     // Query royalty from collection
     let royalty = query_royalty_amount(&deps, &collection_addr, price).unwrap_or(Uint128::zero());
 
-    let seller_proceeds = price - platform_fee - royalty;
+    let seller_proceeds = price - trading_fee - royalty;
 
     Ok(SalePreviewResponse {
         sale_price: price,
-        platform_fee,
+        trading_fee,
         royalty,
         seller_proceeds,
     })
