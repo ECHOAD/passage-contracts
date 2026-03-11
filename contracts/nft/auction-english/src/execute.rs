@@ -536,8 +536,8 @@ fn execute_settle_auction(
                 };
                 messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: router.to_string(),
-                    msg: to_json_binary(&SplitRouterExecuteMsg::RouteAuctionRoyalty {
-                        collection: collection_addr.to_string(),
+                    msg: to_json_binary(&SplitRouterExecuteMsg::Split {
+                        key: collection_addr.to_string(),
                     })?,
                     funds: vec![Coin {
                         denom: config.denom.clone(),

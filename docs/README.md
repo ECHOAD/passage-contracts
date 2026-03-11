@@ -22,11 +22,9 @@ Recommended reading order:
 
 ## Naming note
 
-The contract is named `split-router`, but its physical directory is still:
+The contract package and its physical directory now use the same name:
 
-- `contracts/core/revenue-router`
-
-This documentation uses the functional name `split-router`, because that is how the package and integrations are exposed today.
+- `contracts/core/split-router`
 
 ## Two collection paths
 

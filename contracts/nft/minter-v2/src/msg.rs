@@ -235,7 +235,7 @@ pub struct TokenNativeAssetsResponse {
 
 #[cw_serde]
 pub enum SplitRouterExecuteMsg {
-    RoutePrimarySale { collection: String },
+    Split { key: String },
 }
 
 // ========== Whitelist Query ==========

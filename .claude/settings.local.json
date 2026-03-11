@@ -9,7 +9,8 @@
       "Bash(cat:*)",
       "Bash(cargo --version:*)",
       "Bash(rustc:*)",
-      "mcp__figma__generate_diagram"
+      "mcp__figma__generate_diagram",
+      "Skill(blockchain-smart-contract-engineer)"
     ]
   }
 }

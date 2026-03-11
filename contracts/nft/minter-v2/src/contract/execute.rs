@@ -91,8 +91,8 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
 
     if config.use_split_router {
         if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
-                collection: config.cw721_address.to_string(),
+            let route_msg = SplitRouterExecuteMsg::Split {
+                key: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: router.to_string(),
@@ -261,8 +261,8 @@ fn execute_batch_mint(
     // Handle payment routing
     if config.use_split_router {
         if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
-                collection: config.cw721_address.to_string(),
+            let route_msg = SplitRouterExecuteMsg::Split {
+                key: config.cw721_address.to_string(),
             };
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: router.to_string(),

@@ -287,8 +287,8 @@ fn settle_auction_routes_trading_fee_seller_and_royalty() {
             let parsed: SplitRouterExecuteMsg = from_json(msg).unwrap();
             assert_eq!(
                 parsed,
-                SplitRouterExecuteMsg::RouteAuctionRoyalty {
-                    collection: collection.to_string(),
+                SplitRouterExecuteMsg::Split {
+                    key: collection.to_string(),
                 }
             );
             assert_eq!(funds[0].amount, Uint128::new(100));

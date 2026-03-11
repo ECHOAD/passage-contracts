@@ -234,8 +234,8 @@ pub(super) fn execute_sale(
         if royalty.is_zero() {
             // No creator-side royalty to route.
         } else if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::RouteSecondaryRoyalty {
-                collection: collection.to_string(),
+            let route_msg = SplitRouterExecuteMsg::Split {
+                key: collection.to_string(),
             };
 
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {

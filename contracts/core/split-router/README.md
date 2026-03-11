@@ -1,14 +1,14 @@
-# Passage Revenue Router Contract
+# Passage Split Router Contract
 
-The Revenue Router is the **financial brain** of the Passage ecosystem. It handles automatic, configurable revenue distribution for all economic activity including minting (primary sales), marketplace transactions (secondary sales), and auctions.
+The Split Router is the **financial brain** of the Passage ecosystem. It handles automatic, configurable revenue distribution for all economic activity including minting (primary sales), marketplace transactions (secondary sales), and auctions.
 
 ## Overview
 
-The Revenue Router replaces the fragmented revenue handling in the existing contracts:
+The Split Router replaces the fragmented revenue handling in the existing contracts:
 - **Minter**: Previously accumulated funds for manual admin withdrawal
 - **Marketplace**: Previously hardcoded direct fee/royalty distribution
 
-With the Revenue Router, all revenue flows through a single, configurable contract that:
+With the Split Router, all revenue flows through a single, configurable contract that:
 - Applies platform fees automatically
 - Distributes to creators and collaborators
 - Tracks all financial events for auditing
@@ -270,12 +270,12 @@ CollectionStats {
 
 ```rust
 // On mint, call Revenue Router with payment
-let route_msg = RevenueRouterExecuteMsg::RoutePrimarySale {
+let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
     collection: collection_address.to_string(),
 };
 
 let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
-    contract_addr: revenue_router_address.to_string(),
+    contract_addr: split_router_address.to_string(),
     msg: to_json_binary(&route_msg)?,
     funds: vec![payment_coin],
 });
@@ -285,14 +285,14 @@ let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
 
 ```rust
 // On sale, call Revenue Router with payment
-let route_msg = RevenueRouterExecuteMsg::RouteSecondarySale {
+let route_msg = SplitRouterExecuteMsg::RouteSecondarySale {
     collection: collection_address.to_string(),
     seller: seller_address.to_string(),
     royalty_amount: calculated_royalty,
 };
 
 let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
-    contract_addr: revenue_router_address.to_string(),
+    contract_addr: split_router_address.to_string(),
     msg: to_json_binary(&route_msg)?,
     funds: vec![sale_amount_coin],
 });
@@ -300,15 +300,15 @@ let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
 
 ## Migration and Upgrade Notes
 
-`revenue-router` does not currently expose a `migrate` entrypoint. Upgrade strategy is deploy-and-cutover:
+`split-router` does not currently expose a `migrate` entrypoint. Upgrade strategy is deploy-and-cutover:
 See also: [`MIGRATION.md`](./MIGRATION.md).
 
 1. Deploy a new router instance.
 2. Recreate distribution rules (`SetDistributionRule`) in the new instance.
 3. Recreate split wallets if used.
 4. Update all producers to point to the new router:
-   - `marketplace-v3` via `UpdateConfig { revenue_router, use_revenue_router }`
-   - `minter-v2` via `UpdateConfig { revenue_router, use_revenue_router }`
+   - `marketplace-v3` via `UpdateConfig { split_router, use_split_router }`
+   - `minter-v2` via `UpdateConfig { split_router, use_split_router }`
    - set optional ecosystem treasury via `SetEcosystemConfig`
 5. Verify with low-value primary and secondary test flows.
 

@@ -155,7 +155,7 @@ pub struct AuctionsResponse {
 
 #[cw_serde]
 pub enum SplitRouterExecuteMsg {
-    RouteAuctionRoyalty { collection: String },
+    Split { key: String },
 }
 
 #[cw_serde]

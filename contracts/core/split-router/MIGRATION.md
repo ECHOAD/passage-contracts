@@ -1,6 +1,6 @@
-# Revenue Router Upgrade Guide
+# Split Router Upgrade Guide
 
-`revenue-router` currently has no `migrate` entrypoint. Upgrades are deploy-and-cutover.
+`split-router` currently has no `migrate` entrypoint. Upgrades are deploy-and-cutover.
 
 ## Upgrade Steps
 
@@ -8,9 +8,8 @@
 2. Recreate distribution rules with `SetDistributionRule`.
 3. Recreate split wallets if used.
 4. Repoint producer contracts:
-   - `marketplace-v3` -> `UpdateConfig { revenue_router, use_revenue_router }`
-   - `minter-v2` -> `UpdateConfig { revenue_router, use_revenue_router }`
-   - if using ecosystem treasury metadata, set it via `SetEcosystemConfig`
+   - `marketplace-v3` -> `UpdateConfig { split_router, use_split_router }`
+   - `minter-v2` -> `UpdateConfig { split_router, use_split_router }`
 5. Execute low-value primary + secondary sale tests.
 6. After validation, retire old router references.
 

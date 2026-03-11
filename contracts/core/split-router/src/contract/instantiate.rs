@@ -17,19 +17,13 @@ pub fn instantiate(
         .transpose()?
         .unwrap_or(info.sender);
 
-    let registry = msg
-        .registry
-        .map(|r| deps.api.addr_validate(&r))
-        .transpose()?;
-
     let config = Config {
         admin,
-        registry,
         paused: false,
     };
 
     CONFIG.save(deps.storage, &config)?;
-    REVENUE_EVENT_COUNT.save(deps.storage, &0u64)?;
+    SPLIT_EVENT_COUNT.save(deps.storage, &0u64)?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")

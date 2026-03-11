@@ -418,7 +418,7 @@ pub struct SalePreviewResponse {
 
 #[cw_serde]
 pub enum SplitRouterExecuteMsg {
-    RouteSecondaryRoyalty { collection: String },
+    Split { key: String },
 }
 
 #[cw_serde]
