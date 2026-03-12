@@ -17,10 +17,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanMint { address } => to_json_binary(&query_can_mint(deps, env, address)?),
         QueryMsg::MintStats {} => to_json_binary(&query_mint_stats(deps)?),
         QueryMsg::IsMintingActive {} => to_json_binary(&query_is_minting_active(deps, env)?),
-        QueryMsg::NativeAssetTemplate {} => to_json_binary(&query_native_asset_template(deps)?),
-        QueryMsg::TokenNativeAssets { token_id } => {
-            to_json_binary(&query_token_native_assets(deps, token_id)?)
-        }
     }
 }
 
@@ -195,29 +191,4 @@ fn query_is_minting_active(deps: Deps, env: Env) -> StdResult<IsMintingActiveRes
         is_active: true,
         reason: None,
     })
-}
-
-fn query_native_asset_template(deps: Deps) -> StdResult<NativeAssetTemplateResponse> {
-    let config = CONFIG.load(deps.storage)?;
-    Ok(NativeAssetTemplateResponse {
-        native_assets: config.native_asset_template,
-    })
-}
-
-fn query_token_native_assets(deps: Deps, token_id: u32) -> StdResult<TokenNativeAssetsResponse> {
-    let config = CONFIG.load(deps.storage)?;
-    let override_assets = TOKEN_NATIVE_ASSET_OVERRIDES.may_load(deps.storage, token_id)?;
-
-    match override_assets {
-        Some(native_assets) => Ok(TokenNativeAssetsResponse {
-            token_id,
-            source: "override".to_string(),
-            native_assets,
-        }),
-        None => Ok(TokenNativeAssetsResponse {
-            token_id,
-            source: "template".to_string(),
-            native_assets: config.native_asset_template,
-        }),
-    }
 }

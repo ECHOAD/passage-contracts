@@ -24,9 +24,6 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            split_router,
-            use_split_router,
-            metadata_mode,
             paused,
         } => execute_update_config(
             deps,
@@ -36,9 +33,6 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            split_router,
-            use_split_router,
-            metadata_mode,
             paused,
         ),
         ExecuteMsg::UpdateStartTime { start_time } => {
@@ -48,16 +42,6 @@ pub fn execute(
         ExecuteMsg::RemoveWhitelist {} => execute_remove_whitelist(deps, info),
         ExecuteMsg::Withdraw {} => execute_withdraw(deps, env, info),
         ExecuteMsg::WithdrawTo { recipient } => execute_withdraw_to(deps, env, info, recipient),
-        ExecuteMsg::SetNativeAssetTemplate { native_assets } => {
-            execute_set_native_asset_template(deps, info, native_assets)
-        }
-        ExecuteMsg::SetTokenNativeAssetOverride {
-            token_id,
-            native_assets,
-        } => execute_set_token_native_asset_override(deps, info, token_id, native_assets),
-        ExecuteMsg::ClearTokenNativeAssetOverride { token_id } => {
-            execute_clear_token_native_asset_override(deps, info, token_id)
-        }
     }
 }
 
@@ -72,7 +56,7 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     let token_id = get_random_token_id(deps.storage, &env)?;
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, info.sender.to_string())?;
+    let mint_msg = create_mint_msg(&config, token_id, info.sender.to_string())?;
 
     // Update state
     increment_mint_count(deps.storage, &info.sender)?;
@@ -86,22 +70,7 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     stats.total_minted += 1;
     stats.total_revenue += mint_price.amount;
 
-    // Handle payment routing
-    let mut messages: Vec<CosmosMsg> = vec![mint_msg];
-
-    if config.use_split_router {
-        if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::Split {
-                key: config.cw721_address.to_string(),
-            };
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: router.to_string(),
-                msg: to_json_binary(&route_msg)?,
-                funds: vec![mint_price.clone()],
-            }));
-            stats.total_routed += mint_price.amount;
-        }
-    }
+    let messages: Vec<CosmosMsg> = vec![mint_msg];
 
     MINT_STATS.save(deps.storage, &stats)?;
 
@@ -135,7 +104,7 @@ fn execute_mint_to(
     let token_id = get_random_token_id(deps.storage, &env)?;
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, recipient.clone())?;
+    let mint_msg = create_mint_msg(&config, token_id, recipient.clone())?;
 
     // Update state
     increment_mint_count(deps.storage, &recipient_addr)?;
@@ -180,7 +149,7 @@ fn execute_mint_for(
     }
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, recipient.clone())?;
+    let mint_msg = create_mint_msg(&config, token_id, recipient.clone())?;
 
     // Update state
     increment_mint_count(deps.storage, &recipient_addr)?;
@@ -243,7 +212,7 @@ fn execute_batch_mint(
 
     for _ in 0..count {
         let token_id = get_random_token_id(deps.storage, &env)?;
-        let mint_msg = create_mint_msg(deps.storage, &config, token_id, info.sender.to_string())?;
+        let mint_msg = create_mint_msg(&config, token_id, info.sender.to_string())?;
         messages.push(mint_msg);
         minted_ids.push(token_id);
         MINTABLE_TOKEN_IDS.remove(deps.storage, token_id);
@@ -257,21 +226,6 @@ fn execute_batch_mint(
     let mut stats = MINT_STATS.load(deps.storage)?;
     stats.total_minted += count;
     stats.total_revenue += total_price.amount;
-
-    // Handle payment routing
-    if config.use_split_router {
-        if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::Split {
-                key: config.cw721_address.to_string(),
-            };
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: router.to_string(),
-                msg: to_json_binary(&route_msg)?,
-                funds: vec![total_price.clone()],
-            }));
-            stats.total_routed += total_price.amount;
-        }
-    }
 
     MINT_STATS.save(deps.storage, &stats)?;
 
@@ -294,9 +248,6 @@ fn execute_update_config(
     unit_price: Option<Coin>,
     whitelist: Option<String>,
     registry: Option<String>,
-    split_router: Option<String>,
-    use_split_router: Option<bool>,
-    metadata_mode: Option<MetadataMode>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
@@ -325,27 +276,13 @@ fn execute_update_config(
         config.registry = Some(deps.api.addr_validate(&reg)?);
     }
 
-    if let Some(router) = split_router {
-        config.split_router = Some(deps.api.addr_validate(&router)?);
-    }
-
-    if let Some(use_router) = use_split_router {
-        config.use_split_router = use_router;
-    }
-
-    if let Some(mode) = metadata_mode {
-        config.metadata_mode = mode;
-    }
-
     if let Some(is_paused) = paused {
         config.paused = is_paused;
     }
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new()
-        .add_attribute("action", "update_config")
-        .add_attribute("metadata_mode", format!("{:?}", config.metadata_mode)))
+    Ok(Response::new().add_attribute("action", "update_config"))
 }
 
 fn execute_update_start_time(
@@ -399,103 +336,11 @@ fn execute_remove_whitelist(deps: DepsMut, info: MessageInfo) -> Result<Response
     Ok(Response::new().add_attribute("action", "remove_whitelist"))
 }
 
-fn validate_native_assets(native_assets: &[NativeAsset]) -> Result<(), ContractError> {
-    for asset in native_assets {
-        if asset.asset_id.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: "asset_id cannot be empty".to_string(),
-            });
-        }
-        if asset.name.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: format!("name cannot be empty for asset_id {}", asset.asset_id),
-            });
-        }
-        if asset.image_url.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: format!("image_url cannot be empty for asset_id {}", asset.asset_id),
-            });
-        }
-    }
-    Ok(())
-}
-
-fn execute_set_native_asset_template(
-    deps: DepsMut,
-    info: MessageInfo,
-    native_assets: Vec<NativeAsset>,
-) -> Result<Response, ContractError> {
-    let mut config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    validate_native_assets(&native_assets)?;
-    config.native_asset_template = native_assets;
-    CONFIG.save(deps.storage, &config)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "set_native_asset_template")
-        .add_attribute("count", config.native_asset_template.len().to_string()))
-}
-
-fn execute_set_token_native_asset_override(
-    deps: DepsMut,
-    info: MessageInfo,
-    token_id: u32,
-    native_assets: Vec<NativeAsset>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if token_id == 0 || token_id > config.num_tokens {
-        return Err(ContractError::InvalidTokenId { token_id });
-    }
-
-    validate_native_assets(&native_assets)?;
-    TOKEN_NATIVE_ASSET_OVERRIDES.save(deps.storage, token_id, &native_assets)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "set_token_native_asset_override")
-        .add_attribute("token_id", token_id.to_string())
-        .add_attribute("count", native_assets.len().to_string()))
-}
-
-fn execute_clear_token_native_asset_override(
-    deps: DepsMut,
-    info: MessageInfo,
-    token_id: u32,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if token_id == 0 || token_id > config.num_tokens {
-        return Err(ContractError::InvalidTokenId { token_id });
-    }
-
-    TOKEN_NATIVE_ASSET_OVERRIDES.remove(deps.storage, token_id);
-
-    Ok(Response::new()
-        .add_attribute("action", "clear_token_native_asset_override")
-        .add_attribute("token_id", token_id.to_string()))
-}
-
 fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
     if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
-    }
-
-    if config.use_split_router {
-        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let balance = deps
@@ -528,10 +373,6 @@ fn execute_withdraw_to(
 
     if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
-    }
-
-    if config.use_split_router {
-        return Err(ContractError::CannotWithdrawWithSplitRouter {});
     }
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;

@@ -9,15 +9,12 @@ pub(super) use crate::migration::migrate_state;
 pub(super) use crate::msg::{
     CanMintResponse, ConfigResponse, ExecuteMsg, HasMemberResponse, InstantiateMsg,
     IsMintingActiveResponse, MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse,
-    MintableNumTokensResponse, NativeAssetTemplateResponse, QueryMsg,
-    RegistryApprovalStatusResponse, RegistryCollectionResponse, RegistryMinterAuthorizedResponse,
-    RegistryQueryMsg, SplitRouterExecuteMsg, StartTimeResponse, TokenNativeAssetsResponse,
-    WhitelistConfigResponse, WhitelistQueryMsg,
+    MintableNumTokensResponse, QueryMsg, RegistryApprovalStatusResponse,
+    RegistryCollectionResponse, RegistryMinterAuthorizedResponse, RegistryQueryMsg,
+    StartTimeResponse, WhitelistConfigResponse, WhitelistQueryMsg,
 };
 pub(super) use crate::state::{
-    Config, Extension, MetadataMode, MintStats, NativeAsset, TokenMetadata, CONFIG,
-    MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
-    TOKEN_NATIVE_ASSET_OVERRIDES,
+    Config, MintStats, CONFIG, MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-minter-v2";

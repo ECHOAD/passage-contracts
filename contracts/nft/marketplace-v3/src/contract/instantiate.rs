@@ -27,11 +27,6 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let split_router = msg
-        .split_router
-        .map(|r| deps.api.addr_validate(&r))
-        .transpose()?;
-
     let operators = msg
         .operators
         .unwrap_or_default()
@@ -59,8 +54,6 @@ pub fn instantiate(
         max_trading_fee_bps,
         fee_collector,
         registry,
-        split_router: split_router.clone(),
-        use_split_router: msg.use_split_router.unwrap_or(split_router.is_some()),
         operators,
         paused: false,
         require_registration: msg.require_registration.unwrap_or(true),

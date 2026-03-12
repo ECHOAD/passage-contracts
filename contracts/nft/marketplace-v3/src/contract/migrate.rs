@@ -28,13 +28,6 @@ pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, Con
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let split_router = msg
-        .split_router
-        .map(|r| deps.api.addr_validate(&r))
-        .transpose()?;
-
-    let use_split_router = msg.use_split_router.unwrap_or(split_router.is_some());
-
     let additional_collections = msg
         .additional_collections
         .unwrap_or_default()
@@ -59,8 +52,6 @@ pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, Con
         deps.storage,
         collection.clone(),
         registry,
-        split_router,
-        use_split_router,
         additional_collections,
         env.block.time.seconds(),
     )?;

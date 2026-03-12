@@ -1,17 +1,14 @@
 use super::*;
-use cosmwasm_std::{testing::mock_dependencies, Coin};
+use cosmwasm_std::{testing::mock_dependencies, Addr, Coin, Decimal};
 
 #[test]
 fn preview_split_handles_multiple_denoms() {
     let mut deps = mock_dependencies();
 
-    SPLIT_RULES
+    SPLIT_CONFIG
         .save(
             deps.as_mut().storage,
-            "preview-key",
-            &SplitRule {
-                key: "preview-key".to_string(),
-                owner: Addr::unchecked("owner"),
+            &SplitConfig {
                 recipients: vec![
                     Recipient {
                         address: Addr::unchecked("platform"),
@@ -33,7 +30,6 @@ fn preview_split_handles_multiple_denoms() {
 
     let response = query_preview_split(
         deps.as_ref(),
-        "preview-key".to_string(),
         vec![Coin::new(101u128, "upasg"), Coin::new(7u128, "uatom")],
     )
     .unwrap();

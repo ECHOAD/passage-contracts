@@ -27,8 +27,6 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            split_router,
-            use_split_router,
             operators,
             paused,
             require_registration,
@@ -42,8 +40,6 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            split_router,
-            use_split_router,
             operators,
             paused,
             require_registration,
@@ -159,8 +155,6 @@ fn execute_update_config(
     max_trading_fee_bps: Option<u64>,
     fee_collector: Option<String>,
     registry: Option<String>,
-    split_router: Option<String>,
-    use_split_router: Option<bool>,
     operators: Option<Vec<String>>,
     paused: Option<bool>,
     require_registration: Option<bool>,
@@ -191,12 +185,6 @@ fn execute_update_config(
     }
     if let Some(new_registry) = registry {
         config.registry = Some(deps.api.addr_validate(&new_registry)?);
-    }
-    if let Some(new_router) = split_router {
-        config.split_router = Some(deps.api.addr_validate(&new_router)?);
-    }
-    if let Some(use_router) = use_split_router {
-        config.use_split_router = use_router;
     }
     if let Some(new_operators) = operators {
         config.operators = new_operators

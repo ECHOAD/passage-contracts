@@ -54,11 +54,8 @@ pub enum ContractError {
     #[error("No funds to withdraw")]
     NoFundsToWithdraw {},
 
-    #[error("Cannot withdraw when using Split Router")]
-    CannotWithdrawWithSplitRouter {},
-
-    #[error("Split Router not configured")]
-    SplitRouterNotConfigured {},
+    #[error("Cannot withdraw when collector_address is configured")]
+    CannotWithdrawWithCollectorAddress {},
 
     #[error("Collection not registered in Registry")]
     CollectionNotRegistered {},

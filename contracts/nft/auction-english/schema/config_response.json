@@ -14,8 +14,7 @@
     "min_price",
     "paused",
     "require_registration",
-    "trading_fee_bps",
-    "use_split_router"
+    "trading_fee_bps"
   ],
   "properties": {
     "admin": {
@@ -65,19 +64,10 @@
     "require_registration": {
       "type": "boolean"
     },
-    "split_router": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
     "trading_fee_bps": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0
-    },
-    "use_split_router": {
-      "type": "boolean"
     }
   },
   "additionalProperties": false,

@@ -20,10 +20,6 @@ pub struct Config {
     pub fee_collector: Addr,
     /// Registry contract address (required for collection verification)
     pub registry: Option<Addr>,
-    /// Split Router address for creator-side royalty routing
-    pub split_router: Option<Addr>,
-    /// Whether to use Split Router
-    pub use_split_router: bool,
     /// Operators who can update ask states and manage collections
     pub operators: Vec<Addr>,
     /// Whether the contract is paused

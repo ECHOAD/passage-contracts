@@ -1,7 +1,7 @@
 //! Migration module for minter v1 to minter-v2
 //!
-//! This module handles the state migration from the legacy minter
-//! to minter-v2 with Split Router support.
+//! This module handles the state migration from legacy minters and prior
+//! minter-v2 versions into the collector-address model.
 
 use std::collections::BTreeSet;
 
@@ -44,6 +44,26 @@ pub struct ConfigMetadataOnchainV1 {
     pub per_address_limit: u32,
 }
 
+/// Config from previous minter-v2 releases before collector_address replaced split_router.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ConfigV2Legacy {
+    pub admin: Addr,
+    pub cw721_address: Addr,
+    pub cw721_code_id: u64,
+    pub base_token_uri: String,
+    pub num_tokens: u32,
+    pub unit_price: Coin,
+    pub per_address_limit: u32,
+    pub start_time: Timestamp,
+    pub whitelist: Option<Addr>,
+    pub registry: Option<Addr>,
+    pub split_router: Option<Addr>,
+    pub use_split_router: bool,
+    pub metadata_mode: MetadataMode,
+    pub native_asset_template: Vec<crate::state::NativeAsset>,
+    pub paused: bool,
+}
+
 // ============================================================================
 // V1 Storage Keys (must match exactly what v1 uses)
 // ============================================================================
@@ -52,6 +72,7 @@ const CONFIG_V1: Item<ConfigV1> = Item::new("config");
 const CW721_ADDRESS_V1: Item<Addr> = Item::new("cw721_address");
 const MINTABLE_TOKEN_IDS_V1: Map<u32, bool> = Map::new("mt");
 const MINTER_ADDRS_V1: Map<Addr, u32> = Map::new("ma");
+const CONFIG_V2_LEGACY: Item<ConfigV2Legacy> = Item::new("config");
 
 const CONFIG_METADATA_ONCHAIN_V1: Item<ConfigMetadataOnchainV1> = Item::new("config");
 const MINTABLE_TOKEN_IDS_METADATA_ONCHAIN_V1: Item<Vec<u32>> = Item::new("mintable_token_ids");
@@ -66,20 +87,15 @@ pub fn migrate_state(
     storage: &mut dyn Storage,
     source_contract: &str,
     registry: Option<Addr>,
-    split_router: Option<Addr>,
-    use_split_router: bool,
+    collector_address: Option<Addr>,
     base_token_uri: Option<String>,
 ) -> StdResult<MigrationResult> {
-    if source_contract.contains("passage-minter-metadata-onchain") {
-        migrate_from_metadata_onchain(
-            storage,
-            registry,
-            split_router,
-            use_split_router,
-            base_token_uri,
-        )
+    if source_contract == "crates.io:passage-minter-v2-metadata-onchain" {
+        migrate_from_current_v2(storage, registry, collector_address)
+    } else if source_contract.contains("passage-minter-metadata-onchain") {
+        migrate_from_metadata_onchain(storage, registry, collector_address, base_token_uri)
     } else if source_contract.ends_with("passage-minter") {
-        migrate_from_minter_v1(storage, registry, split_router, use_split_router)
+        migrate_from_minter_v1(storage, registry, collector_address)
     } else {
         Err(StdError::generic_err(format!(
             "unsupported migration source contract: {source_contract}"
@@ -90,8 +106,7 @@ pub fn migrate_state(
 fn migrate_from_minter_v1(
     storage: &mut dyn Storage,
     registry: Option<Addr>,
-    split_router: Option<Addr>,
-    use_split_router: bool,
+    collector_address: Option<Addr>,
 ) -> StdResult<MigrationResult> {
     let config_v1 = CONFIG_V1.load(storage)?;
     let cw721_address = CW721_ADDRESS_V1.load(storage)?;
@@ -107,8 +122,7 @@ fn migrate_from_minter_v1(
         start_time: config_v1.start_time,
         whitelist: config_v1.whitelist,
         registry,
-        split_router: split_router.clone(),
-        use_split_router,
+        collector_address: collector_address.clone(),
         metadata_mode: MetadataMode::OnChain,
         native_asset_template: vec![],
         paused: false,
@@ -152,15 +166,14 @@ fn migrate_from_minter_v1(
         tokens_migrated: config_v2.num_tokens,
         mintable_remaining,
         unique_minters,
-        split_router_enabled: use_split_router,
+        collector_configured: config_v2.collector_address.is_some(),
     })
 }
 
 fn migrate_from_metadata_onchain(
     storage: &mut dyn Storage,
     registry: Option<Addr>,
-    split_router: Option<Addr>,
-    use_split_router: bool,
+    collector_address: Option<Addr>,
     base_token_uri: Option<String>,
 ) -> StdResult<MigrationResult> {
     let config_v1 = CONFIG_METADATA_ONCHAIN_V1.load(storage)?;
@@ -182,8 +195,7 @@ fn migrate_from_metadata_onchain(
         start_time: config_v1.start_time,
         whitelist: config_v1.whitelist,
         registry,
-        split_router: split_router.clone(),
-        use_split_router,
+        collector_address: collector_address.clone(),
         metadata_mode: MetadataMode::OnChain,
         native_asset_template: vec![],
         paused: false,
@@ -228,8 +240,74 @@ fn migrate_from_metadata_onchain(
         tokens_migrated: config_v2.num_tokens,
         mintable_remaining,
         unique_minters,
-        split_router_enabled: use_split_router,
+        collector_configured: config_v2.collector_address.is_some(),
     })
+}
+
+fn migrate_from_current_v2(
+    storage: &mut dyn Storage,
+    registry: Option<Addr>,
+    collector_address: Option<Addr>,
+) -> StdResult<MigrationResult> {
+    let legacy = CONFIG_V2_LEGACY.load(storage)?;
+    let collector_address = resolve_collector_address(
+        collector_address,
+        legacy.split_router,
+        legacy.use_split_router,
+    )?;
+    let mintable_remaining = MINTABLE_NUM_TOKENS
+        .may_load(storage)?
+        .unwrap_or(legacy.num_tokens);
+    let unique_minters = MINT_STATS
+        .may_load(storage)?
+        .map(|stats| stats.unique_minters)
+        .unwrap_or_default();
+
+    let config_v2 = Config {
+        admin: legacy.admin,
+        cw721_address: legacy.cw721_address,
+        cw721_code_id: legacy.cw721_code_id,
+        base_token_uri: legacy.base_token_uri,
+        num_tokens: legacy.num_tokens,
+        unit_price: legacy.unit_price,
+        per_address_limit: legacy.per_address_limit,
+        start_time: legacy.start_time,
+        whitelist: legacy.whitelist,
+        registry: registry.or(legacy.registry),
+        collector_address: collector_address.clone(),
+        metadata_mode: MetadataMode::OnChain,
+        native_asset_template: legacy.native_asset_template,
+        paused: legacy.paused,
+    };
+    CONFIG.save(storage, &config_v2)?;
+
+    Ok(MigrationResult {
+        source_contract: "crates.io:passage-minter-v2-metadata-onchain".to_string(),
+        tokens_migrated: config_v2.num_tokens,
+        mintable_remaining,
+        unique_minters,
+        collector_configured: config_v2.collector_address.is_some(),
+    })
+}
+
+fn resolve_collector_address(
+    explicit_collector: Option<Addr>,
+    legacy_split_router: Option<Addr>,
+    legacy_use_split_router: bool,
+) -> StdResult<Option<Addr>> {
+    if explicit_collector.is_some() {
+        return Ok(explicit_collector);
+    }
+
+    if legacy_use_split_router {
+        return legacy_split_router.map(Some).ok_or_else(|| {
+            StdError::generic_err(
+                "legacy config has use_split_router enabled but split_router is missing",
+            )
+        });
+    }
+
+    Ok(None)
 }
 
 /// Result of migration
@@ -238,5 +316,5 @@ pub struct MigrationResult {
     pub tokens_migrated: u32,
     pub mintable_remaining: u32,
     pub unique_minters: u32,
-    pub split_router_enabled: bool,
+    pub collector_configured: bool,
 }

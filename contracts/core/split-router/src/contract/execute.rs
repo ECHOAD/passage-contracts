@@ -18,17 +18,10 @@ pub fn execute(
         ExecuteMsg::UpdateConfig { admin, paused } => {
             execute_update_config(deps, info, admin, paused)
         }
-        ExecuteMsg::CreateSplitRule { key, recipients } => {
-            execute_create_split_rule(deps, env, info, key, recipients)
+        ExecuteMsg::UpdateSplit { recipients, active } => {
+            execute_update_split(deps, env, info, recipients, active)
         }
-        ExecuteMsg::UpdateSplitRule {
-            key,
-            recipients,
-            owner,
-            active,
-        } => execute_update_split_rule(deps, env, info, key, recipients, owner, active),
-        ExecuteMsg::RemoveSplitRule { key } => execute_remove_split_rule(deps, info, key),
-        ExecuteMsg::Split { key } => execute_split(deps, env, info, key),
+        ExecuteMsg::Split {} => execute_split(deps, env, info),
     }
 }
 
@@ -57,116 +50,45 @@ fn execute_update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-fn execute_create_split_rule(
+fn execute_update_split(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    key: String,
-    recipients: Vec<RecipientInput>,
-) -> Result<Response, ContractError> {
-    validate_key(&key)?;
-    if SPLIT_RULES.has(deps.storage, key.as_str()) {
-        return Err(ContractError::SplitRuleExists { key });
-    }
-
-    let rule = SplitRule {
-        key: key.clone(),
-        owner: info.sender.clone(),
-        recipients: build_recipients(deps.as_ref(), recipients)?,
-        active: true,
-        created_at: env.block.time.seconds(),
-        updated_at: env.block.time.seconds(),
-    };
-
-    SPLIT_RULES.save(deps.storage, key.as_str(), &rule)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "create_split_rule")
-        .add_attribute("key", key)
-        .add_attribute("owner", info.sender))
-}
-
-fn execute_update_split_rule(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    key: String,
     recipients: Option<Vec<RecipientInput>>,
-    owner: Option<String>,
     active: Option<bool>,
 ) -> Result<Response, ContractError> {
-    validate_key(&key)?;
-
     let config = CONFIG.load(deps.storage)?;
-    let mut rule = SPLIT_RULES
-        .load(deps.storage, key.as_str())
-        .map_err(|_| ContractError::SplitRuleNotFound { key: key.clone() })?;
-
-    ensure_rule_manager(&config, &info.sender, &rule.owner)?;
-
-    if let Some(recipients) = recipients {
-        rule.recipients = build_recipients(deps.as_ref(), recipients)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
     }
 
-    if let Some(owner) = owner {
-        rule.owner = deps.api.addr_validate(&owner)?;
+    let mut split = SPLIT_CONFIG.load(deps.storage)?;
+    if let Some(recipients) = recipients {
+        split.recipients = build_recipients(deps.as_ref(), recipients)?;
     }
 
     if let Some(active) = active {
-        rule.active = active;
+        split.active = active;
     }
 
-    rule.updated_at = env.block.time.seconds();
-    SPLIT_RULES.save(deps.storage, key.as_str(), &rule)?;
+    split.updated_at = env.block.time.seconds();
+    SPLIT_CONFIG.save(deps.storage, &split)?;
 
-    Ok(Response::new()
-        .add_attribute("action", "update_split_rule")
-        .add_attribute("key", key)
-        .add_attribute("owner", rule.owner))
+    Ok(Response::new().add_attribute("action", "update_split"))
 }
 
-fn execute_remove_split_rule(
-    deps: DepsMut,
-    info: MessageInfo,
-    key: String,
-) -> Result<Response, ContractError> {
-    validate_key(&key)?;
-
-    let config = CONFIG.load(deps.storage)?;
-    let rule = SPLIT_RULES
-        .load(deps.storage, key.as_str())
-        .map_err(|_| ContractError::SplitRuleNotFound { key: key.clone() })?;
-
-    ensure_rule_manager(&config, &info.sender, &rule.owner)?;
-    SPLIT_RULES.remove(deps.storage, key.as_str());
-
-    Ok(Response::new()
-        .add_attribute("action", "remove_split_rule")
-        .add_attribute("key", key))
-}
-
-fn execute_split(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    key: String,
-) -> Result<Response, ContractError> {
-    validate_key(&key)?;
-
+fn execute_split(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     if info.funds.is_empty() {
         return Err(ContractError::NoFundsSent {});
     }
 
-    let rule = SPLIT_RULES
-        .load(deps.storage, key.as_str())
-        .map_err(|_| ContractError::SplitRuleNotFound { key: key.clone() })?;
-
-    if !rule.active {
-        return Err(ContractError::SplitRuleInactive { key });
+    let split = SPLIT_CONFIG.load(deps.storage)?;
+    if !split.active {
+        return Err(ContractError::SplitInactive {});
     }
 
     let total_funds = info.funds.clone();
-    let recipient_amounts = calculate_split_amounts(&rule.recipients, &info.funds);
+    let recipient_amounts = calculate_split_amounts(&split.recipients, &info.funds);
     let mut messages: Vec<CosmosMsg> = vec![];
     for (recipient, amount) in &recipient_amounts {
         if amount.is_empty() {
@@ -182,7 +104,6 @@ fn execute_split(
     let event_id = record_split_event(
         deps.storage,
         &env,
-        key.as_str(),
         total_funds,
         recipient_amounts,
         &info.sender,
@@ -191,7 +112,6 @@ fn execute_split(
     Ok(Response::new()
         .add_messages(messages)
         .add_attribute("action", "split")
-        .add_attribute("key", key)
         .add_attribute("funds_count", info.funds.len().to_string())
         .add_attribute("event_id", event_id.to_string()))
 }

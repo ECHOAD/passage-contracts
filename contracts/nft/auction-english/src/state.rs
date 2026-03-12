@@ -11,8 +11,6 @@ pub struct Config {
     pub max_trading_fee_bps: u64,
     pub fee_collector: Addr,
     pub registry: Option<Addr>,
-    pub split_router: Option<Addr>,
-    pub use_split_router: bool,
     pub min_bid_increment_percent: Decimal,
     pub min_duration: u64,
     pub max_duration: u64,

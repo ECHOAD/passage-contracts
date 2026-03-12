@@ -1,17 +1,18 @@
 pub(super) use cosmwasm_std::{
     entry_point, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Order, Response, StdError, StdResult,
+    Env, MessageInfo, Order, Response, StdResult,
 };
 pub(super) use cw2::set_contract_version;
 pub(super) use cw_storage_plus::Bound;
 
 pub(super) use crate::error::ContractError;
 pub(super) use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RecipientInput, SplitEventsResponse,
-    SplitPreviewResponse, SplitRuleResponse, SplitRulesResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RecipientInput, SplitConfigResponse,
+    SplitEventsResponse, SplitPreviewResponse,
 };
 pub(super) use crate::state::{
-    Config, Recipient, SplitEvent, SplitRule, CONFIG, SPLIT_EVENTS, SPLIT_EVENT_COUNT, SPLIT_RULES,
+    Config, Recipient, SplitConfig, SplitEvent, CONFIG, SPLIT_CONFIG, SPLIT_EVENTS,
+    SPLIT_EVENT_COUNT,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-split-router";

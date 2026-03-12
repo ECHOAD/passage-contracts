@@ -12,22 +12,13 @@ pub enum ContractError {
     #[error("Contract is paused")]
     ContractPaused {},
 
+    #[error("Split is inactive")]
+    SplitInactive {},
+
     #[error("No funds sent")]
     NoFundsSent {},
 
-    #[error("Split rule not found for key: {key}")]
-    SplitRuleNotFound { key: String },
-
-    #[error("Split rule already exists for key: {key}")]
-    SplitRuleExists { key: String },
-
-    #[error("Split rule is inactive for key: {key}")]
-    SplitRuleInactive { key: String },
-
-    #[error("Split rule key cannot be empty")]
-    EmptyKey {},
-
-    #[error("Split rule must have at least one recipient")]
+    #[error("Split must have at least one recipient")]
     NoRecipients {},
 
     #[error("Recipient share cannot be zero: {address}")]
@@ -38,7 +29,4 @@ pub enum ContractError {
 
     #[error("Recipient shares must sum to {expected}, got {actual}")]
     InvalidTotalShare { expected: Decimal, actual: Decimal },
-
-    #[error("Only the rule owner or contract admin can modify this split rule")]
-    NotRuleOwner {},
 }

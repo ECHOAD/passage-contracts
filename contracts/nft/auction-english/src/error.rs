@@ -76,9 +76,6 @@ pub enum ContractError {
     #[error("Only the seller can manage this auction")]
     NotSeller {},
 
-    #[error("Split Router not configured")]
-    SplitRouterNotConfigured {},
-
     #[error("Failed to query NFT ownership")]
     NftQueryFailed {},
 

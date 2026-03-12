@@ -26,12 +26,10 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let split_router = msg
-        .split_router
+    let collector_address = msg
+        .collector_address
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
-
-    let use_split_router = msg.use_split_router.unwrap_or(split_router.is_some());
 
     // Create initial config (cw721_address will be set in reply)
     let config = Config {
@@ -45,8 +43,7 @@ pub fn instantiate(
         start_time: msg.start_time,
         whitelist,
         registry,
-        split_router,
-        use_split_router,
+        collector_address,
         metadata_mode: MetadataMode::OnChain,
         native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,

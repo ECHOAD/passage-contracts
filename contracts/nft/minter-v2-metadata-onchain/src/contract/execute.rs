@@ -24,8 +24,7 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            split_router,
-            use_split_router,
+            collector_address,
             metadata_mode,
             paused,
         } => execute_update_config(
@@ -36,8 +35,7 @@ pub fn execute(
             unit_price,
             whitelist,
             registry,
-            split_router,
-            use_split_router,
+            collector_address,
             metadata_mode,
             paused,
         ),
@@ -59,6 +57,29 @@ pub fn execute(
             execute_clear_token_native_asset_override(deps, info, token_id)
         }
     }
+}
+
+fn build_collector_payout_msg(
+    deps: Deps,
+    collector_address: &Addr,
+    funds: Coin,
+) -> Result<CosmosMsg, ContractError> {
+    if deps
+        .querier
+        .query_wasm_contract_info(collector_address)
+        .is_ok()
+    {
+        return Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: collector_address.to_string(),
+            msg: to_json_binary(&SplitExecuteMsg::Split {})?,
+            funds: vec![funds],
+        }));
+    }
+
+    Ok(CosmosMsg::Bank(BankMsg::Send {
+        to_address: collector_address.to_string(),
+        amount: vec![funds],
+    }))
 }
 
 fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
@@ -92,20 +113,13 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     // Handle payment routing
     let mut messages: Vec<CosmosMsg> = vec![mint_msg];
 
-    if config.use_split_router {
-        if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::Split {
-                key: config.cw721_address.to_string(),
-            };
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: router.to_string(),
-                msg: to_json_binary(&route_msg)?,
-                funds: vec![mint_price.clone()],
-            }));
-            stats.total_routed += mint_price.amount;
-        } else {
-            return Err(ContractError::SplitRouterNotConfigured {});
-        }
+    if let Some(collector_address) = &config.collector_address {
+        messages.push(build_collector_payout_msg(
+            deps.as_ref(),
+            collector_address,
+            mint_price.clone(),
+        )?);
+        stats.total_routed += mint_price.amount;
     }
 
     MINT_STATS.save(deps.storage, &stats)?;
@@ -254,21 +268,13 @@ fn execute_batch_mint(
     stats.total_minted += count;
     stats.total_revenue += total_price.amount;
 
-    // Handle payment routing
-    if config.use_split_router {
-        if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::Split {
-                key: config.cw721_address.to_string(),
-            };
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: router.to_string(),
-                msg: to_json_binary(&route_msg)?,
-                funds: vec![total_price.clone()],
-            }));
-            stats.total_routed += total_price.amount;
-        } else {
-            return Err(ContractError::SplitRouterNotConfigured {});
-        }
+    if let Some(collector_address) = &config.collector_address {
+        messages.push(build_collector_payout_msg(
+            deps.as_ref(),
+            collector_address,
+            total_price.clone(),
+        )?);
+        stats.total_routed += total_price.amount;
     }
 
     MINT_STATS.save(deps.storage, &stats)?;
@@ -292,8 +298,7 @@ fn execute_update_config(
     unit_price: Option<Coin>,
     whitelist: Option<String>,
     registry: Option<String>,
-    split_router: Option<String>,
-    use_split_router: Option<bool>,
+    collector_address: Option<String>,
     metadata_mode: Option<MetadataMode>,
     paused: Option<bool>,
 ) -> Result<Response, ContractError> {
@@ -323,12 +328,8 @@ fn execute_update_config(
         config.registry = Some(deps.api.addr_validate(&reg)?);
     }
 
-    if let Some(router) = split_router {
-        config.split_router = Some(deps.api.addr_validate(&router)?);
-    }
-
-    if let Some(use_router) = use_split_router {
-        config.use_split_router = use_router;
+    if let Some(address) = collector_address {
+        config.collector_address = Some(deps.api.addr_validate(&address)?);
     }
 
     if let Some(mode) = metadata_mode {
@@ -495,8 +496,8 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_split_router {
-        return Err(ContractError::CannotWithdrawWithSplitRouter {});
+    if config.collector_address.is_some() {
+        return Err(ContractError::CannotWithdrawWithCollectorAddress {});
     }
 
     let balance = deps
@@ -531,8 +532,8 @@ fn execute_withdraw_to(
         return Err(ContractError::Unauthorized {});
     }
 
-    if config.use_split_router {
-        return Err(ContractError::CannotWithdrawWithSplitRouter {});
+    if config.collector_address.is_some() {
+        return Err(ContractError::CannotWithdrawWithCollectorAddress {});
     }
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;

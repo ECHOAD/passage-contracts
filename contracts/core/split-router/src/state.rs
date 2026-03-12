@@ -19,21 +19,18 @@ pub struct Recipient {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SplitRule {
-    pub key: String,
-    pub owner: Addr,
+pub struct SplitConfig {
     pub recipients: Vec<Recipient>,
     pub active: bool,
     pub created_at: u64,
     pub updated_at: u64,
 }
 
-pub const SPLIT_RULES: Map<&str, SplitRule> = Map::new("split_rules");
+pub const SPLIT_CONFIG: Item<SplitConfig> = Item::new("split_config");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SplitEvent {
     pub id: u64,
-    pub key: String,
     pub total_funds: Vec<Coin>,
     pub recipient_amounts: Vec<(Addr, Vec<Coin>)>,
     pub timestamp: u64,

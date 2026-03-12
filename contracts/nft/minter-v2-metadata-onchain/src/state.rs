@@ -62,10 +62,9 @@ pub struct Config {
     pub whitelist: Option<Addr>,
     /// Registry contract address for verification
     pub registry: Option<Addr>,
-    /// Split Router address for automatic fund distribution
-    pub split_router: Option<Addr>,
-    /// Whether to use Split Router (if false, uses legacy withdraw pattern)
-    pub use_split_router: bool,
+    /// Optional destination for mint proceeds. If it is a contract, the minter
+    /// executes `Split {}` with the mint funds; otherwise it sends the funds directly.
+    pub collector_address: Option<Addr>,
     /// Metadata storage mode for minted tokens.
     pub metadata_mode: MetadataMode,
     /// Default native dependents included on each minted NFT.
@@ -97,7 +96,7 @@ pub struct MintStats {
     pub total_minted: u32,
     /// Total revenue generated
     pub total_revenue: Uint128,
-    /// Total routed through Split Router
+    /// Total revenue automatically forwarded out of the minter
     pub total_routed: Uint128,
     /// Number of unique minters
     pub unique_minters: u32,

@@ -58,12 +58,6 @@ pub fn validate_config(config: &Config) -> Result<(), ContractError> {
         });
     }
 
-    if config.use_split_router && config.split_router.is_none() {
-        return Err(ContractError::InvalidConfig {
-            reason: "split_router must be set when use_split_router is true".to_string(),
-        });
-    }
-
     if config.require_registration && config.registry.is_none() {
         return Err(ContractError::InvalidConfig {
             reason: "registry must be set when require_registration is true".to_string(),

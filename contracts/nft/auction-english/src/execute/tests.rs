@@ -6,7 +6,8 @@ use crate::msg::{
 use cosmwasm_std::{
     from_json,
     testing::{message_info, mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_json_binary, Coin, ContractResult, OwnedDeps, SystemError, SystemResult, WasmQuery,
+    to_json_binary, Coin, ContractInfoResponse, ContractResult, OwnedDeps, SystemError,
+    SystemResult, WasmQuery,
 };
 
 fn base_config() -> Config {
@@ -19,8 +20,6 @@ fn base_config() -> Config {
         max_trading_fee_bps: 1000,
         fee_collector: api.addr_make("treasury"),
         registry: None,
-        split_router: Some(api.addr_make("split-router")),
-        use_split_router: true,
         min_bid_increment_percent: Decimal::percent(5),
         min_duration: 60,
         max_duration: 3_600,
@@ -37,12 +36,14 @@ fn mock_collection_queries(
     approved_spender: Option<&str>,
     royalty_recipient: Option<&str>,
     royalty_share: Option<&str>,
+    royalty_is_contract: bool,
 ) {
     let collection = collection.to_string();
     let owner = owner.to_string();
     let approved_spender = approved_spender.map(str::to_string);
     let royalty_recipient = royalty_recipient.map(str::to_string);
     let royalty_share = royalty_share.map(str::to_string);
+    let contract_recipient = royalty_recipient.clone();
     let creator = MockApi::default().addr_make("creator").to_string();
 
     deps.querier.update_wasm(move |query| match query {
@@ -98,9 +99,32 @@ fn mock_collection_queries(
                 request: msg.clone(),
             })
         }
+        WasmQuery::ContractInfo { contract_addr }
+            if royalty_is_contract
+                && contract_recipient
+                    .as_ref()
+                    .map(|recipient| recipient == contract_addr)
+                    .unwrap_or(false) =>
+        {
+            SystemResult::Ok(ContractResult::Ok(
+                to_json_binary(&ContractInfoResponse::new(
+                    1,
+                    cosmwasm_std::Addr::unchecked("creator"),
+                    None::<cosmwasm_std::Addr>,
+                    false,
+                    None::<String>,
+                ))
+                .unwrap(),
+            ))
+        }
         WasmQuery::Smart { .. } => SystemResult::Err(SystemError::NoSuchContract {
             addr: "unknown".to_string(),
         }),
+        WasmQuery::ContractInfo { contract_addr } => {
+            SystemResult::Err(SystemError::NoSuchContract {
+                addr: contract_addr.clone(),
+            })
+        }
         _ => SystemResult::Err(SystemError::UnsupportedRequest {
             kind: "unsupported wasm query".to_string(),
         }),
@@ -122,6 +146,7 @@ fn create_auction_moves_nft_into_contract_custody() {
         Some(env.contract.address.as_str()),
         None,
         None,
+        false,
     );
 
     let response = execute_create_auction(
@@ -207,10 +232,9 @@ fn settle_auction_routes_trading_fee_seller_and_royalty() {
     let collection = deps.api.addr_make("collection");
     let seller = deps.api.addr_make("seller");
     let bidder = deps.api.addr_make("bidder");
-    let royalty_recipient = deps.api.addr_make("creator-wallet");
+    let royalty_splitter = deps.api.addr_make("royalty-splitter");
     let seller_recipient = deps.api.addr_make("seller-recipient");
     let fee_collector = deps.api.addr_make("treasury");
-    let split_router = deps.api.addr_make("split-router");
     let caller = deps.api.addr_make("anyone");
 
     CONFIG.save(deps.as_mut().storage, &base_config()).unwrap();
@@ -219,8 +243,9 @@ fn settle_auction_routes_trading_fee_seller_and_royalty() {
         collection.as_str(),
         seller.as_str(),
         None,
-        Some(royalty_recipient.as_str()),
+        Some(royalty_splitter.as_str()),
         Some("0.1"),
+        true,
     );
 
     let ended_at = env.block.time.minus_seconds(1);
@@ -283,14 +308,9 @@ fn settle_auction_routes_trading_fee_seller_and_royalty() {
             msg,
             funds,
         }) => {
-            assert_eq!(contract_addr, split_router.as_str());
+            assert_eq!(contract_addr, royalty_splitter.as_str());
             let parsed: SplitRouterExecuteMsg = from_json(msg).unwrap();
-            assert_eq!(
-                parsed,
-                SplitRouterExecuteMsg::Split {
-                    key: collection.to_string(),
-                }
-            );
+            assert_eq!(parsed, SplitRouterExecuteMsg::Split {});
             assert_eq!(funds[0].amount, Uint128::new(100));
         }
         _ => panic!("expected split router royalty routing"),

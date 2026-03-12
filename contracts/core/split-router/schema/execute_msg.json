@@ -32,55 +32,15 @@
     {
       "type": "object",
       "required": [
-        "create_split_rule"
+        "update_split"
       ],
       "properties": {
-        "create_split_rule": {
+        "update_split": {
           "type": "object",
-          "required": [
-            "key",
-            "recipients"
-          ],
-          "properties": {
-            "key": {
-              "type": "string"
-            },
-            "recipients": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/RecipientInput"
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "update_split_rule"
-      ],
-      "properties": {
-        "update_split_rule": {
-          "type": "object",
-          "required": [
-            "key"
-          ],
           "properties": {
             "active": {
               "type": [
                 "boolean",
-                "null"
-              ]
-            },
-            "key": {
-              "type": "string"
-            },
-            "owner": {
-              "type": [
-                "string",
                 "null"
               ]
             },
@@ -102,40 +62,11 @@
     {
       "type": "object",
       "required": [
-        "remove_split_rule"
-      ],
-      "properties": {
-        "remove_split_rule": {
-          "type": "object",
-          "required": [
-            "key"
-          ],
-          "properties": {
-            "key": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
         "split"
       ],
       "properties": {
         "split": {
           "type": "object",
-          "required": [
-            "key"
-          ],
-          "properties": {
-            "key": {
-              "type": "string"
-            }
-          },
           "additionalProperties": false
         }
       },

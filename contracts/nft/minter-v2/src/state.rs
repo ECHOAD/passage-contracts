@@ -3,42 +3,6 @@ use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MetadataMode {
-    /// Only store token_uri on-chain. Full metadata is resolved off-chain.
-    OffChain,
-    /// Store token_uri and optional native asset references on-chain.
-    OnChain,
-}
-
-impl Default for MetadataMode {
-    fn default() -> Self {
-        Self::OffChain
-    }
-}
-
-impl MetadataMode {
-    pub fn uses_onchain_metadata(&self) -> bool {
-        matches!(self, Self::OnChain)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NativeAsset {
-    pub asset_id: String,
-    pub name: String,
-    pub image_url: String,
-    pub description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
-pub struct TokenMetadata {
-    pub native_assets: Option<Vec<NativeAsset>>,
-}
-
-pub type Extension = Option<TokenMetadata>;
-
 /// Contract configuration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -62,14 +26,6 @@ pub struct Config {
     pub whitelist: Option<Addr>,
     /// Registry contract address for verification
     pub registry: Option<Addr>,
-    /// Split Router address for automatic creator-side fund distribution
-    pub split_router: Option<Addr>,
-    /// Whether to use Split Router (if false, uses legacy withdraw pattern)
-    pub use_split_router: bool,
-    /// Metadata storage mode for minted tokens.
-    pub metadata_mode: MetadataMode,
-    /// Default native dependents included on each minted NFT.
-    pub native_asset_template: Vec<NativeAsset>,
     /// Whether minting is paused
     pub paused: bool,
 }
@@ -82,11 +38,6 @@ pub const MINTER_ADDRS: Map<&Addr, u32> = Map::new("minter_addrs");
 /// Available token IDs for minting
 pub const MINTABLE_TOKEN_IDS: Map<u32, bool> = Map::new("mintable_ids");
 
-/// Optional token-specific native asset overrides.
-/// If present for a token_id, this replaces the default template at mint time.
-pub const TOKEN_NATIVE_ASSET_OVERRIDES: Map<u32, Vec<NativeAsset>> =
-    Map::new("native_asset_overrides");
-
 /// Counter for tracking total minted
 pub const MINTABLE_NUM_TOKENS: Item<u32> = Item::new("mintable_num_tokens");
 
@@ -97,7 +48,7 @@ pub struct MintStats {
     pub total_minted: u32,
     /// Total revenue generated
     pub total_revenue: Uint128,
-    /// Total routed through Split Router
+    /// Total revenue automatically forwarded out of the minter
     pub total_routed: Uint128,
     /// Number of unique minters
     pub unique_minters: u32,

@@ -18,83 +18,11 @@
     {
       "type": "object",
       "required": [
-        "split_rule"
+        "split_config"
       ],
       "properties": {
-        "split_rule": {
+        "split_config": {
           "type": "object",
-          "required": [
-            "key"
-          ],
-          "properties": {
-            "key": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "split_rules"
-      ],
-      "properties": {
-        "split_rules": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "split_rules_by_owner"
-      ],
-      "properties": {
-        "split_rules_by_owner": {
-          "type": "object",
-          "required": [
-            "owner"
-          ],
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "owner": {
-              "type": "string"
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
           "additionalProperties": false
         }
       },
@@ -109,12 +37,6 @@
         "split_events": {
           "type": "object",
           "properties": {
-            "key": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "limit": {
               "type": [
                 "integer",
@@ -146,8 +68,7 @@
         "preview_split": {
           "type": "object",
           "required": [
-            "funds",
-            "key"
+            "funds"
           ],
           "properties": {
             "funds": {
@@ -155,9 +76,6 @@
               "items": {
                 "$ref": "#/definitions/Coin"
               }
-            },
-            "key": {
-              "type": "string"
             }
           },
           "additionalProperties": false

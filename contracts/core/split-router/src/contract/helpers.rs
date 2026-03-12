@@ -1,14 +1,6 @@
 use super::*;
 use std::collections::HashSet;
 
-pub(super) fn validate_key(key: &str) -> Result<(), ContractError> {
-    if key.trim().is_empty() {
-        return Err(ContractError::EmptyKey {});
-    }
-
-    Ok(())
-}
-
 pub(super) fn build_recipients(
     deps: Deps,
     recipients: Vec<RecipientInput>,
@@ -62,18 +54,6 @@ pub(super) fn validate_recipients(recipients: &[Recipient]) -> Result<(), Contra
     Ok(())
 }
 
-pub(super) fn ensure_rule_manager(
-    config: &Config,
-    sender: &Addr,
-    owner: &Addr,
-) -> Result<(), ContractError> {
-    if config.admin == *sender || owner == sender {
-        return Ok(());
-    }
-
-    Err(ContractError::NotRuleOwner {})
-}
-
 pub(super) fn calculate_split_amounts(
     recipients: &[Recipient],
     funds: &[Coin],
@@ -115,7 +95,6 @@ pub(super) fn calculate_split_amounts(
 pub(super) fn record_split_event(
     storage: &mut dyn cosmwasm_std::Storage,
     env: &Env,
-    key: &str,
     total_funds: Vec<Coin>,
     recipient_amounts: Vec<(Addr, Vec<Coin>)>,
     sender: &Addr,
@@ -130,7 +109,6 @@ pub(super) fn record_split_event(
 
     let event = SplitEvent {
         id: event_id,
-        key: key.to_string(),
         total_funds,
         recipient_amounts,
         timestamp: env.block.time.seconds(),

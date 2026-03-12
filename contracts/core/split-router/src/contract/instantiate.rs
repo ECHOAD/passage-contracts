@@ -1,11 +1,10 @@
+use super::helpers::build_recipients;
 use super::*;
-
-// ========== Instantiate ==========
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -21,11 +20,18 @@ pub fn instantiate(
         admin,
         paused: false,
     };
+    let split = SplitConfig {
+        recipients: build_recipients(deps.as_ref(), msg.recipients)?,
+        active: msg.active.unwrap_or(true),
+        created_at: env.block.time.seconds(),
+        updated_at: env.block.time.seconds(),
+    };
 
     CONFIG.save(deps.storage, &config)?;
+    SPLIT_CONFIG.save(deps.storage, &split)?;
     SPLIT_EVENT_COUNT.save(deps.storage, &0u64)?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
-        .add_attribute("contract", "split-router"))
+        .add_attribute("contract", "split"))
 }

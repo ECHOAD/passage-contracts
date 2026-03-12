@@ -84,10 +84,6 @@ fn sample_config() -> Config {
         start_time: Timestamp::from_seconds(1_000),
         whitelist: Some(Addr::unchecked("whitelist")),
         registry: None,
-        split_router: None,
-        use_split_router: false,
-        metadata_mode: MetadataMode::OffChain,
-        native_asset_template: vec![],
         paused: false,
     }
 }

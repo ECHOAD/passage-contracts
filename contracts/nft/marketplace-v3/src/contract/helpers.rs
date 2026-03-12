@@ -147,6 +147,32 @@ pub(super) struct RoyaltyPayout {
     pub amount: Uint128,
 }
 
+fn build_royalty_payout_msg(
+    deps: &Deps,
+    recipient: &Addr,
+    sale_denom: &str,
+    amount: Uint128,
+) -> Result<CosmosMsg, ContractError> {
+    if deps.querier.query_wasm_contract_info(recipient).is_ok() {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: recipient.to_string(),
+            msg: to_json_binary(&SplitRouterExecuteMsg::Split {})?,
+            funds: vec![Coin {
+                denom: sale_denom.to_string(),
+                amount,
+            }],
+        }))
+    } else {
+        Ok(CosmosMsg::Bank(BankMsg::Send {
+            to_address: recipient.to_string(),
+            amount: vec![Coin {
+                denom: sale_denom.to_string(),
+                amount,
+            }],
+        }))
+    }
+}
+
 pub(super) fn query_royalty_payout(
     deps: &Deps,
     collection: &Addr,
@@ -230,36 +256,14 @@ pub(super) fn execute_sale(
         }));
     }
 
-    if config.use_split_router {
-        if royalty.is_zero() {
-            // No creator-side royalty to route.
-        } else if let Some(router) = &config.split_router {
-            let route_msg = SplitRouterExecuteMsg::Split {
-                key: collection.to_string(),
-            };
-
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: router.to_string(),
-                msg: to_json_binary(&route_msg)?,
-                funds: vec![Coin {
-                    denom: sale_denom.to_string(),
-                    amount: royalty,
-                }],
-            }));
-        } else {
-            return Err(ContractError::SplitRouterNotConfigured {});
-        }
-    } else {
-        if let Some(payout) = royalty_payout {
-            if !payout.amount.is_zero() {
-                messages.push(CosmosMsg::Bank(BankMsg::Send {
-                    to_address: payout.recipient.to_string(),
-                    amount: vec![Coin {
-                        denom: sale_denom.to_string(),
-                        amount: payout.amount,
-                    }],
-                }));
-            }
+    if let Some(payout) = royalty_payout {
+        if !payout.amount.is_zero() {
+            messages.push(build_royalty_payout_msg(
+                &deps.as_ref(),
+                &payout.recipient,
+                sale_denom,
+                payout.amount,
+            )?);
         }
     }
 

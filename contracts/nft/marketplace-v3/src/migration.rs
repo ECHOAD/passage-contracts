@@ -151,8 +151,6 @@ pub fn migrate_state(
     storage: &mut dyn Storage,
     collection: Addr,
     registry: Option<Addr>,
-    split_router: Option<Addr>,
-    use_split_router: bool,
     additional_collections: Vec<Addr>,
     current_time: u64,
 ) -> StdResult<MigrationStats> {
@@ -183,8 +181,6 @@ pub fn migrate_state(
         max_trading_fee_bps: DEFAULT_MAX_TRADING_FEE_BPS,
         fee_collector: config_v2.collector_address,
         registry,
-        split_router: split_router.clone(),
-        use_split_router,
         operators: config_v2.operators,
         paused: false,
         require_registration: true, // Enable registration for migrated contracts

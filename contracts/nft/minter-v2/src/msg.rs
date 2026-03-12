@@ -1,4 +1,4 @@
-use crate::state::{Config, MetadataMode, MintStats, NativeAsset, Pg721InstantiateMsg};
+use crate::state::{Config, MintStats, Pg721InstantiateMsg};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Timestamp};
 
@@ -7,10 +7,6 @@ use cosmwasm_std::{Coin, Timestamp};
 pub struct MigrateMsg {
     /// Registry contract address for collection verification
     pub registry: Option<String>,
-    /// Split Router address for automatic creator-side fund distribution
-    pub split_router: Option<String>,
-    /// Whether to use Split Router (default: true if split_router is set)
-    pub use_split_router: Option<bool>,
     /// Required only for `passage-minter-metadata-onchain` migrations
     /// because that legacy state does not store a base token URI.
     pub base_token_uri: Option<String>,
@@ -36,14 +32,6 @@ pub struct InstantiateMsg {
     pub whitelist: Option<String>,
     /// Registry contract address
     pub registry: Option<String>,
-    /// Split Router address for automatic creator-side fund distribution
-    pub split_router: Option<String>,
-    /// Whether to use Split Router (default: true if split_router is set)
-    pub use_split_router: Option<bool>,
-    /// Metadata mode: off-chain by default, on-chain optional.
-    pub metadata_mode: Option<MetadataMode>,
-    /// Optional default native assets template for every minted token.
-    pub native_asset_template: Option<Vec<NativeAsset>>,
 }
 
 #[cw_serde]
@@ -66,9 +54,6 @@ pub enum ExecuteMsg {
         unit_price: Option<Coin>,
         whitelist: Option<String>,
         registry: Option<String>,
-        split_router: Option<String>,
-        use_split_router: Option<bool>,
-        metadata_mode: Option<MetadataMode>,
         paused: Option<bool>,
     },
     /// Update minting start time
@@ -79,19 +64,10 @@ pub enum ExecuteMsg {
     RemoveWhitelist {},
 
     // ========== Legacy Compatibility ==========
-    /// Withdraw accumulated funds (only works if use_split_router is false)
+    /// Withdraw accumulated funds held by the minter
     Withdraw {},
     /// Withdraw to specific address
     WithdrawTo { recipient: String },
-    /// Replace default native asset template used for mint metadata (admin only)
-    SetNativeAssetTemplate { native_assets: Vec<NativeAsset> },
-    /// Set token-specific native assets override (admin only)
-    SetTokenNativeAssetOverride {
-        token_id: u32,
-        native_assets: Vec<NativeAsset>,
-    },
-    /// Remove token-specific native assets override (admin only)
-    ClearTokenNativeAssetOverride { token_id: u32 },
 }
 
 #[cw_serde]
@@ -128,12 +104,6 @@ pub enum QueryMsg {
     /// Check if minting is active
     #[returns(IsMintingActiveResponse)]
     IsMintingActive {},
-    /// Get default native asset template used for mint metadata.
-    #[returns(NativeAssetTemplateResponse)]
-    NativeAssetTemplate {},
-    /// Get resolved native assets for a token ID (override or template).
-    #[returns(TokenNativeAssetsResponse)]
-    TokenNativeAssets { token_id: u32 },
 }
 
 // ========== Response Types ==========
@@ -150,10 +120,6 @@ pub struct ConfigResponse {
     pub unit_price: Coin,
     pub whitelist: Option<String>,
     pub registry: Option<String>,
-    pub split_router: Option<String>,
-    pub use_split_router: bool,
-    pub metadata_mode: MetadataMode,
-    pub native_asset_template: Vec<NativeAsset>,
     pub paused: bool,
 }
 
@@ -170,10 +136,6 @@ impl From<Config> for ConfigResponse {
             unit_price: config.unit_price,
             whitelist: config.whitelist.map(|w| w.to_string()),
             registry: config.registry.map(|r| r.to_string()),
-            split_router: config.split_router.map(|r| r.to_string()),
-            use_split_router: config.use_split_router,
-            metadata_mode: config.metadata_mode,
-            native_asset_template: config.native_asset_template,
             paused: config.paused,
         }
     }
@@ -217,25 +179,6 @@ pub struct MintStatsResponse {
 pub struct IsMintingActiveResponse {
     pub is_active: bool,
     pub reason: Option<String>,
-}
-
-#[cw_serde]
-pub struct NativeAssetTemplateResponse {
-    pub native_assets: Vec<NativeAsset>,
-}
-
-#[cw_serde]
-pub struct TokenNativeAssetsResponse {
-    pub token_id: u32,
-    pub source: String,
-    pub native_assets: Vec<NativeAsset>,
-}
-
-// ========== Split Router Messages ==========
-
-#[cw_serde]
-pub enum SplitRouterExecuteMsg {
-    Split { key: String },
 }
 
 // ========== Whitelist Query ==========

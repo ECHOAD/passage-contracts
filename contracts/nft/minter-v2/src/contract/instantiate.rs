@@ -22,13 +22,6 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    let split_router = msg
-        .split_router
-        .map(|r| deps.api.addr_validate(&r))
-        .transpose()?;
-
-    let use_split_router = msg.use_split_router.unwrap_or(split_router.is_some());
-
     // Create initial config (cw721_address will be set in reply)
     let config = Config {
         admin: info.sender.clone(),
@@ -41,10 +34,6 @@ pub fn instantiate(
         start_time: msg.start_time,
         whitelist,
         registry,
-        split_router,
-        use_split_router,
-        metadata_mode: msg.metadata_mode.unwrap_or_default(),
-        native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,
     };
 
@@ -72,7 +61,6 @@ pub fn instantiate(
         .add_submessage(submsg)
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "minter-v2")
-        .add_attribute("metadata_mode", format!("{:?}", config.metadata_mode))
         .add_attribute("admin", info.sender))
 }
 

@@ -12,10 +12,6 @@ pub struct MigrateMsg {
     pub collection: String,
     /// Optional: Registry contract address
     pub registry: Option<String>,
-    /// Optional: Split Router address for creator-side royalty distribution
-    pub split_router: Option<String>,
-    /// Whether to use Split Router (default: true if split_router is set)
-    pub use_split_router: Option<bool>,
     /// Additional collections to support (besides the migrated one)
     pub additional_collections: Option<Vec<String>>,
     /// Optional per-collection denom overrides
@@ -44,10 +40,6 @@ pub struct InstantiateMsg {
     pub fee_collector: String,
     /// Registry contract address (for collection verification)
     pub registry: Option<String>,
-    /// Split Router address
-    pub split_router: Option<String>,
-    /// Whether to use Split Router
-    pub use_split_router: Option<bool>,
     /// Operator addresses
     pub operators: Option<Vec<String>>,
     /// Whether to require collection registration (default: true)
@@ -66,8 +58,6 @@ pub enum ExecuteMsg {
         max_trading_fee_bps: Option<u64>,
         fee_collector: Option<String>,
         registry: Option<String>,
-        split_router: Option<String>,
-        use_split_router: Option<bool>,
         operators: Option<Vec<String>>,
         paused: Option<bool>,
         require_registration: Option<bool>,
@@ -303,8 +293,6 @@ pub struct ConfigResponse {
     pub max_trading_fee_bps: u64,
     pub fee_collector: String,
     pub registry: Option<String>,
-    pub split_router: Option<String>,
-    pub use_split_router: bool,
     pub operators: Vec<String>,
     pub paused: bool,
     pub require_registration: bool,
@@ -320,8 +308,6 @@ impl From<Config> for ConfigResponse {
             max_trading_fee_bps: c.max_trading_fee_bps,
             fee_collector: c.fee_collector.to_string(),
             registry: c.registry.map(|a| a.to_string()),
-            split_router: c.split_router.map(|a| a.to_string()),
-            use_split_router: c.use_split_router,
             operators: c.operators.iter().map(|a| a.to_string()).collect(),
             paused: c.paused,
             require_registration: c.require_registration,
@@ -418,7 +404,7 @@ pub struct SalePreviewResponse {
 
 #[cw_serde]
 pub enum SplitRouterExecuteMsg {
-    Split { key: String },
+    Split {},
 }
 
 #[cw_serde]

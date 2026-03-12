@@ -37,10 +37,6 @@ pub fn instantiate(
         .registry
         .map(|addr| deps.api.addr_validate(&addr))
         .transpose()?;
-    let split_router = msg
-        .split_router
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
     let max_trading_fee_bps = msg
         .max_trading_fee_bps
         .unwrap_or(DEFAULT_MAX_TRADING_FEE_BPS);
@@ -52,8 +48,6 @@ pub fn instantiate(
         max_trading_fee_bps,
         fee_collector: deps.api.addr_validate(&msg.fee_collector)?,
         registry,
-        split_router: split_router.clone(),
-        use_split_router: msg.use_split_router.unwrap_or(split_router.is_some()),
         min_bid_increment_percent: msg.min_bid_increment_percent,
         min_duration: msg.min_duration,
         max_duration: msg.max_duration,
@@ -93,8 +87,6 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            split_router,
-            use_split_router,
             min_bid_increment_percent,
             min_duration,
             max_duration,
@@ -111,8 +103,6 @@ pub fn execute(
             max_trading_fee_bps,
             fee_collector,
             registry,
-            split_router,
-            use_split_router,
             min_bid_increment_percent,
             min_duration,
             max_duration,
@@ -167,8 +157,6 @@ fn execute_update_config(
     max_trading_fee_bps: Option<u64>,
     fee_collector: Option<String>,
     registry: Option<String>,
-    split_router: Option<String>,
-    use_split_router: Option<bool>,
     min_bid_increment_percent: Option<Decimal>,
     min_duration: Option<u64>,
     max_duration: Option<u64>,
@@ -202,12 +190,6 @@ fn execute_update_config(
     }
     if let Some(new_registry) = registry {
         config.registry = Some(deps.api.addr_validate(&new_registry)?);
-    }
-    if let Some(new_split_router) = split_router {
-        config.split_router = Some(deps.api.addr_validate(&new_split_router)?);
-    }
-    if let Some(new_use_split_router) = use_split_router {
-        config.use_split_router = new_use_split_router;
     }
     if let Some(new_increment) = min_bid_increment_percent {
         config.min_bid_increment_percent = new_increment;
@@ -530,15 +512,15 @@ fn execute_settle_auction(
 
     if let Some(royalty_payout) = royalty_payout {
         if !royalty_payout.amount.is_zero() {
-            if config.use_split_router {
-                let Some(router) = &config.split_router else {
-                    return Err(ContractError::SplitRouterNotConfigured {});
-                };
+            if deps
+                .as_ref()
+                .querier
+                .query_wasm_contract_info(&royalty_payout.recipient)
+                .is_ok()
+            {
                 messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: router.to_string(),
-                    msg: to_json_binary(&SplitRouterExecuteMsg::Split {
-                        key: collection_addr.to_string(),
-                    })?,
+                    contract_addr: royalty_payout.recipient.to_string(),
+                    msg: to_json_binary(&SplitRouterExecuteMsg::Split {})?,
                     funds: vec![Coin {
                         denom: config.denom.clone(),
                         amount: royalty_payout.amount,

@@ -11,8 +11,6 @@ pub struct InstantiateMsg {
     pub max_trading_fee_bps: Option<u64>,
     pub fee_collector: String,
     pub registry: Option<String>,
-    pub split_router: Option<String>,
-    pub use_split_router: Option<bool>,
     pub min_bid_increment_percent: Decimal,
     pub min_duration: u64,
     pub max_duration: u64,
@@ -30,8 +28,6 @@ pub enum ExecuteMsg {
         max_trading_fee_bps: Option<u64>,
         fee_collector: Option<String>,
         registry: Option<String>,
-        split_router: Option<String>,
-        use_split_router: Option<bool>,
         min_bid_increment_percent: Option<Decimal>,
         min_duration: Option<u64>,
         max_duration: Option<u64>,
@@ -102,8 +98,6 @@ pub struct ConfigResponse {
     pub max_trading_fee_bps: u64,
     pub fee_collector: String,
     pub registry: Option<String>,
-    pub split_router: Option<String>,
-    pub use_split_router: bool,
     pub min_bid_increment_percent: Decimal,
     pub min_duration: u64,
     pub max_duration: u64,
@@ -122,8 +116,6 @@ impl From<Config> for ConfigResponse {
             max_trading_fee_bps: config.max_trading_fee_bps,
             fee_collector: config.fee_collector.to_string(),
             registry: config.registry.map(|addr| addr.to_string()),
-            split_router: config.split_router.map(|addr| addr.to_string()),
-            use_split_router: config.use_split_router,
             min_bid_increment_percent: config.min_bid_increment_percent,
             min_duration: config.min_duration,
             max_duration: config.max_duration,
@@ -155,7 +147,7 @@ pub struct AuctionsResponse {
 
 #[cw_serde]
 pub enum SplitRouterExecuteMsg {
-    Split { key: String },
+    Split {},
 }
 
 #[cw_serde]

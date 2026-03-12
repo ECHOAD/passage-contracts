@@ -37,20 +37,6 @@
         "string",
         "null"
       ]
-    },
-    "split_router": {
-      "description": "Optional: Split Router address for creator-side royalty distribution",
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "use_split_router": {
-      "description": "Whether to use Split Router (default: true if split_router is set)",
-      "type": [
-        "boolean",
-        "null"
-      ]
     }
   },
   "additionalProperties": false,

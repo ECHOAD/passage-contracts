@@ -66,22 +66,10 @@
         "null"
       ]
     },
-    "split_router": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
     "trading_fee_bps": {
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0
-    },
-    "use_split_router": {
-      "type": [
-        "boolean",
-        "null"
-      ]
     }
   },
   "additionalProperties": false,

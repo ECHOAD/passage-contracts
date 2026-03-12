@@ -8,7 +8,7 @@ enum Pg721ExecuteMsg {
         token_id: String,
         owner: String,
         token_uri: Option<String>,
-        extension: Extension,
+        extension: Option<cosmwasm_std::Empty>,
     },
 }
 
@@ -301,33 +301,17 @@ pub(super) fn get_random_token_id(
 }
 
 pub(super) fn create_mint_msg(
-    storage: &dyn cosmwasm_std::Storage,
     config: &Config,
     token_id: u32,
     owner: String,
 ) -> Result<CosmosMsg, ContractError> {
     let token_uri = format!("{}/{}", config.base_token_uri, token_id);
-    let extension = if config.metadata_mode.uses_onchain_metadata() {
-        let native_assets = TOKEN_NATIVE_ASSET_OVERRIDES
-            .may_load(storage, token_id)?
-            .unwrap_or_else(|| config.native_asset_template.clone());
-
-        if native_assets.is_empty() {
-            None
-        } else {
-            Some(TokenMetadata {
-                native_assets: Some(native_assets),
-            })
-        }
-    } else {
-        None
-    };
 
     let exec_msg = Pg721ExecuteMsg::Mint {
         token_id: token_id.to_string(),
         owner,
         token_uri: Some(token_uri),
-        extension,
+        extension: None,
     };
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
