@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Empty, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,18 @@ impl MetadataMode {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NftType {
+    Component,
+    Avatar,
+    Companion,
+    World,
+    Plugin,
+    Achievement,
+    WorldTemplate,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NativeAsset {
     pub asset_id: String,
     pub name: String,
@@ -32,9 +44,11 @@ pub struct NativeAsset {
     pub description: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenMetadata {
+    pub nft_type: NftType,
     pub native_assets: Option<Vec<NativeAsset>>,
+    pub extension: Option<Empty>,
 }
 
 pub type Extension = Option<TokenMetadata>;
@@ -110,20 +124,21 @@ pub struct Pg721InstantiateMsg {
     pub name: String,
     pub symbol: String,
     pub minter: String,
-    pub collection_info: CollectionInfo,
+    pub nft_type: NftType,
+    pub collection_info: CollectionInfoMsg<RoyaltyInfoResponse>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CollectionInfo {
+pub struct CollectionInfoMsg<T> {
     pub creator: String,
     pub description: String,
     pub image: String,
     pub external_link: Option<String>,
-    pub royalty_info: Option<RoyaltyInfo>,
+    pub royalty_info: Option<T>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct RoyaltyInfo {
+pub struct RoyaltyInfoResponse {
     pub payment_address: String,
-    pub share: String, // Decimal as string
+    pub share: Decimal,
 }

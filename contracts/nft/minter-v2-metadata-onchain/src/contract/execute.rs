@@ -84,6 +84,7 @@ fn build_collector_payout_msg(
 
 fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    let collection_nft_type = query_collection_nft_type(deps.as_ref(), &config)?;
 
     // Validate minting conditions
     validate_mint_conditions(&deps, &env, &info, &config)?;
@@ -96,7 +97,13 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     let token_id = get_random_token_id(deps.storage, &env)?;
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, info.sender.to_string())?;
+    let mint_msg = create_mint_msg(
+        deps.storage,
+        &config,
+        &collection_nft_type,
+        token_id,
+        info.sender.to_string(),
+    )?;
 
     // Update state
     increment_mint_count(deps.storage, &info.sender)?;
@@ -140,6 +147,7 @@ fn execute_mint_to(
     recipient: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    let collection_nft_type = query_collection_nft_type(deps.as_ref(), &config)?;
 
     // Only admin can mint to
     if config.admin != info.sender {
@@ -152,7 +160,13 @@ fn execute_mint_to(
     let token_id = get_random_token_id(deps.storage, &env)?;
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, recipient.clone())?;
+    let mint_msg = create_mint_msg(
+        deps.storage,
+        &config,
+        &collection_nft_type,
+        token_id,
+        recipient.clone(),
+    )?;
 
     // Update state
     increment_mint_count(deps.storage, &recipient_addr)?;
@@ -181,6 +195,7 @@ fn execute_mint_for(
     recipient: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    let collection_nft_type = query_collection_nft_type(deps.as_ref(), &config)?;
 
     // Only admin can mint for
     if config.admin != info.sender {
@@ -195,7 +210,13 @@ fn execute_mint_for(
     }
 
     // Perform mint
-    let mint_msg = create_mint_msg(deps.storage, &config, token_id, recipient.clone())?;
+    let mint_msg = create_mint_msg(
+        deps.storage,
+        &config,
+        &collection_nft_type,
+        token_id,
+        recipient.clone(),
+    )?;
 
     // Update state
     increment_mint_count(deps.storage, &recipient_addr)?;
@@ -223,6 +244,7 @@ fn execute_batch_mint(
     count: u32,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    let collection_nft_type = query_collection_nft_type(deps.as_ref(), &config)?;
 
     // Validate minting conditions
     validate_mint_conditions(&deps, &env, &info, &config)?;
@@ -253,7 +275,13 @@ fn execute_batch_mint(
 
     for _ in 0..count {
         let token_id = get_random_token_id(deps.storage, &env)?;
-        let mint_msg = create_mint_msg(deps.storage, &config, token_id, info.sender.to_string())?;
+        let mint_msg = create_mint_msg(
+            deps.storage,
+            &config,
+            &collection_nft_type,
+            token_id,
+            info.sender.to_string(),
+        )?;
         messages.push(mint_msg);
         minted_ids.push(token_id);
         MINTABLE_TOKEN_IDS.remove(deps.storage, token_id);

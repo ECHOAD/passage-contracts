@@ -101,6 +101,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
+        QueryMsg::CollectionsByNftType {
+            nft_type,
+            start_after,
+            limit,
+        } => to_json_binary(&query_collections_by_nft_type(
+            deps,
+            nft_type,
+            start_after,
+            limit,
+        )?),
         QueryMsg::IsCollectionVerified { address } => {
             to_json_binary(&query_is_collection_verified(deps, address)?)
         }
@@ -408,6 +418,32 @@ fn query_collections_by_creator(
         .idx
         .creator
         .prefix(creator_addr)
+        .range(deps.storage, start_bound, None, Order::Ascending)
+        .take(limit)
+        .map(|item| item.map(|(_, v)| v))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(CollectionsResponse {
+        collections: collection_list,
+    })
+}
+
+fn query_collections_by_nft_type(
+    deps: Deps,
+    nft_type: NftType,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|s| deps.api.addr_validate(&s))
+        .transpose()?;
+    let start_bound = start.map(Bound::exclusive);
+
+    let collection_list: Vec<Collection> = collections()
+        .idx
+        .nft_type
+        .prefix(nft_type.as_str().to_string())
         .range(deps.storage, start_bound, None, Order::Ascending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))

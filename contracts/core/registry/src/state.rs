@@ -2,6 +2,39 @@ use cosmwasm_std::Addr;
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NftType {
+    Component,
+    Avatar,
+    Companion,
+    World,
+    Plugin,
+    Achievement,
+    WorldTemplate,
+}
+
+impl NftType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Component => "component",
+            Self::Avatar => "avatar",
+            Self::Companion => "companion",
+            Self::World => "world",
+            Self::Plugin => "plugin",
+            Self::Achievement => "achievement",
+            Self::WorldTemplate => "world_template",
+        }
+    }
+}
+
+impl fmt::Display for NftType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 /// Contract configuration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -79,6 +112,7 @@ pub struct Collection {
     pub address: Addr,
     pub ecosystem_id: String,
     pub name: String,
+    pub nft_type: NftType,
     pub creator: Addr,
     /// Whether this collection is verified/official
     pub verified: bool,
@@ -97,11 +131,12 @@ pub type CollectionKey = Addr;
 pub struct CollectionIndices<'a> {
     pub ecosystem: MultiIndex<'a, String, Collection, CollectionKey>,
     pub creator: MultiIndex<'a, Addr, Collection, CollectionKey>,
+    pub nft_type: MultiIndex<'a, String, Collection, CollectionKey>,
 }
 
 impl<'a> IndexList<Collection> for CollectionIndices<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Collection>> + '_> {
-        let v: Vec<&dyn Index<Collection>> = vec![&self.ecosystem, &self.creator];
+        let v: Vec<&dyn Index<Collection>> = vec![&self.ecosystem, &self.creator, &self.nft_type];
         Box::new(v.into_iter())
     }
 }
@@ -117,6 +152,11 @@ pub fn collections<'a>() -> IndexedMap<CollectionKey, Collection, CollectionIndi
             |_pk: &[u8], d: &Collection| d.creator.clone(),
             "collections",
             "collections__creator",
+        ),
+        nft_type: MultiIndex::new(
+            |_pk: &[u8], d: &Collection| d.nft_type.as_str().to_string(),
+            "collections",
+            "collections__nft_type",
         ),
     };
     IndexedMap::new("collections", indexes)

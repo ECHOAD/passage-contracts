@@ -5,12 +5,13 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw721::ContractInfoResponse;
+use cw721_base::{ExecuteMsg as Cw721ExecuteMsg, MintMsg as Cw721MintMsg};
 use cw_utils::nonpayable;
 use url::Url;
 
 use crate::msg::{
     CollectionInfoResponse, ExecuteMsg, Extension, FrozenTokenMetadataResponse, InstantiateMsg,
-    QueryMsg, RoyaltyInfoResponse,
+    QueryMsg, RoyaltyInfoResponse, TokenMetadata,
 };
 use crate::state::{CollectionInfo, RoyaltyInfo, COLLECTION_INFO, FROZEN_TOKEN_METADATA};
 use crate::ContractError;
@@ -68,6 +69,7 @@ pub fn instantiate(
     deps.api.addr_validate(&msg.collection_info.creator)?;
 
     let collection_info = CollectionInfo {
+        nft_type: msg.nft_type,
         creator: msg.collection_info.creator,
         description: msg.collection_info.description,
         image: msg.collection_info.image,
@@ -98,6 +100,28 @@ pub fn execute(
             token_id,
             token_uri,
         } => execute_update_token_metadata(deps, info, token_id, token_uri),
+        ExecuteMsg::Mint {
+            token_id,
+            owner,
+            token_uri,
+            extension,
+        } => {
+            validate_token_metadata(deps.as_ref(), extension.as_ref())?;
+
+            Pg721Contract::default()
+                .execute(
+                    deps,
+                    env,
+                    info,
+                    Cw721ExecuteMsg::Mint(Cw721MintMsg {
+                        token_id,
+                        owner,
+                        token_uri,
+                        extension,
+                    }),
+                )
+                .map_err(ContractError::from)
+        }
         other => Pg721Contract::default()
             .execute(deps, env, info, other.into())
             .map_err(ContractError::from),
@@ -181,6 +205,7 @@ fn query_config(deps: Deps) -> StdResult<CollectionInfoResponse> {
     };
 
     Ok(CollectionInfoResponse {
+        nft_type: info.nft_type,
         creator: info.creator,
         description: info.description,
         image: info.image,
@@ -192,6 +217,35 @@ fn query_config(deps: Deps) -> StdResult<CollectionInfoResponse> {
 fn query_frozen_token_metadata(deps: Deps) -> StdResult<FrozenTokenMetadataResponse> {
     let frozen = FROZEN_TOKEN_METADATA.load(deps.storage)?;
     Ok(FrozenTokenMetadataResponse { frozen })
+}
+
+fn validate_token_metadata(
+    deps: Deps,
+    metadata: Option<&TokenMetadata>,
+) -> Result<(), ContractError> {
+    let Some(metadata) = metadata else {
+        return Ok(());
+    };
+
+    let collection_info = COLLECTION_INFO.load(deps.storage)?;
+    if metadata.nft_type != collection_info.nft_type {
+        return Err(ContractError::NftTypeMismatch {
+            expected: collection_info.nft_type.to_string(),
+            found: metadata.nft_type.to_string(),
+        });
+    }
+
+    if let Some(extension) = &metadata.extension {
+        let extension_type = extension.nft_type();
+        if extension_type != collection_info.nft_type {
+            return Err(ContractError::NftTypeExtensionMismatch {
+                expected: collection_info.nft_type.to_string(),
+                found: extension_type.to_string(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -3,6 +3,35 @@ use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NftType {
+    Component,
+    Avatar,
+    Companion,
+    World,
+    Plugin,
+    Achievement,
+    WorldTemplate,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NativeAsset {
+    pub asset_id: String,
+    pub name: String,
+    pub image_url: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TokenMetadata {
+    pub nft_type: NftType,
+    pub native_assets: Option<Vec<NativeAsset>>,
+    pub extension: Option<cosmwasm_std::Empty>,
+}
+
+pub type Extension = Option<TokenMetadata>;
+
 /// Contract configuration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -62,6 +91,7 @@ pub struct Pg721InstantiateMsg {
     pub name: String,
     pub symbol: String,
     pub minter: String,
+    pub nft_type: NftType,
     pub collection_info: CollectionInfo,
 }
 

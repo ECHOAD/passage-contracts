@@ -2,6 +2,39 @@ use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NftType {
+    Component,
+    Avatar,
+    Companion,
+    World,
+    Plugin,
+    Achievement,
+    WorldTemplate,
+}
+
+impl NftType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Component => "component",
+            Self::Avatar => "avatar",
+            Self::Companion => "companion",
+            Self::World => "world",
+            Self::Plugin => "plugin",
+            Self::Achievement => "achievement",
+            Self::WorldTemplate => "world_template",
+        }
+    }
+}
+
+impl fmt::Display for NftType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -21,6 +54,7 @@ pub struct PendingCreation {
     pub ecosystem_id: String,
     pub name: String,
     pub symbol: String,
+    pub nft_type: NftType,
     pub requested_at: u64,
 }
 
@@ -31,6 +65,7 @@ pub struct CollectionRecord {
     pub collection_address: Addr,
     pub name: String,
     pub symbol: String,
+    pub nft_type: NftType,
     pub created_at: u64,
 }
 

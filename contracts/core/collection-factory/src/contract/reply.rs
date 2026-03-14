@@ -22,6 +22,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
         collection_address: collection_address.clone(),
         name: pending.name,
         symbol: pending.symbol,
+        nft_type: pending.nft_type.clone(),
         created_at: env.block.time.seconds(),
     };
 
@@ -35,6 +36,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             ecosystem_id: pending.ecosystem_id.clone(),
             name: record.name.clone(),
             creator: record.creator.to_string(),
+            nft_type: record.nft_type.clone(),
         })?,
         funds: vec![],
     };
@@ -46,5 +48,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
         .add_attribute("collection_id", next_collection_id.to_string())
         .add_attribute("creator", pending.creator)
         .add_attribute("collection_address", collection_address)
-        .add_attribute("ecosystem_id", pending.ecosystem_id))
+        .add_attribute("ecosystem_id", pending.ecosystem_id)
+        .add_attribute("nft_type", record.nft_type.to_string()))
 }

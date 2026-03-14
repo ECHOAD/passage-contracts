@@ -188,12 +188,14 @@ pub fn execute(
             address,
             ecosystem_id,
             name,
-        } => execute_register_collection(deps, env, info, address, ecosystem_id, name),
+            nft_type,
+        } => execute_register_collection(deps, env, info, address, ecosystem_id, name, nft_type),
         ExecuteMsg::RegisterCollectionFromFactory {
             address,
             ecosystem_id,
             name,
             creator,
+            nft_type,
         } => execute_register_collection_from_factory(
             deps,
             env,
@@ -202,12 +204,14 @@ pub fn execute(
             ecosystem_id,
             name,
             creator,
+            nft_type,
         ),
         ExecuteMsg::RegisterExistingCollection {
             address,
             ecosystem_id,
             name,
             creator,
+            nft_type,
         } => execute_register_existing_collection(
             deps,
             env,
@@ -216,6 +220,7 @@ pub fn execute(
             ecosystem_id,
             name,
             creator,
+            nft_type,
         ),
         ExecuteMsg::UpdateCollection {
             address,
@@ -968,6 +973,7 @@ fn execute_register_collection(
     address: String,
     ecosystem_id: String,
     name: String,
+    nft_type: NftType,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&address)?;
@@ -1006,6 +1012,7 @@ fn execute_register_collection(
         address: collection_addr.clone(),
         ecosystem_id: ecosystem_id.clone(),
         name,
+        nft_type: nft_type.clone(),
         creator: creator.clone(),
         verified: false,
         minter: None,
@@ -1022,7 +1029,8 @@ fn execute_register_collection(
         .add_attribute("action", "register_collection")
         .add_attribute("collection", collection_addr)
         .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", creator))
+        .add_attribute("creator", creator)
+        .add_attribute("nft_type", nft_type.to_string()))
 }
 
 fn execute_register_collection_from_factory(
@@ -1033,6 +1041,7 @@ fn execute_register_collection_from_factory(
     ecosystem_id: String,
     name: String,
     creator: String,
+    nft_type: NftType,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&address)?;
@@ -1085,6 +1094,7 @@ fn execute_register_collection_from_factory(
         address: collection_addr.clone(),
         ecosystem_id: ecosystem_id.clone(),
         name,
+        nft_type: nft_type.clone(),
         creator: final_creator.clone(),
         verified: false,
         minter: None,
@@ -1102,7 +1112,8 @@ fn execute_register_collection_from_factory(
         .add_attribute("action", "register_collection_from_factory")
         .add_attribute("collection", collection_addr)
         .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", final_creator))
+        .add_attribute("creator", final_creator)
+        .add_attribute("nft_type", nft_type.to_string()))
 }
 
 fn execute_register_existing_collection(
@@ -1113,6 +1124,7 @@ fn execute_register_existing_collection(
     ecosystem_id: String,
     name: String,
     creator: String,
+    nft_type: NftType,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -1148,6 +1160,7 @@ fn execute_register_existing_collection(
         address: collection_addr.clone(),
         ecosystem_id: ecosystem_id.clone(),
         name,
+        nft_type: nft_type.clone(),
         creator: final_creator.clone(),
         verified: true, // Existing collections registered by admin are verified
         minter: None,
@@ -1165,7 +1178,8 @@ fn execute_register_existing_collection(
         .add_attribute("action", "register_existing_collection")
         .add_attribute("collection", collection_addr)
         .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", final_creator))
+        .add_attribute("creator", final_creator)
+        .add_attribute("nft_type", nft_type.to_string()))
 }
 
 fn execute_update_collection(

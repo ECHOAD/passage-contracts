@@ -24,6 +24,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
+        QueryMsg::CollectionsByNftType {
+            nft_type,
+            start_after,
+            limit,
+        } => to_json_binary(&query_collections_by_nft_type(
+            deps,
+            nft_type,
+            start_after,
+            limit,
+        )?),
     }
 }
 
@@ -95,6 +105,32 @@ fn query_collections_by_creator(
         .filter_map(|item| {
             item.ok().and_then(|(_, collection)| {
                 if collection.creator == creator {
+                    Some(collection)
+                } else {
+                    None
+                }
+            })
+        })
+        .take(limit)
+        .collect::<Vec<_>>();
+
+    Ok(CollectionsResponse { collections })
+}
+
+fn query_collections_by_nft_type(
+    deps: Deps,
+    nft_type: NftType,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<CollectionsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let collections = COLLECTIONS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, collection)| {
+                if collection.nft_type == nft_type {
                     Some(collection)
                 } else {
                     None

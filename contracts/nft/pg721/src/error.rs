@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    Cw721(#[from] Cw721ContractError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
@@ -30,6 +33,12 @@ pub enum ContractError {
     #[error("Description too long")]
     DescriptionTooLong {},
 
+    #[error("Token metadata nft_type `{found}` does not match collection nft_type `{expected}`")]
+    NftTypeMismatch { expected: String, found: String },
+
+    #[error("Token metadata extension `{found}` does not match collection nft_type `{expected}`")]
+    NftTypeExtensionMismatch { expected: String, found: String },
+
     #[error("{0}")]
     Payment(#[from] PaymentError),
 
@@ -40,6 +49,7 @@ pub enum ContractError {
 impl From<ContractError> for Cw721ContractError {
     fn from(err: ContractError) -> Cw721ContractError {
         match err {
+            ContractError::Cw721(err) => err,
             ContractError::Unauthorized {} => Cw721ContractError::Unauthorized {},
             ContractError::Claimed {} => Cw721ContractError::Claimed {},
             ContractError::Expired {} => Cw721ContractError::Expired {},

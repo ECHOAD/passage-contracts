@@ -17,8 +17,8 @@ pub(super) use crate::msg::{
 pub(super) use crate::state::{
     collections, AuthorizedMinter, Collection, CollectionCreationPolicy, CollectionCreationRequest,
     CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
-    EcosystemModeration, EcosystemType, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
-    RecoveryConfig, RecoveryPolicy, RecoveryTarget, AUTHORIZED_MINTERS,
+    EcosystemModeration, EcosystemType, NftType, RecoveryCase, RecoveryCaseKind,
+    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy, RecoveryTarget, AUTHORIZED_MINTERS,
     COLLECTION_CREATION_REQUESTS, COLLECTION_MODERATION, COLLECTION_RECOVERY_POLICIES, CONFIG,
     CREATOR_MODERATION, ECOSYSTEMS, ECOSYSTEM_COUNT, ECOSYSTEM_MEMBERS, ECOSYSTEM_MODERATION,
     ECOSYSTEM_RECOVERY_POLICIES, LAST_CREATOR_ACTIVITY, RECOVERY_CASES, RECOVERY_CASE_COUNT,

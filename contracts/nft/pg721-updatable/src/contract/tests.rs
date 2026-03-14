@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::state::CollectionInfo;
+use crate::msg::{CollectionInfoMsg, NftType};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, from_json, Attribute, Decimal};
 use cw721::NftInfoResponse;
@@ -14,7 +14,8 @@ fn setup_contract(deps: DepsMut, royalty_info: Option<RoyaltyInfoResponse>) {
         name: collection,
         symbol: String::from("BOBO"),
         minter: String::from("minter"),
-        collection_info: CollectionInfo {
+        nft_type: NftType::Component,
+        collection_info: CollectionInfoMsg {
             creator: String::from("creator"),
             description: String::from("Passage Monkeys"),
             image: image.clone(),
@@ -35,7 +36,11 @@ fn mint_token(deps: DepsMut, token_id: &str, token_uri: Option<String>) {
         token_id: token_id.to_string(),
         owner: String::from("owner"),
         token_uri,
-        extension: None,
+        extension: Some(TokenMetadata {
+            nft_type: NftType::Component,
+            native_assets: None,
+            extension: None,
+        }),
     };
 
     execute(deps, mock_env(), mock_info("minter", &[]), mint_msg).unwrap();
@@ -51,6 +56,7 @@ fn proper_initialization_no_royalties() {
     let value: CollectionInfoResponse = from_json(&res).unwrap();
     assert_eq!("https://example.com/image.png", value.image);
     assert_eq!("Passage Monkeys", value.description);
+    assert_eq!(NftType::Component, value.nft_type);
     assert_eq!(
         "https://example.com/external.html",
         value.external_link.unwrap()
@@ -162,5 +168,37 @@ fn update_and_freeze_token_metadata() {
     assert_eq!(
         err.to_string(),
         ContractError::TokenMetadataFrozen {}.to_string()
+    );
+}
+
+#[test]
+fn mint_rejects_mismatched_passage_metadata_type() {
+    let mut deps = mock_dependencies();
+    setup_contract(deps.as_mut(), None);
+
+    let err = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint {
+            token_id: "2".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/2.json".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Avatar,
+                native_assets: None,
+                extension: None,
+            }),
+        },
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        ContractError::NftTypeMismatch {
+            expected: "component".to_string(),
+            found: "avatar".to_string(),
+        }
+        .to_string()
     );
 }

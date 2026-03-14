@@ -1,5 +1,6 @@
 use super::*;
-use serde::Serialize;
+use crate::state::{Extension, NftType, TokenMetadata};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -8,8 +9,19 @@ enum Pg721ExecuteMsg {
         token_id: String,
         owner: String,
         token_uri: Option<String>,
-        extension: Option<cosmwasm_std::Empty>,
+        extension: Extension,
     },
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Pg721QueryMsg {
+    CollectionInfo {},
+}
+
+#[derive(Deserialize)]
+struct Pg721CollectionInfoResponse {
+    nft_type: NftType,
 }
 
 #[derive(Debug)]
@@ -300,8 +312,21 @@ pub(super) fn get_random_token_id(
     Ok(token_id)
 }
 
+pub(super) fn query_collection_nft_type(
+    deps: Deps,
+    config: &Config,
+) -> Result<NftType, ContractError> {
+    let response: Pg721CollectionInfoResponse = deps.querier.query_wasm_smart(
+        config.cw721_address.to_string(),
+        &Pg721QueryMsg::CollectionInfo {},
+    )?;
+
+    Ok(response.nft_type)
+}
+
 pub(super) fn create_mint_msg(
     config: &Config,
+    nft_type: &NftType,
     token_id: u32,
     owner: String,
 ) -> Result<CosmosMsg, ContractError> {
@@ -311,7 +336,11 @@ pub(super) fn create_mint_msg(
         token_id: token_id.to_string(),
         owner,
         token_uri: Some(token_uri),
-        extension: None,
+        extension: Some(TokenMetadata {
+            nft_type: nft_type.clone(),
+            native_assets: None,
+            extension: None,
+        }),
     };
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {

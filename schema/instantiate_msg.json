@@ -16,6 +16,13 @@
       "description": "Base URI for token metadata (e.g., \"ipfs://...\")",
       "type": "string"
     },
+    "collector_address": {
+      "description": "Optional destination for mint proceeds.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "cw721_code_id": {
       "description": "Code ID for pg721 contract",
       "type": "integer",
@@ -29,6 +36,27 @@
           "$ref": "#/definitions/Pg721InstantiateMsg"
         }
       ]
+    },
+    "metadata_mode": {
+      "description": "Metadata mode: off-chain by default, on-chain optional.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MetadataMode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "native_asset_template": {
+      "description": "Optional default native assets template for every minted token.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/definitions/NativeAsset"
+      }
     },
     "num_tokens": {
       "description": "Total number of tokens available",
@@ -127,6 +155,62 @@
       },
       "additionalProperties": false
     },
+    "MetadataMode": {
+      "oneOf": [
+        {
+          "description": "Only store token_uri on-chain. Full metadata is resolved off-chain.",
+          "type": "string",
+          "enum": [
+            "off_chain"
+          ]
+        },
+        {
+          "description": "Store token_uri and optional native asset references on-chain.",
+          "type": "string",
+          "enum": [
+            "on_chain"
+          ]
+        }
+      ]
+    },
+    "NativeAsset": {
+      "type": "object",
+      "required": [
+        "asset_id",
+        "image_url",
+        "name"
+      ],
+      "properties": {
+        "asset_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NftType": {
+      "type": "string",
+      "enum": [
+        "component",
+        "avatar",
+        "companion",
+        "world",
+        "plugin",
+        "achievement",
+        "world_template"
+      ]
+    },
     "Pg721InstantiateMsg": {
       "description": "Extension message for pg721 instantiation",
       "type": "object",
@@ -134,6 +218,7 @@
         "collection_info",
         "minter",
         "name",
+        "nft_type",
         "symbol"
       ],
       "properties": {
@@ -145,6 +230,9 @@
         },
         "name": {
           "type": "string"
+        },
+        "nft_type": {
+          "$ref": "#/definitions/NftType"
         },
         "symbol": {
           "type": "string"

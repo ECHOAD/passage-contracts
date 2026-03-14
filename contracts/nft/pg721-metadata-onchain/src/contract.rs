@@ -7,11 +7,10 @@ use cw2::{get_contract_version, set_contract_version};
 
 use crate::ContractError;
 use cw721::ContractInfoResponse;
-use cw721_base::ContractError as BaseError;
 use url::Url;
 
 use crate::msg::{
-    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, MigrateMsg, QueryMsg,
+    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, Metadata, MigrateMsg, QueryMsg,
     RoyaltyInfoResponse,
 };
 use crate::state::{CollectionInfo, RoyaltyInfo, COLLECTION_INFO};
@@ -69,6 +68,7 @@ pub fn instantiate(
     deps.api.addr_validate(&msg.collection_info.creator)?;
 
     let collection_info = CollectionInfo {
+        nft_type: msg.nft_type,
         creator: msg.collection_info.creator,
         description: msg.collection_info.description,
         image: msg.collection_info.image,
@@ -91,8 +91,14 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, BaseError> {
-    Pg721MetadataContract::default().execute(deps, env, info, msg)
+) -> Result<Response, ContractError> {
+    if let ExecuteMsg::Mint(mint_msg) = &msg {
+        validate_token_metadata(deps.as_ref(), mint_msg.extension.as_ref())?;
+    }
+
+    Pg721MetadataContract::default()
+        .execute(deps, env, info, msg)
+        .map_err(ContractError::from)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -115,6 +121,7 @@ fn query_config(deps: Deps) -> StdResult<CollectionInfoResponse> {
     };
 
     Ok(CollectionInfoResponse {
+        nft_type: info.nft_type,
         creator: info.creator,
         description: info.description,
         image: info.image,
@@ -144,6 +151,35 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         .add_attribute("next-version", CONTRACT_VERSION);
     response.events.push(event);
     Ok(response)
+}
+
+fn validate_token_metadata(deps: Deps, metadata: Option<&Metadata>) -> Result<(), ContractError> {
+    let Some(metadata) = metadata else {
+        return Ok(());
+    };
+
+    let collection_info = COLLECTION_INFO.load(deps.storage)?;
+
+    if let Some(nft_type) = &metadata.nft_type {
+        if *nft_type != collection_info.nft_type {
+            return Err(ContractError::NftTypeMismatch {
+                expected: collection_info.nft_type.to_string(),
+                found: nft_type.to_string(),
+            });
+        }
+    }
+
+    if let Some(extension) = &metadata.extension {
+        let extension_type = extension.nft_type();
+        if extension_type != collection_info.nft_type {
+            return Err(ContractError::NftTypeExtensionMismatch {
+                expected: collection_info.nft_type.to_string(),
+                found: extension_type.to_string(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -1,8 +1,8 @@
 use crate::state::{
     Collection, CollectionCreationPolicy, CollectionCreationRequest,
     CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
-    EcosystemModeration, EcosystemType, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
-    RecoveryConfig, RecoveryPolicy,
+    EcosystemModeration, EcosystemType, NftType, RecoveryCase, RecoveryCaseKind,
+    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
@@ -122,6 +122,7 @@ pub enum ExecuteMsg {
         address: String,
         ecosystem_id: String,
         name: String,
+        nft_type: NftType,
     },
     /// Register collection from authorized ecosystem factory
     RegisterCollectionFromFactory {
@@ -129,6 +130,7 @@ pub enum ExecuteMsg {
         ecosystem_id: String,
         name: String,
         creator: String,
+        nft_type: NftType,
     },
     /// Register an existing/already-deployed collection
     RegisterExistingCollection {
@@ -136,6 +138,7 @@ pub enum ExecuteMsg {
         ecosystem_id: String,
         name: String,
         creator: String,
+        nft_type: NftType,
     },
     /// Update collection metadata
     UpdateCollection {
@@ -286,6 +289,13 @@ pub enum QueryMsg {
     #[returns(CollectionsResponse)]
     CollectionsByCreator {
         creator: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    /// List collections by nft type
+    #[returns(CollectionsResponse)]
+    CollectionsByNftType {
+        nft_type: NftType,
         start_after: Option<String>,
         limit: Option<u32>,
     },

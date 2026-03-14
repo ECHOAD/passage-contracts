@@ -5,7 +5,7 @@ use crate::contract::execute;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, RecoveryTargetInput};
 use crate::state::{
-    collections, Collection, Config, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
+    collections, Collection, Config, NftType, RecoveryCase, RecoveryCaseKind, RecoveryCaseStatus,
     RecoveryConfig, RecoveryPolicy, RecoveryTarget, COLLECTION_RECOVERY_POLICIES, CONFIG,
     LAST_CREATOR_ACTIVITY, RECOVERY_CASES, RECOVERY_CASE_COUNT, RECOVERY_CONFIG,
 };
@@ -37,6 +37,7 @@ fn approved_recovery_case_transfers_collection_creator() {
                 address: Addr::unchecked("collection"),
                 ecosystem_id: "eco".to_string(),
                 name: "Collection".to_string(),
+                nft_type: NftType::Component,
                 creator: Addr::unchecked("old_creator"),
                 verified: false,
                 minter: None,
@@ -139,6 +140,7 @@ fn lost_access_case_requires_delegate_or_recovery_authority() {
                 address: collection_addr.clone(),
                 ecosystem_id: "eco".to_string(),
                 name: "Collection".to_string(),
+                nft_type: NftType::Avatar,
                 creator: creator_addr.clone(),
                 verified: false,
                 minter: None,
@@ -246,6 +248,7 @@ fn abandonment_case_requires_inactivity_threshold() {
                 address: collection_addr.clone(),
                 ecosystem_id: "eco".to_string(),
                 name: "Collection".to_string(),
+                nft_type: NftType::Companion,
                 creator: creator_addr.clone(),
                 verified: false,
                 minter: None,

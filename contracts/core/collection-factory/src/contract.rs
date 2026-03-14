@@ -13,8 +13,8 @@ pub(super) use crate::msg::{
     RegistryEcosystemResponse, RegistryExecuteMsg, RegistryQueryMsg,
 };
 pub(super) use crate::state::{
-    CollectionRecord, Config, PendingCreation, APPROVED_CREATORS, COLLECTIONS, COLLECTION_COUNT,
-    CONFIG, NEXT_REQUEST_ID, PENDING_CREATIONS,
+    CollectionRecord, Config, NftType, PendingCreation, APPROVED_CREATORS, COLLECTIONS,
+    COLLECTION_COUNT, CONFIG, NEXT_REQUEST_ID, PENDING_CREATIONS,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-collection-factory";

@@ -1,4 +1,4 @@
-use crate::state::{CollectionRecord, Config};
+use crate::state::{CollectionRecord, Config, NftType};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Decimal;
 
@@ -35,6 +35,7 @@ pub enum ExecuteMsg {
         name: String,
         symbol: String,
         minter: String,
+        nft_type: NftType,
         collection_info: CollectionInfoInput,
         label: Option<String>,
     },
@@ -65,6 +66,12 @@ pub enum QueryMsg {
         start_after: Option<u64>,
         limit: Option<u32>,
     },
+    #[returns(CollectionsResponse)]
+    CollectionsByNftType {
+        nft_type: NftType,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
 }
 
 #[cw_serde]
@@ -87,6 +94,7 @@ pub struct Pg721InstantiateMsg {
     pub name: String,
     pub symbol: String,
     pub minter: String,
+    pub nft_type: NftType,
     pub collection_info: Pg721CollectionInfo,
 }
 
@@ -151,6 +159,7 @@ pub enum RegistryExecuteMsg {
         ecosystem_id: String,
         name: String,
         creator: String,
+        nft_type: NftType,
     },
 }
 

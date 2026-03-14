@@ -129,6 +129,44 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Get default native asset template used for mint metadata.",
+      "type": "object",
+      "required": [
+        "native_asset_template"
+      ],
+      "properties": {
+        "native_asset_template": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get resolved native assets for a token ID (override or template).",
+      "type": "object",
+      "required": [
+        "token_native_assets"
+      ],
+      "properties": {
+        "token_native_assets": {
+          "type": "object",
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "token_id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }

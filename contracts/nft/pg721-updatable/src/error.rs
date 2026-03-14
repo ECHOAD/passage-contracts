@@ -33,6 +33,12 @@ pub enum ContractError {
     #[error("Description too long")]
     DescriptionTooLong {},
 
+    #[error("Token metadata nft_type `{found}` does not match collection nft_type `{expected}`")]
+    NftTypeMismatch { expected: String, found: String },
+
+    #[error("Token metadata extension `{found}` does not match collection nft_type `{expected}`")]
+    NftTypeExtensionMismatch { expected: String, found: String },
+
     #[error("Token metadata is frozen")]
     TokenMetadataFrozen {},
 

@@ -20,6 +20,9 @@ pub struct Metadata {
     pub background_color: Option<String>,
     pub animation_url: Option<String>,
     pub youtube_url: Option<String>,
+    pub nft_type: Option<NftType>,
+    pub native_assets: Option<Vec<NativeAsset>>,
+    pub extension: Option<NftTypeExtension>,
 }
 
 pub type Extension = Option<Metadata>;

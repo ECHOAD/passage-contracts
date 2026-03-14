@@ -3,8 +3,11 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::msg::NftType;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CollectionInfo<T> {
+    pub nft_type: NftType,
     pub creator: String,
     pub description: String,
     pub image: String,

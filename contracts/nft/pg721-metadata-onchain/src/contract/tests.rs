@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::state::CollectionInfo;
+use crate::msg::{CollectionInfoMsg, NftType};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, from_json, Attribute, Decimal};
 
@@ -13,7 +13,8 @@ fn setup_contract(deps: DepsMut, royalty_info: Option<RoyaltyInfoResponse>) {
         name: collection,
         symbol: String::from("BOBO"),
         minter: String::from("minter"),
-        collection_info: CollectionInfo {
+        nft_type: NftType::Component,
+        collection_info: CollectionInfoMsg {
             creator: String::from("creator"),
             description: String::from("Passage Monkeys"),
             image: image.clone(),
@@ -39,6 +40,7 @@ fn proper_initialization_no_royalties() {
     let value: CollectionInfoResponse = from_json(&res).unwrap();
     assert_eq!("https://example.com/image.png", value.image);
     assert_eq!("Passage Monkeys", value.description);
+    assert_eq!(NftType::Component, value.nft_type);
     assert_eq!(
         "https://example.com/external.html",
         value.external_link.unwrap()

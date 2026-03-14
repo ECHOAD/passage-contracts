@@ -106,6 +106,22 @@
                 "null"
               ]
             },
+            "collector_address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "metadata_mode": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/MetadataMode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "paused": {
               "type": [
                 "boolean",
@@ -207,7 +223,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Withdraw accumulated funds held by the minter",
+      "description": "Withdraw accumulated funds (only works if collector_address is not configured)",
       "type": "object",
       "required": [
         "withdraw"
@@ -241,6 +257,86 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Replace default native asset template used for mint metadata (admin only)",
+      "type": "object",
+      "required": [
+        "set_native_asset_template"
+      ],
+      "properties": {
+        "set_native_asset_template": {
+          "type": "object",
+          "required": [
+            "native_assets"
+          ],
+          "properties": {
+            "native_assets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NativeAsset"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Set token-specific native assets override (admin only)",
+      "type": "object",
+      "required": [
+        "set_token_native_asset_override"
+      ],
+      "properties": {
+        "set_token_native_asset_override": {
+          "type": "object",
+          "required": [
+            "native_assets",
+            "token_id"
+          ],
+          "properties": {
+            "native_assets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NativeAsset"
+              }
+            },
+            "token_id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Remove token-specific native assets override (admin only)",
+      "type": "object",
+      "required": [
+        "clear_token_native_asset_override"
+      ],
+      "properties": {
+        "clear_token_native_asset_override": {
+          "type": "object",
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "token_id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -255,6 +351,50 @@
           "$ref": "#/definitions/Uint128"
         },
         "denom": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MetadataMode": {
+      "oneOf": [
+        {
+          "description": "Only store token_uri on-chain. Full metadata is resolved off-chain.",
+          "type": "string",
+          "enum": [
+            "off_chain"
+          ]
+        },
+        {
+          "description": "Store token_uri and optional native asset references on-chain.",
+          "type": "string",
+          "enum": [
+            "on_chain"
+          ]
+        }
+      ]
+    },
+    "NativeAsset": {
+      "type": "object",
+      "required": [
+        "asset_id",
+        "image_url",
+        "name"
+      ],
+      "properties": {
+        "asset_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "name": {
           "type": "string"
         }
       },

@@ -11,6 +11,13 @@
         "null"
       ]
     },
+    "collector_address": {
+      "description": "Optional destination for mint proceeds.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "registry": {
       "description": "Registry contract address for collection verification",
       "type": [

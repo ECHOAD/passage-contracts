@@ -40,6 +40,7 @@ pub fn execute(
             name,
             symbol,
             minter,
+            nft_type,
             collection_info,
             label,
         } => execute_create_collection(
@@ -49,6 +50,7 @@ pub fn execute(
             name,
             symbol,
             minter,
+            nft_type,
             collection_info,
             label,
         ),
@@ -167,6 +169,7 @@ fn execute_create_collection(
     name: String,
     symbol: String,
     minter: String,
+    nft_type: NftType,
     collection_info: CollectionInfoInput,
     label: Option<String>,
 ) -> Result<Response, ContractError> {
@@ -245,6 +248,7 @@ fn execute_create_collection(
         name: name.clone(),
         symbol: symbol.clone(),
         minter: minter_addr.to_string(),
+        nft_type: nft_type.clone(),
         collection_info: Pg721CollectionInfo {
             creator: effective_creator.to_string(),
             description,
@@ -263,6 +267,7 @@ fn execute_create_collection(
         ecosystem_id: config.ecosystem_id.clone(),
         name: name.clone(),
         symbol: symbol.clone(),
+        nft_type: nft_type.clone(),
         requested_at: env.block.time.seconds(),
     };
     PENDING_CREATIONS.save(deps.storage, request_id, &pending)?;
@@ -285,5 +290,6 @@ fn execute_create_collection(
         .add_attribute("creator", effective_creator)
         .add_attribute("ecosystem_id", config.ecosystem_id)
         .add_attribute("name", name)
-        .add_attribute("symbol", symbol))
+        .add_attribute("symbol", symbol)
+        .add_attribute("nft_type", nft_type.to_string()))
 }

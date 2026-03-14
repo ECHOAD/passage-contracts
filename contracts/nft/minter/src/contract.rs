@@ -1,13 +1,16 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Empty, Env,
-    MessageInfo, Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Timestamp, WasmMsg,
+    coin, to_json_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Order, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Timestamp, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw721_base::{msg::ExecuteMsg as Cw721ExecuteMsg, MintMsg};
+use cw721_base::MintMsg;
 use cw_utils::{may_pay, parse_reply_instantiate_data};
-use pg721::msg::InstantiateMsg as Pg721InstantiateMsg;
+use pg721::msg::{
+    CollectionInfoResponse as Pg721CollectionInfoResponse, ExecuteMsg as Pg721ExecuteMsg,
+    InstantiateMsg as Pg721InstantiateMsg, QueryMsg as Pg721QueryMsg, TokenMetadata,
+};
 use url::Url;
 
 use crate::error::ContractError;
@@ -85,15 +88,18 @@ pub fn instantiate(
         MINTABLE_TOKEN_IDS.save(deps.storage, token_id, &true)?;
     }
 
+    let pg721_msg = msg.cw721_instantiate_msg;
+
     // Submessage to instantiate cw721 contract
     let sub_msgs: Vec<SubMsg> = vec![SubMsg {
         msg: WasmMsg::Instantiate {
             code_id: msg.cw721_code_id,
             msg: to_json_binary(&Pg721InstantiateMsg {
-                name: msg.cw721_instantiate_msg.name,
-                symbol: msg.cw721_instantiate_msg.symbol,
+                name: pg721_msg.name,
+                symbol: pg721_msg.symbol,
                 minter: env.contract.address.to_string(),
-                collection_info: msg.cw721_instantiate_msg.collection_info,
+                nft_type: pg721_msg.nft_type,
+                collection_info: pg721_msg.collection_info,
             })?,
             funds: info.funds,
             admin: Some(info.sender.to_string()),
@@ -374,12 +380,19 @@ fn _execute_mint(
         }
     };
 
-    // Create mint msgs
-    let mint_msg = Cw721ExecuteMsg::Mint(MintMsg::<Empty> {
+    let collection_info: Pg721CollectionInfoResponse = deps
+        .querier
+        .query_wasm_smart(cw721_address.to_string(), &Pg721QueryMsg::CollectionInfo {})?;
+
+    // Mint using the current pg721 metadata shape.
+    let mint_msg = Pg721ExecuteMsg::Mint(MintMsg {
         token_id: mintable_token_id.to_string(),
         owner: recipient_addr.to_string(),
         token_uri: Some(format!("{}/{}", config.base_token_uri, mintable_token_id)),
-        extension: Empty {},
+        extension: Some(TokenMetadata {
+            nft_type: collection_info.nft_type,
+            extension: None,
+        }),
     });
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: cw721_address.to_string(),

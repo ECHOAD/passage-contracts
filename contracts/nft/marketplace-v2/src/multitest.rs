@@ -8,12 +8,15 @@ use crate::msg::{
 use crate::state::{Ask, Bid, CollectionBid, Config};
 use cosmwasm_std::{coin, coins, Addr, Attribute, Coin, Decimal, Empty, Uint128};
 use cw721::{Cw721QueryMsg, OwnerOfResponse};
-use cw721_base::msg::{ExecuteMsg as Cw721ExecuteMsg, MintMsg};
+use cw721_base::msg::ExecuteMsg as Cw721ExecuteMsg;
+use cw721_base::MintMsg;
 use cw_multi_test::{
     App, AppBuilder, BankSudo, Contract, ContractWrapper, Executor, SudoMsg as CwSudoMsg,
 };
-use pg721::msg::{InstantiateMsg as Pg721InstantiateMsg, RoyaltyInfoResponse};
-use pg721::state::CollectionInfo;
+use pg721::msg::{
+    CollectionInfoMsg, ExecuteMsg as Pg721ExecuteMsg, InstantiateMsg as Pg721InstantiateMsg,
+    NftType, RoyaltyInfoResponse, TokenMetadata,
+};
 
 const TOKEN_ID: &str = "123";
 const CREATION_FEE: u128 = 1_000_000_000;
@@ -68,7 +71,8 @@ fn setup_contracts(router: &mut App, creator: &Addr) -> Result<(Addr, Addr), Con
         name: String::from("Test Coin"),
         symbol: String::from("TEST"),
         minter: creator.to_string(),
-        collection_info: CollectionInfo {
+        nft_type: NftType::Component,
+        collection_info: CollectionInfoMsg {
             creator: creator.to_string(),
             description: String::from("Passage Monkeys"),
             image:
@@ -176,11 +180,14 @@ fn setup_accounts(router: &mut App) -> Result<(Addr, Addr, Addr, Addr), Contract
 
 // Mints an NFT for a creator
 fn mint(router: &mut App, creator: &Addr, collection: &Addr, token_id: String) {
-    let mint_for_creator_msg = Cw721ExecuteMsg::Mint(MintMsg {
+    let mint_for_creator_msg = Pg721ExecuteMsg::Mint(MintMsg {
         token_id: token_id,
         owner: creator.clone().to_string(),
         token_uri: Some("https://starships.example.com/Starship/Enterprise.json".into()),
-        extension: Empty {},
+        extension: Some(TokenMetadata {
+            nft_type: NftType::Component,
+            extension: None,
+        }),
     });
     let res = router.execute_contract(
         creator.clone(),
