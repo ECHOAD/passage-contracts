@@ -22,3 +22,5 @@ tmp/
 
 # code coverage
 tarpaulin-report.*
+
+.codex
