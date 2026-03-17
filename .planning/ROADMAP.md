@@ -1,4 +1,4 @@
-﻿# Roadmap: Passage On-Chain Protocol Layer
+# Roadmap: Passage On-Chain Protocol Layer
 
 ## Overview
 
@@ -32,9 +32,9 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Patch critical auth, replay, and trust-boundary defects in billing and payment-adjacent contracts
-- [ ] 01-02: Fix brownfield query, pagination, and reply-path correctness gaps in core contracts
-- [ ] 01-03: Publish and codify boundary, migration, and safety rules across the protocol surface
+- [ ] 01-01-PLAN.md - Harden streaming-billing authority, verified world ownership, and replay/bounds coverage
+- [ ] 01-02-PLAN.md - Correct marketplace/registry query semantics and factory reply-path behavior with tests
+- [ ] 01-03-PLAN.md - Publish the protocol boundary, safety matrix, and aligned streaming-billing operational docs
 
 ### Phase 2: PASG Utility Surface
 **Goal**: Turn PASG from an assumed denom into an explicit protocol utility layer that contracts and services can integrate consistently.
