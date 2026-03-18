@@ -82,6 +82,53 @@
     {
       "type": "object",
       "required": [
+        "creator_ecosystem_creation_requests"
+      ],
+      "properties": {
+        "creator_ecosystem_creation_requests": {
+          "type": "object",
+          "required": [
+            "creator"
+          ],
+          "properties": {
+            "creator": {
+              "type": "string"
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/EcosystemCreationRequestStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "pending_request_by_id"
       ],
       "properties": {
@@ -128,7 +175,9 @@
       "enum": [
         "pending",
         "approved",
-        "rejected"
+        "rejected",
+        "cancelled",
+        "created"
       ]
     }
   }

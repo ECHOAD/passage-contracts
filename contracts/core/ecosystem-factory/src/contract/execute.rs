@@ -1,5 +1,6 @@
 use super::helpers::*;
 use super::*;
+use cw_utils::nonpayable;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -13,6 +14,8 @@ pub fn execute(
     if config.paused && !is_admin_or_operator(&config, &info.sender) {
         return Err(ContractError::ContractPaused {});
     }
+
+    nonpayable(&info)?;
 
     match msg {
         ExecuteMsg::UpdateConfig {
@@ -55,6 +58,9 @@ pub fn execute(
             approved,
             note,
         } => execute_resolve_request(deps, env, info, request_id, approved, note),
+        ExecuteMsg::CancelEcosystemCreationRequest { request_id } => {
+            execute_cancel_request(deps, env, info, request_id)
+        }
     }
 }
 
@@ -174,9 +180,12 @@ fn execute_submit_request(
         reviewed_at: None,
         reviewed_by: None,
         review_note: None,
+        collection_factory: None,
+        created_at: None,
     };
 
     REQUESTS.save(deps.storage, request_id, &request)?;
+    REQUESTS_BY_CREATOR.save(deps.storage, (&info.sender, request_id), &())?;
     PENDING_REQUEST_BY_ID.save(deps.storage, id.clone(), &request_id)?;
 
     Ok(Response::new()
@@ -220,7 +229,7 @@ fn execute_resolve_request(
         .ok_or(ContractError::RequestNotFound { request_id })?;
 
     if request.status != EcosystemCreationRequestStatus::Pending {
-        return Err(ContractError::RequestAlreadyResolved { request_id });
+        return Err(ContractError::RequestNotPending { request_id });
     }
 
     request.status = if approved {
@@ -295,3 +304,39 @@ fn execute_resolve_request(
 
     Ok(res)
 }
+
+fn execute_cancel_request(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    request_id: u64,
+) -> Result<Response, ContractError> {
+    if request_id == 0 {
+        return Err(ContractError::InvalidRequestId {});
+    }
+
+    let mut request = REQUESTS
+        .may_load(deps.storage, request_id)?
+        .ok_or(ContractError::RequestNotFound { request_id })?;
+
+    if request.creator != info.sender {
+        return Err(ContractError::OnlyCreatorCanCancel { request_id });
+    }
+
+    if request.status != EcosystemCreationRequestStatus::Pending {
+        return Err(ContractError::RequestNotPending { request_id });
+    }
+
+    request.status = EcosystemCreationRequestStatus::Cancelled;
+    REQUESTS.save(deps.storage, request_id, &request)?;
+    PENDING_REQUEST_BY_ID.remove(deps.storage, request.id.clone());
+
+    Ok(Response::new()
+        .add_attribute("action", "cancel_ecosystem_creation_request")
+        .add_attribute("request_id", request_id.to_string())
+        .add_attribute("ecosystem_id", request.id)
+        .add_attribute("creator", info.sender))
+}
+
+#[cfg(test)]
+mod tests;

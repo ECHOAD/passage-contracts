@@ -21,6 +21,8 @@ pub enum EcosystemCreationRequestStatus {
     Pending,
     Approved,
     Rejected,
+    Cancelled,
+    Created,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,6 +40,8 @@ pub struct EcosystemCreationRequest {
     pub reviewed_at: Option<u64>,
     pub reviewed_by: Option<Addr>,
     pub review_note: Option<String>,
+    pub collection_factory: Option<Addr>,
+    pub created_at: Option<u64>,
 }
 
 /// Pending ecosystem creation waiting for collection-factory reply
@@ -55,6 +59,7 @@ pub struct PendingEcosystemCreation {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const REQUESTS: Map<u64, EcosystemCreationRequest> = Map::new("requests");
+pub const REQUESTS_BY_CREATOR: Map<(&Addr, u64), ()> = Map::new("requests_by_creator");
 pub const PENDING_REQUEST_BY_ID: Map<String, u64> = Map::new("pending_request_by_id");
 pub const NEXT_REQUEST_ID: Item<u64> = Item::new("next_request_id");
 /// Temporary storage for pending ecosystem creations (keyed by reply_id)

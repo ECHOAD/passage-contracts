@@ -13,6 +13,18 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         } => to_json_binary(&query_requests(deps, status, start_after, limit)?),
+        QueryMsg::CreatorEcosystemCreationRequests {
+            creator,
+            status,
+            start_after,
+            limit,
+        } => to_json_binary(&query_creator_requests(
+            deps,
+            creator,
+            status,
+            start_after,
+            limit,
+        )?),
         QueryMsg::PendingRequestById { id } => to_json_binary(&query_pending_request(deps, id)?),
         QueryMsg::IsAdminOrOperator { address } => {
             to_json_binary(&query_is_admin_or_operator(deps, address)?)
@@ -56,6 +68,34 @@ fn query_requests(
 fn query_pending_request(deps: Deps, id: String) -> StdResult<PendingRequestResponse> {
     let request_id = PENDING_REQUEST_BY_ID.may_load(deps.storage, id)?;
     Ok(PendingRequestResponse { request_id })
+}
+
+fn query_creator_requests(
+    deps: Deps,
+    creator: String,
+    status: Option<EcosystemCreationRequestStatus>,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<EcosystemCreationRequestsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let creator_addr = deps.api.addr_validate(&creator)?;
+    let start = start_after.map(Bound::exclusive);
+
+    let requests = REQUESTS_BY_CREATOR
+        .prefix(&creator_addr)
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            let (request_id, _) = item.ok()?;
+            let request = REQUESTS.may_load(deps.storage, request_id).ok()??;
+            match &status {
+                Some(expected) if request.status != *expected => None,
+                _ => Some(request),
+            }
+        })
+        .take(limit)
+        .collect::<Vec<_>>();
+
+    Ok(EcosystemCreationRequestsResponse { requests })
 }
 
 fn query_is_admin_or_operator(deps: Deps, address: String) -> StdResult<ApprovalStatusResponse> {

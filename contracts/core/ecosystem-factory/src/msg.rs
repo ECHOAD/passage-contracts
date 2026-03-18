@@ -35,6 +35,9 @@ pub enum ExecuteMsg {
         approved: bool,
         note: Option<String>,
     },
+    CancelEcosystemCreationRequest {
+        request_id: u64,
+    },
 }
 
 #[cw_serde]
@@ -46,6 +49,13 @@ pub enum QueryMsg {
     EcosystemCreationRequest { request_id: u64 },
     #[returns(EcosystemCreationRequestsResponse)]
     EcosystemCreationRequests {
+        status: Option<EcosystemCreationRequestStatus>,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+    #[returns(EcosystemCreationRequestsResponse)]
+    CreatorEcosystemCreationRequests {
+        creator: String,
         status: Option<EcosystemCreationRequestStatus>,
         start_after: Option<u64>,
         limit: Option<u32>,

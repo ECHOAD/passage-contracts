@@ -2,7 +2,7 @@ use super::helpers::extract_collection_factory_address_from_reply;
 use super::*;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     let reply_id = msg.id;
 
     // Load pending ecosystem creation data
@@ -10,9 +10,19 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         .may_load(deps.storage, reply_id)?
         .ok_or(ContractError::PendingCreationNotFound { reply_id })?;
 
-    let collection_factory_addr =
-        deps.api
-            .addr_validate(&extract_collection_factory_address_from_reply(&msg)?)?;
+    let collection_factory_addr = deps
+        .api
+        .addr_validate(&extract_collection_factory_address_from_reply(&msg)?)?;
+
+    let mut request = REQUESTS.may_load(deps.storage, pending.request_id)?.ok_or(
+        ContractError::RequestNotFound {
+            request_id: pending.request_id,
+        },
+    )?;
+    request.status = EcosystemCreationRequestStatus::Created;
+    request.collection_factory = Some(collection_factory_addr.clone());
+    request.created_at = Some(env.block.time.seconds());
+    REQUESTS.save(deps.storage, pending.request_id, &request)?;
 
     // Clean up pending data
     PENDING_ECOSYSTEM_CREATIONS.remove(deps.storage, reply_id);

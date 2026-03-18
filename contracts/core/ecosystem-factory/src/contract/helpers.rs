@@ -32,14 +32,12 @@ pub(super) fn validate_request_input(
 pub(super) fn extract_collection_factory_address_from_reply(
     msg: &Reply,
 ) -> Result<String, ContractError> {
-    let res = msg
-        .result
-        .clone()
-        .into_result()
-        .map_err(|e| ContractError::Std(cosmwasm_std::StdError::generic_err(format!(
+    let res = msg.result.clone().into_result().map_err(|e| {
+        ContractError::Std(cosmwasm_std::StdError::generic_err(format!(
             "SubMsg failed: {}",
             e
-        ))))?;
+        )))
+    })?;
 
     let instantiate_data = res
         .msg_responses

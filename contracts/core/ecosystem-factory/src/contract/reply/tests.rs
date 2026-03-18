@@ -1,7 +1,8 @@
 use super::reply;
 use crate::msg::RegistryExecuteMsg;
 use crate::state::{
-    Config, PendingEcosystemCreation, CONFIG, PENDING_ECOSYSTEM_CREATIONS,
+    Config, EcosystemCreationRequest, EcosystemCreationRequestStatus, PendingEcosystemCreation,
+    CONFIG, PENDING_ECOSYSTEM_CREATIONS, REQUESTS,
 };
 use cosmwasm_std::{
     from_json,
@@ -85,6 +86,29 @@ fn reply_uses_instantiate_response_data() {
             },
         )
         .unwrap();
+    REQUESTS
+        .save(
+            deps.as_mut().storage,
+            12,
+            &EcosystemCreationRequest {
+                request_id: 12,
+                creator: Addr::unchecked("creator"),
+                id: "eco-1".to_string(),
+                name: "Eco".to_string(),
+                description: "desc".to_string(),
+                image_urls: vec!["https://example.com/image.png".to_string()],
+                animation_url: Some("https://example.com/anim.mp4".to_string()),
+                url: None,
+                status: EcosystemCreationRequestStatus::Approved,
+                submitted_at: 1,
+                reviewed_at: Some(2),
+                reviewed_by: Some(Addr::unchecked("admin")),
+                review_note: None,
+                collection_factory: None,
+                created_at: None,
+            },
+        )
+        .unwrap();
 
     let res = reply(deps.as_mut(), env, make_reply(factory_addr.as_str())).unwrap();
 
@@ -92,6 +116,10 @@ fn reply_uses_instantiate_response_data() {
         .may_load(deps.as_ref().storage, 12)
         .unwrap()
         .is_none());
+    let stored = REQUESTS.load(deps.as_ref().storage, 12).unwrap();
+    assert_eq!(stored.status, EcosystemCreationRequestStatus::Created);
+    assert_eq!(stored.collection_factory, Some(factory_addr.clone()));
+    assert_eq!(stored.created_at, Some(1571797419));
 
     let message = match &res.messages[0].msg {
         CosmosMsg::Wasm(WasmMsg::Execute {
@@ -142,5 +170,8 @@ fn reply_rejects_missing_pending_creation() {
         .unwrap();
 
     let err = reply(deps.as_mut(), env, make_reply("collection-factory")).unwrap_err();
-    assert_eq!(err, crate::error::ContractError::PendingCreationNotFound { reply_id: 12 });
+    assert_eq!(
+        err,
+        crate::error::ContractError::PendingCreationNotFound { reply_id: 12 }
+    );
 }

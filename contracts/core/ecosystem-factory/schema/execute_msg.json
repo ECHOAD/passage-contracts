@@ -140,6 +140,29 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "cancel_ecosystem_creation_request"
+      ],
+      "properties": {
+        "cancel_ecosystem_creation_request": {
+          "type": "object",
+          "required": [
+            "request_id"
+          ],
+          "properties": {
+            "request_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }

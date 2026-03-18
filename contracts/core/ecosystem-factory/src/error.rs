@@ -1,10 +1,14 @@
 use cosmwasm_std::StdError;
+use cw_utils::PaymentError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("{0}")]
+    Payment(#[from] PaymentError),
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -41,6 +45,12 @@ pub enum ContractError {
 
     #[error("Ecosystem creation request already resolved: {request_id}")]
     RequestAlreadyResolved { request_id: u64 },
+
+    #[error("Ecosystem creation request is not pending: {request_id}")]
+    RequestNotPending { request_id: u64 },
+
+    #[error("Only the request creator can cancel request: {request_id}")]
+    OnlyCreatorCanCancel { request_id: u64 },
 
     #[error("Pending ecosystem creation not found for reply_id: {reply_id}")]
     PendingCreationNotFound { reply_id: u64 },
