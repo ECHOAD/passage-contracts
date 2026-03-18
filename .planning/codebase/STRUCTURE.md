@@ -1,23 +1,28 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-17
+**Analysis Date:** 2026-03-18
 
 ## Directory Layout
 
 ```text
 passage-contracts/
-??? Cargo.toml                  # Workspace manifest and shared dependency/release config
-??? contracts/                  # Deployable contract crates grouped by business domain
-?   ??? core/                   # Registry, factories, governance, routing, billing
-?   ??? nft/                    # Collection primitives, minters, marketplaces, auctions
-?   ??? relationship/           # Social graph contracts
-?   ??? staking/                # Sylvia-based vault and reward contracts
-??? contract-template/          # Scaffold for new direct-entry-point contracts
-??? scripts/                    # Wasm optimization helpers
-??? artifacts/                  # Built Wasm binaries and checksum output
-??? schema/                     # Root-level JSON schema output
-??? docs/                       # Narrative documentation and design notes
-??? .planning/codebase/         # Mapper-generated repository reference docs
+├── Cargo.toml                  # Workspace manifest, shared deps, release profiles
+├── Cargo.lock                  # Locked dependency versions
+├── README.md                   # High-level project overview and deploy examples
+├── CLAUDE.md                   # Agent instructions for this repository
+├── rust-toolchain.toml         # Rust toolchain pin
+├── contract-template/          # Starter layout for a direct CosmWasm contract
+├── contracts/                  # Deployable contract crates grouped by domain
+│   ├── core/                   # Registry, factories, governance, routing, billing
+│   ├── nft/                    # Collection, minting, marketplace, and royalty contracts
+│   ├── relationship/          # Social graph contracts
+│   └── staking/                # Sylvia-based staking and reward contracts
+├── docs/                       # End-to-end setup and method-reference docs
+├── scripts/                    # Wasm optimization helpers
+├── artifacts/                  # Built Wasm binaries and checksums
+├── schema/                     # Root-level generated JSON schema output
+└── .planning/                  # Project state and generated codebase maps
+    └── codebase/               # Architecture and structure reference docs
 ```
 
 ## Directory Purposes
@@ -25,80 +30,102 @@ passage-contracts/
 **`contracts/core`:**
 - Purpose: Hold protocol control-plane contracts and contract-to-contract orchestration.
 - Contains: `collection-factory`, `ecosystem-factory`, `multisig`, `registry`, `split-router`, `streaming-billing`
-- Key files: `contracts/core/registry/src/contract/execute.rs`, `contracts/core/collection-factory/src/contract/reply.rs`, `contracts/core/streaming-billing/src/contract.rs`
+- Key files: `contracts/core/registry/src/contract.rs`, `contracts/core/registry/src/contract/execute.rs`, `contracts/core/collection-factory/src/contract/reply.rs`, `contracts/core/split-router/src/contract.rs`, `contracts/core/multisig/src/contract.rs`
+- Subdirectories: Each crate contains its own `src/`, `examples/`, and sometimes `src/tests/` or `src/contract/` tree.
 
 **`contracts/nft`:**
 - Purpose: Hold NFT collection primitives and commerce contracts.
 - Contains: collection contracts such as `pg721`, minter variants such as `minter-v2`, trading contracts such as `marketplace-v3` and `auction-english`, and support contracts like `royalty-group` and `whitelist`
-- Key files: `contracts/nft/pg721/src/contract.rs`, `contracts/nft/minter-v2/src/contract/helpers.rs`, `contracts/nft/marketplace-v3/src/contract/execute.rs`
-
-**`contracts/staking`:**
-- Purpose: Hold staking and reward contracts implemented with Sylvia.
-- Contains: `nft-vault`, `stake-rewards`, `vault-factory`
-- Key files: `contracts/staking/nft-vault/src/contract.rs`, `contracts/staking/stake-rewards/src/contract.rs`, `contracts/staking/vault-factory/src/contract.rs`
+- Key files: `contracts/nft/pg721/src/contract.rs`, `contracts/nft/minter-v2/src/contract/helpers.rs`, `contracts/nft/marketplace-v3/src/contract/execute.rs`, `contracts/nft/auction-english/src/execute.rs`, `contracts/nft/whitelist/src/contract.rs`
+- Subdirectories: The crate layouts vary by age, with direct `src/*.rs`, split `src/contract/*.rs`, and `src/contract.rs` styles all present.
 
 **`contracts/relationship`:**
 - Purpose: Hold relationship graph contracts with hook-based side effects.
 - Contains: `follow`, `friend`
-- Key files: `contracts/relationship/follow/src/execute.rs`, `contracts/relationship/follow/src/state.rs`, `contracts/relationship/friend/src/query.rs`
+- Key files: `contracts/relationship/follow/src/execute.rs`, `contracts/relationship/follow/src/hooks.rs`, `contracts/relationship/follow/src/multitest.rs`, `contracts/relationship/friend/src/query.rs`
+- Subdirectories: Both crates keep direct top-level `src/*.rs` modules and supporting helpers or hooks.
+
+**`contracts/staking`:**
+- Purpose: Hold staking and reward contracts implemented with Sylvia.
+- Contains: `nft-vault`, `stake-rewards`, `vault-factory`
+- Key files: `contracts/staking/nft-vault/src/contract.rs`, `contracts/staking/nft-vault/src/claim.rs`, `contracts/staking/nft-vault/src/bin/schema.rs`, `contracts/staking/stake-rewards/src/contract.rs`, `contracts/staking/vault-factory/src/contract.rs`
+- Subdirectories: These crates expose a `src/contract.rs` entry point, plus support modules and schema generators under `src/bin/` or `examples/`.
 
 **`contract-template`:**
 - Purpose: Provide the baseline file layout for a new direct CosmWasm contract.
-- Contains: `src/lib.rs`, `src/instantiate.rs`, `src/execute.rs`, `src/query.rs`, `src/state.rs`, `examples/schema.rs`
-- Key files: `contract-template/src/lib.rs`, `contract-template/src/instantiate.rs`
+- Contains: `src/lib.rs`, `src/instantiate.rs`, `src/execute.rs`, `src/query.rs`, `src/state.rs`, `src/helpers.rs`, `src/error.rs`, `examples/schema.rs`
+- Key files: `contract-template/src/lib.rs`, `contract-template/src/execute.rs`, `contract-template/src/query.rs`
+- Subdirectories: `src/` for contract modules, `examples/` for schema generation, `.cargo/` for local cargo config.
+
+**`docs`:**
+- Purpose: Keep developer-facing documentation and setup notes.
+- Contains: end-to-end setup, JSON examples, method reference, and multisig governance docs.
+- Key files: `docs/README.md`, `docs/01-end-to-end-setup.md`, `docs/02-method-reference.md`, `docs/03-json-examples.md`, `docs/04-multisig-governance.md`
+- Subdirectories: None.
 
 **`scripts`:**
 - Purpose: Hold repeatable build helpers for Wasm optimization.
-- Contains: shell wrappers around `cosmwasm/optimizer`
+- Contains: shell wrappers around the CosmWasm optimizer workflow.
 - Key files: `scripts/optimize.sh`, `scripts/optimize-arm.sh`
+- Subdirectories: None.
 
 **`artifacts`:**
-- Purpose: Store built `.wasm` binaries and checksums.
-- Contains: one Wasm per compiled contract plus `checksums.txt`
-- Key files: `artifacts/registry.wasm`, `artifacts/marketplace_v3.wasm`, `artifacts/checksums.txt`
+- Purpose: Store built `.wasm` binaries and checksum output.
+- Contains: compiled contract artifacts and `checksums.txt`
+- Key files: the generated Wasm files under `artifacts/` and checksum metadata
+- Subdirectories: None.
 
 **`schema`:**
 - Purpose: Store root-level schema output for the currently generated contract set.
 - Contains: `execute_msg.json`, `instantiate_msg.json`, `migrate_msg.json`, `query_msg.json`
 - Key files: `schema/execute_msg.json`, `schema/query_msg.json`
+- Subdirectories: None.
 
-**`docs`:**
-- Purpose: Keep prose design notes that explain business intent and contract interactions.
-- Contains: architecture summaries, redesign notes, and topic-specific explainers
-- Key files: `ARCHITECTURE_SUMMARY.md`, `ECOSYSTEM_FEE_PATTERN.md`, `REVENUE_ROUTER_EXPLAINED.md`
+**`.planning/codebase`:**
+- Purpose: Generated repository reference docs used by GSD planning and execution commands.
+- Contains: `ARCHITECTURE.md` and `STRUCTURE.md`
+- Key files: the two mapping docs in this directory
+- Subdirectories: None.
 
 ## Key File Locations
 
 **Entry Points:**
-- `Cargo.toml`: workspace root for all crate membership and shared dependency versions
-- `contracts/core/registry/src/lib.rs`: exports registry modules and test module
-- `contracts/core/registry/src/contract/instantiate.rs`: split entry-point style instantiate handler
-- `contracts/nft/marketplace-v3/src/contract/execute.rs`: split entry-point style execute handler
-- `contracts/nft/marketplace-legacy/src/execute.rs`: legacy direct execute entry point kept outside a `contract/` subdirectory
-- `contracts/staking/nft-vault/src/contract.rs`: Sylvia contract implementation that generates Wasm entry points from annotated methods
-- `contracts/relationship/follow/src/instantiate.rs`: simple direct instantiate entry point for relationship contracts
+- `Cargo.toml`: workspace root for crate membership and shared dependency versions
+- `README.md`: project overview, diagrams, and deploy commands
+- `contracts/core/registry/src/contract.rs`: registry contract entry surface
+- `contracts/nft/marketplace-v3/src/contract.rs`: split-handler marketplace entry surface
+- `contracts/staking/nft-vault/src/contract.rs`: Sylvia contract entry surface
+- `contracts/relationship/follow/src/instantiate.rs`: direct entry-point style for relationship contracts
 
 **Configuration:**
 - `Cargo.toml`: workspace dependencies, release profiles, and local library crate wiring
-- `rust-toolchain.toml`: Rust toolchain pinning
-- `.github/workflows/main.yaml`: CI entry point
-- `scripts/optimize.sh`: canonical optimizer invocation for release artifacts
-- `contracts/*/*/Cargo.toml`: per-crate package metadata, feature flags, and schema binaries/examples
+- `rust-toolchain.toml`: Rust version pin
+- `contract-template/.cargo/config`: template-local cargo configuration
+- `contracts/*/*/Cargo.toml`: per-crate package metadata, feature flags, and schema binaries or examples
 
 **Core Logic:**
-- `contracts/core/registry/src/contract/*.rs`: ecosystem, collection, moderation, and recovery logic
+- `contracts/core/registry/src/contract/*.rs`: registry execution, query, helpers, and instantiate logic
 - `contracts/core/collection-factory/src/contract/*.rs`: collection creation orchestration and reply handling
-- `contracts/nft/minter-v2/src/contract/*.rs`: minting lifecycle, reply handling, and migration
+- `contracts/core/ecosystem-factory/src/contract/*.rs`: ecosystem creation orchestration and reply handling
+- `contracts/nft/minter-v2/src/contract/*.rs`: mint lifecycle, reply handling, migration, and helpers
 - `contracts/nft/marketplace-v3/src/contract/*.rs`: trade registration, ask/bid execution, and query helpers
 - `contracts/staking/nft-vault/src/contract.rs`: staking state machine and reward-account orchestration
 
 **Testing:**
-- `contracts/core/registry/src/tests/`: registry integration-style test modules
-- `contracts/core/multisig/src/tests/`: multisig governance tests
+- `contracts/core/registry/src/tests/`: registry integration-style tests
+- `contracts/core/multisig/src/tests/`: governance tests
 - `contracts/core/split-router/src/contract/execute/tests.rs`: submodule-local tests
-- `contracts/nft/auction-english/src/execute/tests.rs`: feature-local execute tests
-- `contracts/nft/minter/src/contract_tests.rs`: crate-level test file for older minter layout
-- `contracts/relationship/follow/src/multitest.rs`: contract integration tests using multi-test
+- `contracts/nft/auction-english/src/execute/tests.rs`: execute-path tests
+- `contracts/nft/minter-v2/src/contract/helpers/tests.rs`: helper-path tests
+- `contracts/relationship/follow/src/multitest.rs`: multi-test integration coverage
+- `contracts/staking/nft-vault/src/contract/tests.rs`: staking contract tests
+
+**Documentation:**
+- `README.md`: user-facing overview and deploy examples
+- `docs/README.md`: documentation index
+- `.planning/codebase/ARCHITECTURE.md`: conceptual codebase map
+- `.planning/codebase/STRUCTURE.md`: physical codebase map
+- `contracts/*/README.md`: crate-specific contract docs and usage notes
 
 ## Naming Conventions
 
@@ -109,17 +136,23 @@ passage-contracts/
 
 **Directories:**
 - Contract crate directories use kebab-case names such as `collection-factory`, `marketplace-v3`, `nft-vault`, and `streaming-billing`.
-- Internal module directories mirror lifecycle concepts: `src/contract/`, `src/tests/`, `src/claim/`, and `examples/`.
+- Internal module directories mirror lifecycle concepts: `src/contract/`, `src/tests/`, `src/bin/`, and `examples/`.
 - Domain grouping is fixed at the top level: add new crates under `contracts/core`, `contracts/nft`, `contracts/staking`, or `contracts/relationship`, not at the repository root.
+
+**Special Patterns:**
+- `src/lib.rs` exports the crate module surface and shared error type.
+- `src/contract.rs` is common in Sylvia crates and some modern direct contracts.
+- `examples/schema.rs` or `src/bin/schema.rs` generates contract JSON schema.
 
 ## Where to Add New Code
 
 **New Feature:**
-- Primary code: extend the existing crate inside its current style. Use `src/contract/*.rs` in split-handler crates such as `contracts/core/registry` or `contracts/nft/marketplace-v3`; use `src/contract.rs` or `src/execute.rs` / `src/query.rs` in legacy crates such as `contracts/nft/marketplace-legacy` or `contracts/relationship/follow`.
+- Primary code: extend the existing crate inside its current style. Use `src/contract/*.rs` in split-handler crates such as `contracts/core/registry` or `contracts/nft/marketplace-v3`; use direct `src/*.rs` files in older crates such as `contracts/relationship/follow` or `contracts/nft/marketplace-legacy`.
 - Tests: keep tests next to the style already used by that crate. Examples are `contracts/core/registry/src/tests/`, `contracts/nft/auction-english/src/execute/tests.rs`, and `contracts/relationship/follow/src/multitest.rs`.
 
 **New Component/Module:**
 - Implementation: create a new sibling crate under the correct domain directory with its own `Cargo.toml`, `src/lib.rs`, `src/msg.rs`, `src/state.rs`, `src/error.rs`, and entry-point implementation. Use `contract-template/` as the baseline for direct CosmWasm crates, or mirror `contracts/staking/nft-vault` when the new contract should use Sylvia.
+- Tests: place crate-local coverage next to the implementation style the new crate chooses.
 
 **Utilities:**
 - Shared helpers: prefer crate-local `helpers.rs` or `src/contract/helpers.rs` first. This repo does not use a global shared `src/common` crate.
@@ -176,4 +209,4 @@ passage-contracts/
 
 ---
 
-*Structure analysis: 2026-03-17*
+*Structure analysis: 2026-03-18*

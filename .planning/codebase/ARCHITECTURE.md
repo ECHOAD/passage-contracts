@@ -1,165 +1,152 @@
 # Architecture
 
-**Analysis Date:** 2026-03-17
+**Analysis Date:** 2026-03-18
 
 ## Pattern Overview
 
-**Overall:** Domain-segmented CosmWasm workspace with a registry-centered control plane and contract-local state machines.
+**Overall:** Domain-segmented CosmWasm workspace with contract-local state machines and a small set of shared protocol control points.
 
 **Key Characteristics:**
-- The workspace root `Cargo.toml` groups deployable contracts by domain under `contracts/core/*`, `contracts/nft/*`, `contracts/staking/*`, and `contracts/relationship/*`; each child crate compiles to its own Wasm artifact.
-- Global policy and catalog state live in `contracts/core/registry`, while downstream contracts such as `contracts/core/collection-factory`, `contracts/core/ecosystem-factory`, `contracts/nft/minter-v2`, and `contracts/nft/marketplace-v3` query the registry instead of duplicating allowlist or moderation rules.
-- Internal crate structure is mixed on purpose: newer crates split entry points into `src/contract/*.rs` modules (`contracts/core/registry/src/contract/*.rs`, `contracts/nft/marketplace-v3/src/contract/*.rs`), older crates keep direct `src/contract.rs` or `src/execute.rs` / `src/query.rs` files (`contracts/nft/marketplace-legacy/src/execute.rs`, `contracts/relationship/follow/src/execute.rs`), and staking crates use Sylvia-generated entry points (`contracts/staking/nft-vault/src/contract.rs`, `contracts/staking/vault-factory/src/contract.rs`).
+- The root `Cargo.toml` defines a single Rust workspace with four contract domains under `contracts/core/*`, `contracts/nft/*`, `contracts/relationship/*`, and `contracts/staking/*`.
+- `contracts/core/registry` is the closest thing to a protocol source of truth: it owns ecosystem, collection, moderation, and recovery state, and other contracts query it instead of duplicating policy.
+- The codebase uses multiple internal module styles on purpose. Split-handler crates keep lifecycle code in `src/contract/*.rs` such as `contracts/core/registry/src/contract/execute.rs` and `contracts/nft/marketplace-v3/src/contract/query.rs`, while older contracts keep direct files like `contracts/nft/marketplace-legacy/src/execute.rs` and Sylvia-based staking contracts centralize logic in `src/contract.rs` such as `contracts/staking/nft-vault/src/contract.rs`.
 
 ## Layers
 
-**Control Plane Contracts:**
-- Purpose: Own protocol-wide registration, moderation, governance, routing, and platform billing decisions.
-- Location: `contracts/core/registry`, `contracts/core/collection-factory`, `contracts/core/ecosystem-factory`, `contracts/core/multisig`, `contracts/core/split-router`, `contracts/core/streaming-billing`
-- Contains: ecosystem and collection registries, factory request queues, governance proposals, payment routing, billing sessions, and platform stats.
-- Depends on: `cw-storage-plus` state, CosmWasm entry points, and cross-contract messages such as `RegistryQueryMsg` / `RegistryExecuteMsg` in `contracts/core/registry/src/msg.rs`.
-- Used by: NFT contracts in `contracts/nft/*`, staking and billing contracts that need downstream addresses, and off-chain clients that treat the registry as the source of truth.
+**Protocol Control Plane:**
+- Purpose: Own registry state, factory orchestration, governance, routing, and protocol-level billing decisions.
+- Contains: `contracts/core/registry`, `contracts/core/collection-factory`, `contracts/core/ecosystem-factory`, `contracts/core/multisig`, `contracts/core/split-router`, `contracts/core/streaming-billing`
+- Depends on: `cw-storage-plus`, CosmWasm entry points, and cross-contract messages defined in files such as `contracts/core/registry/src/msg.rs` and `contracts/core/collection-factory/src/msg.rs`.
+- Used by: NFT contracts, staking contracts, and off-chain callers that treat the registry as the canonical catalog.
 
-**NFT Asset and Commerce Contracts:**
-- Purpose: Define collection primitives and monetization flows for Passage assets.
-- Location: `contracts/nft/pg721`, `contracts/nft/pg721-updatable`, `contracts/nft/pg721-metadata-onchain`, `contracts/nft/minter*`, `contracts/nft/marketplace-*`, `contracts/nft/auction-english`, `contracts/nft/royalty-group`, `contracts/nft/whitelist`
-- Contains: CW721-derived collection contracts, minters that instantiate or mint into collections, marketplace order books, auctions, royalty routing, and sale allowlisting.
-- Depends on: collection metadata in `contracts/nft/pg721/src/state.rs`, registry lookups from helpers such as `contracts/nft/minter-v2/src/contract/helpers.rs` and `contracts/nft/marketplace-v3/src/contract/helpers.rs`, plus direct CW721 queries.
-- Used by: creators, factory contracts, and user-facing mint/trade flows.
+**NFT Commerce Layer:**
+- Purpose: Handle collection primitives, minting, trading, royalties, allowlists, and metadata variants.
+- Contains: `contracts/nft/pg721`, `contracts/nft/pg721-updatable`, `contracts/nft/pg721-metadata-onchain`, `contracts/nft/minter`, `contracts/nft/minter-v2`, `contracts/nft/minter-v2-metadata-onchain`, `contracts/nft/marketplace-legacy`, `contracts/nft/marketplace-v2`, `contracts/nft/marketplace-v3`, `contracts/nft/auction-english`, `contracts/nft/royalty-group`, `contracts/nft/whitelist`
+- Depends on: contract-local config and state, registry queries from helpers such as `contracts/nft/minter-v2/src/contract/helpers.rs`, and CW721-compatible messages or queries.
+- Used by: creators, marketplaces, minters, and factory contracts.
 
-**Staking and Rewards Contracts:**
-- Purpose: Manage NFT staking vaults and reward distribution accounts.
-- Location: `contracts/staking/nft-vault`, `contracts/staking/stake-rewards`, `contracts/staking/vault-factory`
-- Contains: Sylvia contracts with instantiate/exec/query methods, indexed staking state, instantiate2 flows, and reward-account orchestration.
-- Depends on: local workspace crate references declared in the root `Cargo.toml`, plus shared libraries like `uju-cw2-common`, `uju-cw2-nft`, and `uju-index-query`.
-- Used by: the staking factory in `contracts/staking/vault-factory/src/contract.rs` and any caller creating staking products around approved NFT collections.
+**Staking Layer:**
+- Purpose: Manage NFT vaults, reward distribution, and vault deployment.
+- Contains: `contracts/staking/nft-vault`, `contracts/staking/stake-rewards`, `contracts/staking/vault-factory`
+- Depends on: Sylvia-generated entry points, local `state.rs` / `error.rs` modules, and workspace dependencies declared in `Cargo.toml`.
+- Used by: vault creation flows and any caller staking approved collections.
 
-**Relationship Contracts:**
-- Purpose: Model social graph edges and emit hook notifications on changes.
-- Location: `contracts/relationship/follow`, `contracts/relationship/friend`
-- Contains: follow/friend state, add/remove hook management, and query surfaces backed by indexed maps.
-- Depends on: contract-local `msg.rs`, `state.rs`, and hook helpers in `contracts/relationship/follow/src/hooks.rs` and `contracts/relationship/friend/src/hooks.rs`.
-- Used by: other contracts or indexers that subscribe to follow/unfollow or friend/unfriend events.
+**Relationship Layer:**
+- Purpose: Model social graph edges and emit hook notifications on relationship changes.
+- Contains: `contracts/relationship/follow`, `contracts/relationship/friend`
+- Depends on: local `msg.rs`, `state.rs`, `hooks.rs`, and helper modules in each crate.
+- Used by: contracts or indexers that subscribe to follow/friend events.
 
-**Intra-Contract State Machine Layer:**
-- Purpose: Keep every contract self-contained around messages, entry points, helpers, and persistent state.
-- Location: `src/lib.rs`, `src/msg.rs`, `src/state.rs`, `src/error.rs`, and either `src/contract.rs` or `src/contract/*.rs` inside each crate.
-- Contains: message enums, entry-point dispatch, helper functions, reply handlers, migrations, and `Item` / `Map` / `IndexedMap` definitions.
-- Depends on: CosmWasm APIs (`Deps`, `DepsMut`, `Env`, `MessageInfo`) and `cw-storage-plus`.
-- Used by: all crates; this is the stable implementation pattern to follow when extending an existing contract.
+**Contract-Local State Machine Layer:**
+- Purpose: Keep each contract self-contained around messages, entry points, validation, state, and replies.
+- Contains: `src/lib.rs`, `src/msg.rs`, `src/state.rs`, `src/error.rs`, plus either `src/contract.rs`, `src/contract/*.rs`, or direct top-level `src/instantiate.rs` / `src/execute.rs` / `src/query.rs`.
+- Depends on: CosmWasm APIs such as `Deps`, `DepsMut`, `Env`, `MessageInfo`, `Response`, and `StdResult`.
+- Used by: every deployable crate in the workspace.
 
 ## Data Flow
 
-**Ecosystem Provisioning Flow:**
+**Registry-Gated Creation Flow:**
 
-1. `contracts/core/ecosystem-factory/src/contract/execute.rs` accepts `SubmitEcosystemCreationRequest`, validates the creator against `contracts/core/registry` through `RegistryQueryMsg::CanCreateEcosystem`, and stores the request in `REQUESTS` and `PENDING_REQUEST_BY_ID`.
-2. The same file resolves approved requests by instantiating a per-ecosystem collection factory with `SubMsg::reply_on_success`, storing `PendingEcosystemCreation` in `PENDING_ECOSYSTEM_CREATIONS`.
-3. `contracts/core/ecosystem-factory/src/contract/reply.rs` parses the instantiate reply, extracts the new collection-factory address, and registers the ecosystem back into `contracts/core/registry` via `RegistryExecuteMsg::RegisterEcosystemFromFactory`.
+1. A factory contract such as `contracts/core/ecosystem-factory/src/contract/execute.rs` or `contracts/core/collection-factory/src/contract/execute.rs` receives a creation request.
+2. It validates permissions against `contracts/core/registry` using query messages defined in `contracts/core/registry/src/msg.rs`.
+3. It stores pending request state in crate-local storage, then sends a submessage to instantiate a downstream contract.
+4. The reply handler, such as `contracts/core/ecosystem-factory/src/contract/reply.rs` or `contracts/core/collection-factory/src/contract/reply.rs`, finalizes local state and registers the new object back with the registry.
 
-**Collection Provisioning Flow:**
+**Mint and Trade Flow:**
 
-1. `contracts/core/collection-factory/src/contract/execute.rs` validates creator permissions by querying `contracts/core/registry` for ecosystem membership, moderation, and cross-ecosystem admin status.
-2. It persists `PendingCreation` in `PENDING_CREATIONS`, instantiates a `pg721` collection with `WasmMsg::Instantiate`, and binds the reply ID to the pending request.
-3. `contracts/core/collection-factory/src/contract/reply.rs` resolves the new collection address, records it in local `COLLECTIONS`, and calls `RegistryExecuteMsg::RegisterCollectionFromFactory` so the registry becomes the canonical catalog entry.
+1. A minter or marketplace entry point such as `contracts/nft/minter-v2/src/contract/execute.rs` or `contracts/nft/marketplace-v3/src/contract/execute.rs` receives a user action.
+2. Helper code checks local config and registry-backed authorization before any mutation.
+3. The contract updates its own state maps and emits downstream CW721, bank, or split-router messages.
+4. Query handlers expose the resulting state through typed response structs from `msg.rs`.
 
-**Mint Authorization Flow:**
+**Staking Flow:**
 
-1. A minter entry point such as `contracts/nft/minter-v2/src/contract/execute.rs` delegates gating to `contracts/nft/minter-v2/src/contract/helpers.rs`.
-2. Helper code queries `contracts/core/registry` to verify the collection is registered, minting is enabled, and the minter contract is authorized for that collection.
-3. The minter optionally queries `contracts/nft/whitelist` for active whitelist configuration, updates local mint counters in `MINTER_ADDRS`, `MINTABLE_NUM_TOKENS`, and `MINT_STATS`, then issues a CW721 mint message against the configured collection address.
-
-**Marketplace Sale Flow:**
-
-1. `contracts/nft/marketplace-v3/src/contract/execute.rs` validates ask/bid actions and uses `contracts/nft/marketplace-v3/src/contract/helpers.rs` to decide whether a collection can trade.
-2. Helper code checks local collection configuration in `COLLECTION_CONFIGS` and, when configured, queries `contracts/core/registry` through `RegistryQueryMsg::CanTradeCollection`.
-3. Sale execution computes trading fees and optional royalties, routes royalty payouts either directly or through `contracts/core/split-router`, transfers the NFT, and updates `MARKET_STATS` plus `COLLECTION_STATS`.
-
-**Staking Vault Flow:**
-
-1. `contracts/staking/vault-factory/src/contract.rs` stores code IDs and creates vault instances with `WasmMsg::Instantiate2`, predicting the address before execution.
-2. `contracts/staking/nft-vault/src/contract.rs` accepts stake and unstake actions, persists staked NFT records in an `IndexedMap`, and emits submessages to update associated reward contracts.
-3. Reward accounts are created from the vault itself with another `Instantiate2` flow into `contracts/staking/stake-rewards`, keeping vault and reward account linkage on-chain.
+1. `contracts/staking/vault-factory/src/contract.rs` instantiates vault contracts with predicted addresses.
+2. `contracts/staking/nft-vault/src/contract.rs` records staked NFTs and orchestrates reward-account linkage.
+3. `contracts/staking/stake-rewards/src/contract.rs` maintains reward distribution state tied to the vault lifecycle.
 
 **State Management:**
-- Persistent state is crate-local and explicit. Examples include `CONFIG` and `ECOSYSTEMS` in `contracts/core/registry/src/state.rs`, `COLLECTION_CONFIGS`, `asks()`, and `bids()` in `contracts/nft/marketplace-v3/src/state.rs`, and `users_staked_nfts` in `contracts/staking/nft-vault/src/contract.rs`.
-- Query-heavy datasets use `IndexedMap` and `MultiIndex` instead of scanning raw maps. Representative patterns live in `contracts/core/registry/src/state.rs`, `contracts/nft/marketplace-v3/src/state.rs`, and `contracts/relationship/follow/src/state.rs`.
-- Multi-step workflows store pending state keyed by reply IDs before sending submessages. This pattern appears in `contracts/core/ecosystem-factory/src/state.rs`, `contracts/core/collection-factory/src/state.rs`, `contracts/nft/minter-v2/src/contract/instantiate.rs`, and `contracts/nft/minter-v2-metadata-onchain/src/contract/instantiate.rs`.
+- Persistent state is explicit and crate-local. Examples include `CONFIG` and collection policy maps in `contracts/core/registry/src/state.rs`, `COLLECTION_CONFIGS` and order-book storage in `contracts/nft/marketplace-v3/src/state.rs`, and staking records in `contracts/staking/nft-vault/src/state.rs`.
+- Query-heavy data uses `IndexedMap`, `MultiIndex`, or other keyed collections instead of raw scans when a contract needs pagination or alternate lookup dimensions.
+- Reply-driven flows keep pending metadata in storage before dispatching `SubMsg::reply_on_success`, which appears in factory crates and in minter instantiation flows.
 
 ## Key Abstractions
 
 **Registry Catalog and Policy Surface:**
-- Purpose: Provide the canonical record for ecosystems, collections, minter authorization, moderation, and ownership recovery.
+- Purpose: Hold the canonical protocol record for ecosystems, collections, minter authorization, moderation, and recovery.
 - Examples: `contracts/core/registry/src/state.rs`, `contracts/core/registry/src/msg.rs`, `contracts/core/registry/src/contract/helpers.rs`
-- Pattern: One contract owns protocol-wide data, while other contracts consume it through `query_wasm_smart` and explicit execute messages.
+- Pattern: One contract owns protocol-wide data, while other contracts consume it through queries and explicit execute messages.
 
-**Pending Creation Queues:**
-- Purpose: Bridge async contract instantiation to later registration logic.
+**Pending Creation Queue:**
+- Purpose: Bridge asynchronous instantiation with later registration and bookkeeping.
 - Examples: `contracts/core/ecosystem-factory/src/state.rs`, `contracts/core/ecosystem-factory/src/contract/reply.rs`, `contracts/core/collection-factory/src/state.rs`, `contracts/core/collection-factory/src/contract/reply.rs`
-- Pattern: Save request metadata before `SubMsg::reply_on_success`, then finalize local state and downstream registration in the reply handler.
+- Pattern: Save request metadata before sending a submessage, then reconcile reply data back into permanent state.
 
 **Per-Contract Config Object:**
-- Purpose: Centralize admin addresses, code IDs, pause flags, pricing, and contract references.
-- Examples: `contracts/core/split-router/src/state.rs`, `contracts/nft/minter-v2/src/state.rs`, `contracts/nft/marketplace-v3/src/state.rs`, `contracts/core/streaming-billing/src/state.rs`
-- Pattern: A `Config` struct in `state.rs` plus a top-level `CONFIG: Item<Config>` gatekeeps privileged actions and integration endpoints.
+- Purpose: Centralize admin addresses, code IDs, pricing, and protocol references.
+- Examples: `contracts/core/split-router/src/state.rs`, `contracts/core/streaming-billing/src/state.rs`, `contracts/nft/minter-v2/src/state.rs`, `contracts/nft/marketplace-v3/src/state.rs`
+- Pattern: A `Config` struct plus a top-level `CONFIG: Item<Config>` controls privileged paths and integration points.
 
-**Indexed Storage Models:**
+**Indexed Storage Model:**
 - Purpose: Support paginated queries and alternate lookup dimensions without off-chain joins.
-- Examples: `collections()` in `contracts/core/registry/src/state.rs`, `asks()` / `bids()` / `collection_bids()` in `contracts/nft/marketplace-v3/src/state.rs`, `follows()` in `contracts/relationship/follow/src/state.rs`
-- Pattern: `IndexedMap` exposes secondary indexes for query handlers; add new query dimensions here before adding query handlers that need them.
+- Examples: `contracts/core/registry/src/state.rs`, `contracts/nft/marketplace-v3/src/state.rs`, `contracts/relationship/follow/src/state.rs`
+- Pattern: Secondary indexes are added where query handlers need them, rather than creating separate caches.
 
 **Library-Style Contract Exports:**
-- Purpose: Allow one contract crate to depend on another crate's message types or Sylvia-generated interfaces.
-- Examples: root `Cargo.toml` workspace dependencies for `nft-vault`, `stake-rewards`, `pg721`, and `pg721-updatable`; imports in `contracts/staking/vault-factory/src/contract.rs`
-- Pattern: Reusable contract crates expose library interfaces through `crate-type = ["cdylib", "rlib"]`, then sibling crates import instantiate/query message types instead of duplicating them.
+- Purpose: Allow one contract crate to depend on another crate's message types or generated interfaces.
+- Examples: workspace dependencies for `nft-vault`, `stake-rewards`, `pg721`, and `pg721-updatable` in `Cargo.toml`
+- Pattern: Reusable crates expose library interfaces, then sibling crates import message types instead of duplicating them.
 
 ## Entry Points
 
 **Workspace Build Entry Point:**
 - Location: `Cargo.toml`
-- Triggers: `cargo check`, `cargo test`, `cargo run --example schema`, optimizer scripts
+- Triggers: `cargo check`, `cargo test`, schema generation, and optimizer scripts
 - Responsibilities: declare workspace members, pin shared dependencies, and define release profiles for each contract crate.
 
 **Registry Contract Entry Points:**
-- Location: `contracts/core/registry/src/contract/instantiate.rs`, `contracts/core/registry/src/contract/execute.rs`, `contracts/core/registry/src/contract/query.rs`
-- Triggers: Wasm `instantiate`, `execute`, and `query`
-- Responsibilities: initialize global config, apply moderation and recovery actions, register ecosystems and collections, and answer policy queries consumed by other contracts.
+- Location: `contracts/core/registry/src/contract.rs` and the split modules under `contracts/core/registry/src/contract/*.rs`
+- Triggers: Wasm `instantiate`, `execute`, `query`, and tests in `contracts/core/registry/src/tests/`
+- Responsibilities: initialize global config, apply moderation and recovery actions, register ecosystems and collections, and answer policy queries.
 
-**Factory Reply Entry Points:**
+**Factory and Minter Reply Entry Points:**
 - Location: `contracts/core/ecosystem-factory/src/contract/reply.rs`, `contracts/core/collection-factory/src/contract/reply.rs`, `contracts/nft/minter-v2/src/contract/instantiate.rs`
-- Triggers: `SubMsg::reply_on_success` after child contract instantiation
-- Responsibilities: parse instantiate replies, turn pending state into permanent records, and wire newly created addresses into registry or config state.
+- Triggers: `SubMsg::reply_on_success` after contract instantiation
+- Responsibilities: parse instantiate replies, turn pending state into permanent records, and wire newly created addresses into local or registry state.
 
 **Marketplace and Minter Entry Points:**
 - Location: `contracts/nft/marketplace-v3/src/contract/*.rs`, `contracts/nft/minter-v2/src/contract/*.rs`, `contracts/nft/minter-v2-metadata-onchain/src/contract/*.rs`
-- Triggers: user mint, list, bid, buy, migrate, and query messages
+- Triggers: mint, list, bid, buy, migrate, and query messages
 - Responsibilities: enforce local and registry-backed rules, mutate order books and mint counters, and emit downstream CW721 or bank messages.
 
 **Sylvia Contract Entry Points:**
 - Location: `contracts/staking/nft-vault/src/contract.rs`, `contracts/staking/stake-rewards/src/contract.rs`, `contracts/staking/vault-factory/src/contract.rs`
-- Triggers: Sylvia-generated Wasm entry points from `#[contract]` and `#[sv::msg(...)]`
-- Responsibilities: hide raw entry-point boilerplate while exposing typed instantiate/exec/query methods for staking and reward flows.
+- Triggers: Sylvia-generated Wasm entry points
+- Responsibilities: hide boilerplate while exposing typed instantiate, execute, and query methods for staking and reward flows.
 
 **Schema Generation Entry Points:**
 - Location: `contracts/*/*/examples/schema.rs`, `contracts/staking/*/src/bin/schema.rs`
-- Triggers: `cargo run --example schema` or `cargo run --bin schema --features schema`
-- Responsibilities: generate JSON schema directories committed alongside each contract crate and, for the root, in `schema/`.
+- Triggers: `cargo run --example schema` or `cargo run --bin schema`
+- Responsibilities: generate JSON schema directories committed alongside each contract crate and, for the root workspace, in `schema/`.
 
 ## Error Handling
 
-**Strategy:** Per-crate typed errors plus early validation, with queries returning `StdResult` and execute paths converting failures into domain-specific `ContractError` variants.
+**Strategy:** Typed per-crate errors plus early validation. Queries return `StdResult`, and execute paths convert failures into contract-specific `ContractError` variants.
 
 **Patterns:**
-- Authorization and pause checks happen before state mutation. Representative implementations are in `contracts/core/registry/src/contract/execute.rs`, `contracts/core/split-router/src/contract/execute.rs`, and `contracts/nft/marketplace-v3/src/contract/execute.rs`.
-- Address parsing and structural validation happen at the boundary using `deps.api.addr_validate`, `nonpayable`, URL parsing, or custom helper validators in files such as `contracts/core/registry/src/contract/helpers.rs` and `contracts/nft/pg721/src/contract.rs`.
+- Authorization and pause checks happen before state mutation in contracts such as `contracts/core/registry/src/contract/execute.rs`, `contracts/core/split-router/src/contract/execute.rs`, and `contracts/nft/marketplace-v3/src/contract/execute.rs`.
+- Boundary validation uses `deps.api.addr_validate`, `nonpayable`, URL parsing, and helper validators in files such as `contracts/core/registry/src/contract/helpers.rs` and `contracts/nft/pg721/src/contract.rs`.
 - Reply-based workflows protect themselves with pending-state lookups and explicit parse errors in `contracts/core/ecosystem-factory/src/contract/reply.rs` and `contracts/core/collection-factory/src/contract/reply.rs`.
-- Query helpers often downgrade contract-call failures into domain decisions. Examples include registry gating in `contracts/nft/minter-v2/src/contract/helpers.rs` and trade checks in `contracts/nft/marketplace-v3/src/contract/helpers.rs`.
+- Helper code often converts failed contract calls into domain decisions instead of panicking, as seen in registry gating and trade checks for minters and marketplaces.
 
 ## Cross-Cutting Concerns
 
 **Logging:** Contracts emit `Response` attributes and `Event`s instead of using a shared logger. Examples: `contracts/core/streaming-billing/src/contract.rs`, `contracts/staking/nft-vault/src/contract.rs`, `contracts/relationship/follow/src/execute.rs`.
-**Validation:** Inputs are validated at message boundaries with helpers and typed parsers in `contracts/core/registry/src/contract/helpers.rs`, `contracts/nft/pg721/src/contract.rs`, `contracts/core/ecosystem-factory/src/contract/helpers.rs`, and Sylvia utilities like `nonpayable` and `only_contract_admin`.
-**Authentication:** Admin and operator patterns dominate direct CosmWasm contracts (`contracts/core/collection-factory/src/state.rs`, `contracts/nft/marketplace-v3/src/state.rs`), while staking uses `only_contract_admin` and ownership checks in `contracts/staking/nft-vault/src/contract.rs`; relationship contracts authenticate via sender-owned hook lists in `contracts/relationship/follow/src/execute.rs`.
+
+**Validation:** Inputs are validated at message boundaries with typed parsers and helper functions in `contracts/core/registry/src/contract/helpers.rs`, `contracts/nft/pg721/src/contract.rs`, `contracts/core/ecosystem-factory/src/contract/helpers.rs`, and Sylvia utilities such as `nonpayable` and `only_contract_admin`.
+
+**Authentication:** Admin and operator patterns dominate direct CosmWasm contracts such as `contracts/core/collection-factory/src/state.rs` and `contracts/nft/marketplace-v3/src/state.rs`, while staking uses `only_contract_admin` and ownership checks in `contracts/staking/nft-vault/src/contract.rs`; relationship contracts authenticate via sender-owned hook lists in `contracts/relationship/follow/src/execute.rs`.
 
 ---
 
-*Architecture analysis: 2026-03-17*
+*Architecture analysis: 2026-03-18*
