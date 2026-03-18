@@ -2,6 +2,15 @@
 
 `streaming-billing` is the Passage hybrid billing primitive for streaming points, session settlement, and world revenue accumulation. It is not a subscription engine and it is not a fully autonomous billing system.
 
+## Canonical PASG Utility Surface
+
+This contract is the repo's canonical PASG utility surface.
+
+- `upasg` is the native settlement denom and the source of truth for PASG accounting in this workspace.
+- `QueryMsg::PasgUtility {}` is the integrator-facing query for canonical denom, conversion semantics, compatibility metadata, and scope boundaries.
+- `QueryMsg::ConversionRate {}` remains available for lightweight point-to-PASG conversion reads, but it is subordinate to the canonical PASG utility query.
+- If a wrapper or adapter is ever introduced, it is compatibility-only and must forward to the native `upasg` path without changing PASG economics.
+
 ## What The Contract Guarantees
 
 - Tracks user points balances funded by direct PASG deposits or fiat purchase reports.
@@ -105,6 +114,21 @@ Authorized backend operator settles a session using the reported duration, bound
 ### `SetWorldRate`
 
 Verified world owner or admin configures the hourly points rate for a world after registry and cw721 ownership verification.
+
+## Canonical PASG Queries
+
+### `PasgUtility`
+
+Returns the source-of-truth PASG interface:
+
+- canonical denom: `upasg`
+- conversion semantics: `points_per_pasg` and `pasg_per_point`
+- compatibility metadata: wrapper/shim stance and generic split-router forwarding path
+- scope boundary: on-chain settlement utility only, with platform billing and subscription policy staying off-chain
+
+### `ConversionRate`
+
+Returns the current `points_per_pasg`, `pasg_per_point`, and configured PASG denom for callers that only need conversion math.
 
 ## Recommended Verification After Changes
 

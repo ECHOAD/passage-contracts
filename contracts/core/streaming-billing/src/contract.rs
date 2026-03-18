@@ -9,9 +9,12 @@ use cw_storage_plus::Bound;
 use crate::error::ContractError;
 use crate::msg::{
     ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
-    OwnerOfResponse, PendingRevenueResponse, PlatformStatsResponse, PurchaseHistoryResponse,
-    PurchaseRecord, PurchaseType, QueryMsg, RegistryCollectionResponse, RegistryQueryMsg,
-    SessionResponse, SessionStatus, UserBalanceResponse, UserSessionsResponse, WorldConfigResponse,
+    OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityRouterExecuteRoute,
+    PasgCompatibilityRouterResponse, PasgScopeBoundaryResponse, PasgSettlementKind,
+    PasgUtilityExecuteRoute, PasgUtilityMetadata, PasgUtilityQueryRoute, PasgUtilityResponse,
+    PendingRevenueResponse, PlatformStatsResponse, PurchaseHistoryResponse, PurchaseRecord,
+    PurchaseType, QueryMsg, RegistryCollectionResponse, RegistryQueryMsg, SessionResponse,
+    SessionStatus, UserBalanceResponse, UserSessionsResponse, WorldConfigResponse,
     WorldStatsResponse,
 };
 use crate::state::{
@@ -25,6 +28,8 @@ const CONTRACT_NAME: &str = "crates.io:streaming-billing";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_FIAT_REPORT_AGE_SECONDS: u64 = 900;
 const MAX_SESSION_DURATION_SECONDS: u64 = 86_400;
+const PASG_COMPATIBILITY_NOTE: &str =
+    "Compatibility shims must forward to native upasg settlement and must not redefine PASG economics.";
 
 #[cw_serde]
 struct SplitRouterRouteWorldRevenueExecuteMsg {
@@ -35,6 +40,30 @@ struct SplitRouterRouteWorldRevenueExecuteMsg {
 struct RouteWorldRevenuePayload {
     world_nft_id: String,
     world_collection: String,
+}
+
+fn default_pasg_utility_metadata() -> PasgUtilityMetadata {
+    PasgUtilityMetadata {
+        settlement_kind: PasgSettlementKind::NativeDenom,
+        compatibility_shim: None,
+        compatibility_note: PASG_COMPATIBILITY_NOTE.to_string(),
+    }
+}
+
+fn default_pasg_execute_routes() -> Vec<PasgUtilityExecuteRoute> {
+    vec![
+        PasgUtilityExecuteRoute::DepositCrypto,
+        PasgUtilityExecuteRoute::ReportFiatPurchase,
+        PasgUtilityExecuteRoute::WithdrawPoints,
+        PasgUtilityExecuteRoute::DistributeWorldRevenue,
+        PasgUtilityExecuteRoute::BatchDistributeRevenue,
+    ]
+}
+
+fn pasg_per_point(points_per_pasg: Uint128) -> Decimal {
+    Decimal::one()
+        .checked_div(Decimal::from_ratio(points_per_pasg, Uint128::one()))
+        .unwrap_or(Decimal::zero())
 }
 
 // ========================================
@@ -49,6 +78,10 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if msg.points_per_denom.is_zero() {
+        return Err(ContractError::InvalidConversionRate {});
+    }
 
     let admin = deps.api.addr_validate(&msg.admin)?;
     let split_router = deps.api.addr_validate(&msg.split_router)?;
@@ -75,6 +108,7 @@ pub fn instantiate(
         backend_operator,
         pasg_denom: msg.denom,
         points_per_pasg: msg.points_per_denom,
+        pasg_utility: default_pasg_utility_metadata(),
         fiat_oracle,
         stripe_webhook_validator,
         paused: false,
@@ -247,20 +281,20 @@ fn query_registered_world_collection(
     world_collection: &str,
 ) -> Result<Addr, ContractError> {
     let world_collection_addr = deps.api.addr_validate(world_collection)?;
-    let response: RegistryCollectionResponse =
-        deps.querier
-            .query(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: registry.to_string(),
-                msg: to_json_binary(&RegistryQueryMsg::Collection {
-                    address: world_collection_addr.to_string(),
-                })?,
-            }))
-            .map_err(|_| ContractError::InvalidWorldCollection {
-                reason: format!(
-                    "collection {} could not be resolved from registry",
-                    world_collection_addr
-                ),
-            })?;
+    let response: RegistryCollectionResponse = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: registry.to_string(),
+            msg: to_json_binary(&RegistryQueryMsg::Collection {
+                address: world_collection_addr.to_string(),
+            })?,
+        }))
+        .map_err(|_| ContractError::InvalidWorldCollection {
+            reason: format!(
+                "collection {} could not be resolved from registry",
+                world_collection_addr
+            ),
+        })?;
 
     let collection = response
         .collection
@@ -421,16 +455,17 @@ fn execute_report_fiat_purchase(
     FIAT_PURCHASE_TX_IDS.save(deps.storage, transaction_id.as_str(), &true)?;
 
     // Update user balance
-    let mut user_balance = USER_BALANCES
-        .may_load(deps.storage, &user_addr)?
-        .unwrap_or(UserBalance {
-            user: user_addr.clone(),
-            points_balance: Uint128::zero(),
-            total_deposited_pasg: Uint128::zero(),
-            total_spent_points: Uint128::zero(),
-            total_sessions: 0,
-            last_activity: env.block.time,
-        });
+    let mut user_balance =
+        USER_BALANCES
+            .may_load(deps.storage, &user_addr)?
+            .unwrap_or(UserBalance {
+                user: user_addr.clone(),
+                points_balance: Uint128::zero(),
+                total_deposited_pasg: Uint128::zero(),
+                total_spent_points: Uint128::zero(),
+                total_sessions: 0,
+                last_activity: env.block.time,
+            });
 
     user_balance.points_balance += points_awarded;
     user_balance.total_deposited_pasg += pasg_amount;
@@ -573,11 +608,11 @@ fn execute_start_session(
     }
 
     // Verify user has balance
-    let user_balance = USER_BALANCES
-        .load(deps.storage, &user_addr)
-        .map_err(|_| ContractError::UserBalanceNotFound {
+    let user_balance = USER_BALANCES.load(deps.storage, &user_addr).map_err(|_| {
+        ContractError::UserBalanceNotFound {
             user: user_addr.to_string(),
-        })?;
+        }
+    })?;
 
     if user_balance.points_balance.is_zero() {
         return Err(ContractError::InsufficientPoints {
@@ -880,7 +915,12 @@ fn execute_batch_distribute_revenue(
     let mut response = Response::new().add_attribute("action", "batch_distribute_revenue");
 
     for world_nft_id in world_nft_ids {
-        match execute_distribute_world_revenue(deps.branch(), env.clone(), info.clone(), world_nft_id.clone()) {
+        match execute_distribute_world_revenue(
+            deps.branch(),
+            env.clone(),
+            info.clone(),
+            world_nft_id.clone(),
+        ) {
             Ok(res) => {
                 response = response.add_attributes(res.attributes);
                 response = response.add_submessages(res.messages);
@@ -923,6 +963,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&query_pending_revenue(deps, world_nft_id)?)
         }
         QueryMsg::ConversionRate {} => to_json_binary(&query_conversion_rate(deps)?),
+        QueryMsg::PasgUtility {} => to_json_binary(&query_pasg_utility(deps)?),
         QueryMsg::PlatformStats {} => to_json_binary(&query_platform_stats(deps)?),
     }
 }
@@ -936,6 +977,7 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
         backend_operator: config.backend_operator,
         pasg_denom: config.pasg_denom,
         points_per_pasg: config.points_per_pasg,
+        pasg_utility: config.pasg_utility,
         fiat_oracle: config.fiat_oracle,
         stripe_webhook_validator: config.stripe_webhook_validator,
         paused: config.paused,
@@ -1108,17 +1150,33 @@ fn query_pending_revenue(deps: Deps, world_nft_id: String) -> StdResult<PendingR
 fn query_conversion_rate(deps: Deps) -> StdResult<ConversionRateResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    let pasg_per_point = Decimal::one()
-        .checked_div(Decimal::from_ratio(
-            config.points_per_pasg,
-            Uint128::one(),
-        ))
-        .unwrap_or(Decimal::zero());
-
     Ok(ConversionRateResponse {
         points_per_pasg: config.points_per_pasg,
-        pasg_per_point,
+        pasg_per_point: pasg_per_point(config.points_per_pasg),
         pasg_denom: config.pasg_denom,
+    })
+}
+
+fn query_pasg_utility(deps: Deps) -> StdResult<PasgUtilityResponse> {
+    let config = CONFIG.load(deps.storage)?;
+
+    Ok(PasgUtilityResponse {
+        canonical_denom: config.pasg_denom.clone(),
+        points_per_pasg: config.points_per_pasg,
+        pasg_per_point: pasg_per_point(config.points_per_pasg),
+        metadata: config.pasg_utility,
+        canonical_query: PasgUtilityQueryRoute::PasgUtility,
+        canonical_execute: default_pasg_execute_routes(),
+        compatibility_router: PasgCompatibilityRouterResponse {
+            contract: config.split_router,
+            forwards_native_denom: true,
+            execute_route: PasgCompatibilityRouterExecuteRoute::RouteWorldRevenue,
+        },
+        scope_boundary: PasgScopeBoundaryResponse {
+            settlement: PasgBusinessBoundary::OnChainUtilitySurface,
+            platform_billing: PasgBusinessBoundary::OffChainService,
+            subscriptions: PasgBusinessBoundary::OffChainService,
+        },
     })
 }
 

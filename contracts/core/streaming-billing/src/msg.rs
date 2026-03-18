@@ -9,12 +9,12 @@ pub struct InstantiateMsg {
     pub backend_operator: Option<String>,
 
     // Payment configuration
-    pub denom: String,  // e.g., "upasg"
-    pub points_per_denom: Uint128,  // e.g., 100 points = 1 PASG
+    pub denom: String,             // e.g., "upasg"
+    pub points_per_denom: Uint128, // e.g., 100 points = 1 PASG
 
     // Fiat integration
-    pub fiat_oracle: Option<String>,  // Off-chain service that reports fiat → crypto conversions
-    pub stripe_webhook_validator: Option<String>,  // Contract that validates Stripe webhooks
+    pub fiat_oracle: Option<String>, // Off-chain service that reports fiat → crypto conversions
+    pub stripe_webhook_validator: Option<String>, // Contract that validates Stripe webhooks
 }
 
 #[cw_serde]
@@ -32,7 +32,6 @@ pub enum ExecuteMsg {
     // ========================================
     // CREDIT/POINTS MANAGEMENT
     // ========================================
-
     /// User deposits PASG directly to buy streaming points
     /// Payment comes in msg.funds
     DepositCrypto {},
@@ -41,22 +40,19 @@ pub enum ExecuteMsg {
     /// Only callable by fiat_oracle
     ReportFiatPurchase {
         user: String,
-        fiat_amount_usd: Uint128,  // Amount paid in USD cents (e.g., 1000 = $10.00)
-        pasg_amount: Uint128,       // Equivalent PASG amount (after conversion)
-        points_awarded: Uint128,    // Points to credit
-        transaction_id: String,     // Stripe payment intent ID
+        fiat_amount_usd: Uint128, // Amount paid in USD cents (e.g., 1000 = $10.00)
+        pasg_amount: Uint128,     // Equivalent PASG amount (after conversion)
+        points_awarded: Uint128,  // Points to credit
+        transaction_id: String,   // Stripe payment intent ID
         timestamp: Timestamp,
     },
 
     /// User withdraws unused points back to PASG (with small fee)
-    WithdrawPoints {
-        points: Uint128,
-    },
+    WithdrawPoints { points: Uint128 },
 
     // ========================================
     // STREAMING SESSIONS
     // ========================================
-
     /// Start a streaming session (called by backend)
     StartSession {
         user: String,
@@ -71,14 +67,11 @@ pub enum ExecuteMsg {
     },
 
     /// Force stop session (admin only, for emergencies)
-    ForceStopSession {
-        session_id: u64,
-    },
+    ForceStopSession { session_id: u64 },
 
     // ========================================
     // WORLD CONFIGURATION
     // ========================================
-
     /// Set streaming rate for a world (called by world owner or admin)
     SetWorldRate {
         world_nft_id: String,
@@ -95,16 +88,74 @@ pub enum ExecuteMsg {
     // ========================================
     // REVENUE DISTRIBUTION
     // ========================================
-
     /// Distribute accumulated revenue for a world (anyone can call)
-    DistributeWorldRevenue {
-        world_nft_id: String,
-    },
+    DistributeWorldRevenue { world_nft_id: String },
 
     /// Batch distribute for multiple worlds
-    BatchDistributeRevenue {
-        world_nft_ids: Vec<String>,
-    },
+    BatchDistributeRevenue { world_nft_ids: Vec<String> },
+}
+
+#[cw_serde]
+pub enum PasgSettlementKind {
+    NativeDenom,
+}
+
+#[cw_serde]
+pub enum PasgCompatibilityShimKind {
+    NativeDenomAdapter,
+}
+
+#[cw_serde]
+pub struct PasgCompatibilityShim {
+    pub kind: PasgCompatibilityShimKind,
+    pub forwards_to_native_denom: bool,
+}
+
+#[cw_serde]
+pub struct PasgUtilityMetadata {
+    pub settlement_kind: PasgSettlementKind,
+    pub compatibility_shim: Option<PasgCompatibilityShim>,
+    pub compatibility_note: String,
+}
+
+#[cw_serde]
+pub enum PasgUtilityQueryRoute {
+    PasgUtility,
+    ConversionRate,
+}
+
+#[cw_serde]
+pub enum PasgUtilityExecuteRoute {
+    DepositCrypto,
+    ReportFiatPurchase,
+    WithdrawPoints,
+    DistributeWorldRevenue,
+    BatchDistributeRevenue,
+}
+
+#[cw_serde]
+pub enum PasgCompatibilityRouterExecuteRoute {
+    RouteWorldRevenue,
+}
+
+#[cw_serde]
+pub struct PasgCompatibilityRouterResponse {
+    pub contract: Addr,
+    pub forwards_native_denom: bool,
+    pub execute_route: PasgCompatibilityRouterExecuteRoute,
+}
+
+#[cw_serde]
+pub enum PasgBusinessBoundary {
+    OnChainUtilitySurface,
+    OffChainService,
+}
+
+#[cw_serde]
+pub struct PasgScopeBoundaryResponse {
+    pub settlement: PasgBusinessBoundary,
+    pub platform_billing: PasgBusinessBoundary,
+    pub subscriptions: PasgBusinessBoundary,
 }
 
 #[cw_serde]
@@ -153,6 +204,10 @@ pub enum QueryMsg {
     #[returns(ConversionRateResponse)]
     ConversionRate {},
 
+    /// Get the canonical PASG utility surface for integrators
+    #[returns(PasgUtilityResponse)]
+    PasgUtility {},
+
     /// Get total platform statistics
     #[returns(PlatformStatsResponse)]
     PlatformStats {},
@@ -170,6 +225,7 @@ pub struct ConfigResponse {
     pub backend_operator: Option<Addr>,
     pub pasg_denom: String,
     pub points_per_pasg: Uint128,
+    pub pasg_utility: PasgUtilityMetadata,
     pub fiat_oracle: Option<Addr>,
     pub stripe_webhook_validator: Option<Addr>,
     pub paused: bool,
@@ -189,16 +245,16 @@ pub struct PurchaseRecord {
     pub id: u64,
     pub timestamp: Timestamp,
     pub purchase_type: PurchaseType,
-    pub amount_usd: Option<Uint128>,   // If fiat purchase
-    pub amount_pasg: Uint128,           // Crypto amount
+    pub amount_usd: Option<Uint128>, // If fiat purchase
+    pub amount_pasg: Uint128,        // Crypto amount
     pub points_received: Uint128,
     pub transaction_id: Option<String>, // Stripe ID or tx hash
 }
 
 #[cw_serde]
 pub enum PurchaseType {
-    CryptoDirect,      // User deposited PASG directly
-    FiatConverted,     // User paid with credit card → converted to PASG
+    CryptoDirect,  // User deposited PASG directly
+    FiatConverted, // User paid with credit card → converted to PASG
 }
 
 #[cw_serde]
@@ -237,7 +293,7 @@ pub struct WorldConfigResponse {
     pub world_collection: Addr,
     pub owner: Addr,
     pub points_per_hour: Uint128,
-    pub pasg_per_hour: Uint128,  // Calculated from points
+    pub pasg_per_hour: Uint128, // Calculated from points
     pub active: bool,
 }
 
@@ -264,6 +320,18 @@ pub struct ConversionRateResponse {
     pub points_per_pasg: Uint128,
     pub pasg_per_point: Decimal,
     pub pasg_denom: String,
+}
+
+#[cw_serde]
+pub struct PasgUtilityResponse {
+    pub canonical_denom: String,
+    pub points_per_pasg: Uint128,
+    pub pasg_per_point: Decimal,
+    pub metadata: PasgUtilityMetadata,
+    pub canonical_query: PasgUtilityQueryRoute,
+    pub canonical_execute: Vec<PasgUtilityExecuteRoute>,
+    pub compatibility_router: PasgCompatibilityRouterResponse,
+    pub scope_boundary: PasgScopeBoundaryResponse,
 }
 
 #[cw_serde]

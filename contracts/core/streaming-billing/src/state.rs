@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
 
-use crate::msg::{PurchaseType, SessionStatus};
+use crate::msg::{PasgUtilityMetadata, PurchaseType, SessionStatus};
 
 #[cw_serde]
 pub struct Config {
@@ -12,6 +12,7 @@ pub struct Config {
     pub backend_operator: Option<Addr>,
     pub pasg_denom: String,
     pub points_per_pasg: Uint128,
+    pub pasg_utility: PasgUtilityMetadata,
     pub fiat_oracle: Option<Addr>,
     pub stripe_webhook_validator: Option<Addr>,
     pub paused: bool,

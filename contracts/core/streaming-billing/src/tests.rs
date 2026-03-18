@@ -1,20 +1,22 @@
 use cosmwasm_std::{
     from_json,
     testing::{message_info, mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_json_binary, Addr, ContractResult, OwnedDeps, SystemError, SystemResult, Timestamp,
-    Uint128, WasmQuery,
+    to_json_binary, Addr, ContractResult, OwnedDeps, SystemError, SystemResult, Timestamp, Uint128,
+    WasmQuery,
 };
 
 use crate::{
-    contract::{execute, instantiate},
+    contract::{execute, instantiate, query},
     error::ContractError,
     msg::{
-        Cw721QueryMsg, ExecuteMsg, InstantiateMsg, OwnerOfResponse, RegistryCollection,
+        ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
+        OwnerOfResponse, PasgBusinessBoundary, PasgSettlementKind, PasgUtilityExecuteRoute,
+        PasgUtilityQueryRoute, PasgUtilityResponse, QueryMsg, RegistryCollection,
         RegistryCollectionResponse, RegistryQueryMsg, SessionStatus,
     },
     state::{
-        Config, PlatformStats, StreamingSession, UserBalance, WorldConfig, CONFIG,
-        PLATFORM_STATS, SESSION_COUNTER, SESSIONS, USER_BALANCES, USER_SESSIONS, WORLD_CONFIGS,
+        Config, PlatformStats, StreamingSession, UserBalance, WorldConfig, CONFIG, PLATFORM_STATS,
+        SESSIONS, SESSION_COUNTER, USER_BALANCES, USER_SESSIONS, WORLD_CONFIGS,
     },
 };
 
@@ -138,7 +140,9 @@ fn seed_active_session(
     USER_SESSIONS
         .save(deps.as_mut().storage, (&user_addr, session_id), &())
         .unwrap();
-    SESSION_COUNTER.save(deps.as_mut().storage, &session_id).unwrap();
+    SESSION_COUNTER
+        .save(deps.as_mut().storage, &session_id)
+        .unwrap();
 }
 
 fn mock_world_queries(
@@ -476,4 +480,115 @@ fn update_config_persists_backend_operator() {
 
     let stats: PlatformStats = PLATFORM_STATS.load(deps.as_ref().storage).unwrap();
     assert_eq!(stats.total_sessions, 0);
+}
+
+#[test]
+fn instantiate_rejects_zero_pasg_conversion_rate() {
+    let mut deps = mock_dependencies();
+
+    let err = instantiate(
+        deps.as_mut(),
+        mock_env(),
+        message_info(&addr("deployer"), &[]),
+        InstantiateMsg {
+            admin: addr(ADMIN).to_string(),
+            split_router: addr(SPLIT_ROUTER).to_string(),
+            registry: addr(REGISTRY).to_string(),
+            backend_operator: None,
+            denom: "upasg".to_string(),
+            points_per_denom: Uint128::zero(),
+            fiat_oracle: None,
+            stripe_webhook_validator: None,
+        },
+    )
+    .unwrap_err();
+
+    assert_eq!(err, ContractError::InvalidConversionRate {});
+}
+
+#[test]
+fn config_query_exposes_pasg_utility_metadata() {
+    let mut deps = mock_dependencies();
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+
+    let response: ConfigResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+
+    assert_eq!(response.pasg_denom, "upasg");
+    assert_eq!(response.points_per_pasg, Uint128::new(100));
+    assert_eq!(
+        response.pasg_utility.settlement_kind,
+        PasgSettlementKind::NativeDenom
+    );
+    assert!(response.pasg_utility.compatibility_shim.is_none());
+    assert!(response
+        .pasg_utility
+        .compatibility_note
+        .contains("forward to native upasg settlement"));
+}
+
+#[test]
+fn pasg_utility_query_is_native_first_source_of_truth() {
+    let mut deps = mock_dependencies();
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+
+    let utility: PasgUtilityResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::PasgUtility {}).unwrap()).unwrap();
+    let conversion_rate: ConversionRateResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::ConversionRate {}).unwrap()).unwrap();
+
+    assert_eq!(utility.canonical_denom, "upasg");
+    assert_eq!(utility.points_per_pasg, Uint128::new(100));
+    assert_eq!(utility.pasg_per_point, conversion_rate.pasg_per_point);
+    assert_eq!(utility.canonical_denom, conversion_rate.pasg_denom);
+    assert_eq!(
+        utility.metadata.settlement_kind,
+        PasgSettlementKind::NativeDenom
+    );
+    assert!(utility.metadata.compatibility_shim.is_none());
+    assert_eq!(utility.canonical_query, PasgUtilityQueryRoute::PasgUtility);
+    assert_eq!(
+        utility.canonical_execute,
+        vec![
+            PasgUtilityExecuteRoute::DepositCrypto,
+            PasgUtilityExecuteRoute::ReportFiatPurchase,
+            PasgUtilityExecuteRoute::WithdrawPoints,
+            PasgUtilityExecuteRoute::DistributeWorldRevenue,
+            PasgUtilityExecuteRoute::BatchDistributeRevenue,
+        ]
+    );
+    assert_eq!(utility.compatibility_router.contract, addr(SPLIT_ROUTER));
+    assert!(utility.compatibility_router.forwards_native_denom);
+    assert_eq!(
+        utility.scope_boundary.settlement,
+        PasgBusinessBoundary::OnChainUtilitySurface
+    );
+    assert_eq!(
+        utility.scope_boundary.platform_billing,
+        PasgBusinessBoundary::OffChainService
+    );
+    assert_eq!(
+        utility.scope_boundary.subscriptions,
+        PasgBusinessBoundary::OffChainService
+    );
+}
+
+#[test]
+fn canonical_pasg_query_shape_is_stable() {
+    let binary = to_json_binary(&QueryMsg::PasgUtility {}).unwrap();
+    assert_eq!(
+        String::from_utf8(binary.to_vec()).unwrap(),
+        r#"{"pasg_utility":{}}"#
+    );
+}
+
+#[test]
+fn split_router_message_surface_stays_generic_for_pasg_policy() {
+    let split_router_msg_source =
+        include_str!("../../split-router/src/msg.rs").to_ascii_lowercase();
+
+    assert!(!split_router_msg_source.contains("pasg"));
+    assert!(!split_router_msg_source.contains("upasg"));
 }
