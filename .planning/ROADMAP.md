@@ -10,7 +10,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions if brownfield realities require them later
 
-- [ ] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
+- [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
 - [ ] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
 - [ ] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics.
 - [ ] **Phase 4: PASG Staking & Rewards** - Add staking, unbonding, and emission logic aligned to the token program.
@@ -32,9 +32,9 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md - Harden streaming-billing authority, verified world ownership, and replay/bounds coverage
-- [ ] 01-02-PLAN.md - Correct marketplace/registry query semantics and factory reply-path behavior with tests
-- [ ] 01-03-PLAN.md - Publish the protocol boundary, safety matrix, and aligned streaming-billing operational docs
+- [x] 01-01-PLAN.md - Harden streaming-billing authority, verified world ownership, and replay/bounds coverage
+- [x] 01-02-PLAN.md - Correct marketplace/registry query semantics and factory reply-path behavior with tests
+- [x] 01-03-PLAN.md - Publish the protocol boundary, safety matrix, and aligned streaming-billing operational docs
 
 ### Phase 2: PASG Utility Surface
 **Goal**: Turn PASG from an assumed denom into an explicit protocol utility layer that contracts and services can integrate consistently.
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Protocol Hardening & Boundaries | 0/3 | Not started | - |
+| 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
 | 2. PASG Utility Surface | 0/3 | Not started | - |
 | 3. PASG Governance | 0/3 | Not started | - |
 | 4. PASG Staking & Rewards | 0/3 | Not started | - |

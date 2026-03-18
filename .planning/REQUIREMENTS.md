@@ -1,4 +1,4 @@
-﻿# Requirements: Passage On-Chain Protocol Layer
+# Requirements: Passage On-Chain Protocol Layer
 
 **Defined:** 2026-03-17
 **Core Value:** PASG must provide real on-chain utility for payments, governance, staking, and creator monetization while keeping platform UX and infrastructure concerns off-chain.
@@ -7,9 +7,9 @@
 
 ### Protocol Boundary & Safety
 
-- [ ] **ARCH-01**: Protocol contracts keep ownership, payments, governance, and economic policy on-chain while leaving streaming infrastructure, rendering, search, analytics, and similar UX systems off-chain.
-- [ ] **ARCH-02**: Critical brownfield auth, query, and reply-path defects are fixed before new PASG economics depend on those contracts.
-- [ ] **ARCH-03**: Every long-lived contract in scope has an explicit pause, migration, or deploy-and-cutover strategy that preserves active economic flows.
+- [x] **ARCH-01**: Protocol contracts keep ownership, payments, governance, and economic policy on-chain while leaving streaming infrastructure, rendering, search, analytics, and similar UX systems off-chain.
+- [x] **ARCH-02**: Critical brownfield auth, query, and reply-path defects are fixed before new PASG economics depend on those contracts.
+- [x] **ARCH-03**: Every long-lived contract in scope has an explicit pause, migration, or deploy-and-cutover strategy that preserves active economic flows.
 
 ### PASG Utility
 
@@ -39,7 +39,7 @@
 
 - [ ] **REV-01**: Platform services can execute creator/platform/partner revenue splits for world, marketplace, and asset flows from on-chain rules.
 - [ ] **REV-02**: Revenue execution supports session-based billing, escrow, and refund-safe settlement where the product architecture requires it.
-- [ ] **REV-03**: Fiat-assisted purchase flows into PASG-denominated accounting are protected by explicit oracle, replay, and freshness controls.
+- [x] **REV-03**: Fiat-assisted purchase flows into PASG-denominated accounting are protected by explicit oracle, replay, and freshness controls.
 
 ### Multi-Economy
 
@@ -70,10 +70,10 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
-| REV-03 | Phase 1 | Pending |
+| ARCH-01 | Phase 1 | Complete |
+| ARCH-02 | Phase 1 | Complete |
+| ARCH-03 | Phase 1 | Complete |
+| REV-03 | Phase 1 | Complete |
 | PASG-01 | Phase 2 | Pending |
 | PASG-02 | Phase 2 | Pending |
 | PASG-03 | Phase 2 | Pending |
@@ -101,4 +101,4 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-18 after Phase 1 completion*
