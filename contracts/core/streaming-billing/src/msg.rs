@@ -9,7 +9,7 @@ pub struct InstantiateMsg {
     pub backend_operator: Option<String>,
 
     // Payment configuration
-    pub denom: String,             // e.g., "upasg"
+    pub denom: String, // Compatibility alias only; runtime canonicalizes to "upasg".
     pub points_per_denom: Uint128, // e.g., 100 points = 1 PASG
 
     // Fiat integration
@@ -223,7 +223,7 @@ pub struct ConfigResponse {
     pub split_router: Addr,
     pub registry: Addr,
     pub backend_operator: Option<Addr>,
-    pub pasg_denom: String,
+    pub pasg_denom: String, // Canonical native settlement denom: "upasg"
     pub points_per_pasg: Uint128,
     pub pasg_utility: PasgUtilityMetadata,
     pub fiat_oracle: Option<Addr>,

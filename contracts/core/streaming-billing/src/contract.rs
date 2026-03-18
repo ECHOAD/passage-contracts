@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, entry_point, to_json_binary, Addr, BankMsg, Binary, Decimal, Deps, DepsMut, Env,
+    coins, entry_point, to_json_binary, Addr, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env,
     MessageInfo, QueryRequest, Response, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
@@ -10,12 +10,12 @@ use crate::error::ContractError;
 use crate::msg::{
     ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
     OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityRouterExecuteRoute,
-    PasgCompatibilityRouterResponse, PasgScopeBoundaryResponse, PasgSettlementKind,
-    PasgUtilityExecuteRoute, PasgUtilityMetadata, PasgUtilityQueryRoute, PasgUtilityResponse,
-    PendingRevenueResponse, PlatformStatsResponse, PurchaseHistoryResponse, PurchaseRecord,
-    PurchaseType, QueryMsg, RegistryCollectionResponse, RegistryQueryMsg, SessionResponse,
-    SessionStatus, UserBalanceResponse, UserSessionsResponse, WorldConfigResponse,
-    WorldStatsResponse,
+    PasgCompatibilityRouterResponse, PasgCompatibilityShim, PasgCompatibilityShimKind,
+    PasgScopeBoundaryResponse, PasgSettlementKind, PasgUtilityExecuteRoute, PasgUtilityMetadata,
+    PasgUtilityQueryRoute, PasgUtilityResponse, PendingRevenueResponse, PlatformStatsResponse,
+    PurchaseHistoryResponse, PurchaseRecord, PurchaseType, QueryMsg, RegistryCollectionResponse,
+    RegistryQueryMsg, SessionResponse, SessionStatus, UserBalanceResponse, UserSessionsResponse,
+    WorldConfigResponse, WorldStatsResponse,
 };
 use crate::state::{
     Config, PendingRevenue, PlatformStats, Purchase, StreamingSession, UserBalance, WorldConfig,
@@ -26,6 +26,7 @@ use crate::state::{
 
 const CONTRACT_NAME: &str = "crates.io:streaming-billing";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CANONICAL_PASG_DENOM: &str = "upasg";
 const MAX_FIAT_REPORT_AGE_SECONDS: u64 = 900;
 const MAX_SESSION_DURATION_SECONDS: u64 = 86_400;
 const PASG_COMPATIBILITY_NOTE: &str =
@@ -42,10 +43,23 @@ struct RouteWorldRevenuePayload {
     world_collection: String,
 }
 
-fn default_pasg_utility_metadata() -> PasgUtilityMetadata {
+fn compatibility_shim_for_declared_denom(declared_denom: &str) -> Option<PasgCompatibilityShim> {
+    if declared_denom == CANONICAL_PASG_DENOM {
+        None
+    } else {
+        Some(PasgCompatibilityShim {
+            kind: PasgCompatibilityShimKind::NativeDenomAdapter,
+            forwards_to_native_denom: true,
+        })
+    }
+}
+
+fn default_pasg_utility_metadata(
+    compatibility_shim: Option<PasgCompatibilityShim>,
+) -> PasgUtilityMetadata {
     PasgUtilityMetadata {
         settlement_kind: PasgSettlementKind::NativeDenom,
-        compatibility_shim: None,
+        compatibility_shim,
         compatibility_note: PASG_COMPATIBILITY_NOTE.to_string(),
     }
 }
@@ -58,6 +72,31 @@ fn default_pasg_execute_routes() -> Vec<PasgUtilityExecuteRoute> {
         PasgUtilityExecuteRoute::DistributeWorldRevenue,
         PasgUtilityExecuteRoute::BatchDistributeRevenue,
     ]
+}
+
+fn require_native_pasg_payment(funds: &[Coin]) -> Result<Uint128, ContractError> {
+    if let Some(payment) = funds.iter().find(|coin| coin.denom == CANONICAL_PASG_DENOM) {
+        if let Some(unexpected) = funds
+            .iter()
+            .find(|coin| coin.denom != CANONICAL_PASG_DENOM && !coin.amount.is_zero())
+        {
+            return Err(ContractError::InvalidPayment {
+                expected: CANONICAL_PASG_DENOM.to_string(),
+                denom: unexpected.denom.clone(),
+            });
+        }
+
+        return Ok(payment.amount);
+    }
+
+    if let Some(unexpected) = funds.iter().find(|coin| !coin.amount.is_zero()) {
+        return Err(ContractError::InvalidPayment {
+            expected: CANONICAL_PASG_DENOM.to_string(),
+            denom: unexpected.denom.clone(),
+        });
+    }
+
+    Err(ContractError::NoPayment {})
 }
 
 fn pasg_per_point(points_per_pasg: Uint128) -> Decimal {
@@ -101,14 +140,15 @@ pub fn instantiate(
         .map(|addr| deps.api.addr_validate(&addr))
         .transpose()?;
 
+    let compatibility_shim = compatibility_shim_for_declared_denom(&msg.denom);
     let config = Config {
         admin,
         split_router,
         registry,
         backend_operator,
-        pasg_denom: msg.denom,
+        pasg_denom: CANONICAL_PASG_DENOM.to_string(),
         points_per_pasg: msg.points_per_denom,
-        pasg_utility: default_pasg_utility_metadata(),
+        pasg_utility: default_pasg_utility_metadata(compatibility_shim),
         fiat_oracle,
         stripe_webhook_validator,
         paused: false,
@@ -344,13 +384,7 @@ fn execute_deposit_crypto(
     let config = CONFIG.load(deps.storage)?;
 
     // Verify payment
-    let payment = info
-        .funds
-        .iter()
-        .find(|coin| coin.denom == config.pasg_denom)
-        .ok_or(ContractError::NoPayment {})?;
-
-    let pasg_amount = payment.amount;
+    let pasg_amount = require_native_pasg_payment(&info.funds)?;
 
     // Calculate points to award
     let points_awarded = pasg_amount
@@ -559,7 +593,7 @@ fn execute_withdraw_points(
     // Send PASG back to user
     let send_msg = BankMsg::Send {
         to_address: info.sender.to_string(),
-        amount: coins(amount_to_return.u128(), &config.pasg_denom),
+        amount: coins(amount_to_return.u128(), CANONICAL_PASG_DENOM),
     };
 
     Ok(Response::new()
@@ -889,7 +923,7 @@ fn execute_distribute_world_revenue(
                 world_collection: world_config.world_collection.to_string(),
             },
         })?,
-        funds: coins(pending.pending_pasg.u128(), &config.pasg_denom),
+        funds: coins(pending.pending_pasg.u128(), CANONICAL_PASG_DENOM),
     };
 
     // Reset pending revenue
@@ -1153,7 +1187,7 @@ fn query_conversion_rate(deps: Deps) -> StdResult<ConversionRateResponse> {
     Ok(ConversionRateResponse {
         points_per_pasg: config.points_per_pasg,
         pasg_per_point: pasg_per_point(config.points_per_pasg),
-        pasg_denom: config.pasg_denom,
+        pasg_denom: CANONICAL_PASG_DENOM.to_string(),
     })
 }
 
@@ -1161,7 +1195,7 @@ fn query_pasg_utility(deps: Deps) -> StdResult<PasgUtilityResponse> {
     let config = CONFIG.load(deps.storage)?;
 
     Ok(PasgUtilityResponse {
-        canonical_denom: config.pasg_denom.clone(),
+        canonical_denom: CANONICAL_PASG_DENOM.to_string(),
         points_per_pasg: config.points_per_pasg,
         pasg_per_point: pasg_per_point(config.points_per_pasg),
         metadata: config.pasg_utility,

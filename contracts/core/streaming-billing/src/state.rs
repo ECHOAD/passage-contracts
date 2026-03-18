@@ -10,9 +10,9 @@ pub struct Config {
     pub split_router: Addr,
     pub registry: Addr,
     pub backend_operator: Option<Addr>,
-    pub pasg_denom: String,
+    pub pasg_denom: String, // Canonical native settlement denom: upasg
     pub points_per_pasg: Uint128,
-    pub pasg_utility: PasgUtilityMetadata,
+    pub pasg_utility: PasgUtilityMetadata, // Canonical utility stance plus compatibility shim metadata
     pub fiat_oracle: Option<Addr>,
     pub stripe_webhook_validator: Option<Addr>,
     pub paused: bool,

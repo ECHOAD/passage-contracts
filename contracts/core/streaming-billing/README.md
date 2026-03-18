@@ -9,6 +9,7 @@ This contract is the repo's canonical PASG utility surface.
 - `upasg` is the native settlement denom and the source of truth for PASG accounting in this workspace.
 - `QueryMsg::PasgUtility {}` is the integrator-facing query for canonical denom, conversion semantics, compatibility metadata, and scope boundaries.
 - `QueryMsg::ConversionRate {}` remains available for lightweight point-to-PASG conversion reads, but it is subordinate to the canonical PASG utility query.
+- The instantiate-time `denom` field is a compatibility alias only; runtime settlement, withdrawal, and revenue routing all canonicalize to native `upasg`.
 - If a wrapper or adapter is ever introduced, it is compatibility-only and must forward to the native `upasg` path without changing PASG economics.
 
 ## What The Contract Guarantees

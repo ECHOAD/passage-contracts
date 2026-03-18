@@ -1,8 +1,8 @@
 use cosmwasm_std::{
-    from_json,
+    coins, from_json,
     testing::{message_info, mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_json_binary, Addr, ContractResult, OwnedDeps, SystemError, SystemResult, Timestamp, Uint128,
-    WasmQuery,
+    to_json_binary, Addr, BankMsg, ContractResult, CosmosMsg, OwnedDeps, SystemError,
+    SystemResult, Timestamp, Uint128, WasmQuery, WasmMsg,
 };
 
 use crate::{
@@ -10,13 +10,15 @@ use crate::{
     error::ContractError,
     msg::{
         ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
-        OwnerOfResponse, PasgBusinessBoundary, PasgSettlementKind, PasgUtilityExecuteRoute,
-        PasgUtilityQueryRoute, PasgUtilityResponse, QueryMsg, RegistryCollection,
-        RegistryCollectionResponse, RegistryQueryMsg, SessionStatus,
+        OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityShimKind, PasgSettlementKind,
+        PasgUtilityExecuteRoute, PasgUtilityQueryRoute, PasgUtilityResponse, QueryMsg,
+        RegistryCollection, RegistryCollectionResponse, RegistryQueryMsg, SessionStatus,
+        UserBalanceResponse,
     },
     state::{
-        Config, PlatformStats, StreamingSession, UserBalance, WorldConfig, CONFIG, PLATFORM_STATS,
-        SESSIONS, SESSION_COUNTER, USER_BALANCES, USER_SESSIONS, WORLD_CONFIGS,
+        Config, PendingRevenue, PlatformStats, StreamingSession, UserBalance, WorldConfig,
+        CONFIG, PENDING_REVENUE, PLATFORM_STATS, SESSIONS, SESSION_COUNTER, USER_BALANCES,
+        USER_SESSIONS, WORLD_CONFIGS,
     },
 };
 
@@ -47,12 +49,21 @@ fn instantiate_contract(
     backend_operator: Option<&str>,
     fiat_oracle: Option<&str>,
 ) {
+    instantiate_contract_with_denom(deps, backend_operator, fiat_oracle, "upasg");
+}
+
+fn instantiate_contract_with_denom(
+    deps: &mut TestDeps,
+    backend_operator: Option<&str>,
+    fiat_oracle: Option<&str>,
+    denom: &str,
+) {
     let msg = InstantiateMsg {
         admin: addr(ADMIN).to_string(),
         split_router: addr(SPLIT_ROUTER).to_string(),
         registry: addr(REGISTRY).to_string(),
         backend_operator: backend_operator.map(|value| addr(value).to_string()),
-        denom: "upasg".to_string(),
+        denom: denom.to_string(),
         points_per_denom: Uint128::new(100),
         fiat_oracle: fiat_oracle.map(|value| addr(value).to_string()),
         stripe_webhook_validator: None,
@@ -65,6 +76,27 @@ fn instantiate_contract(
         msg,
     )
     .unwrap();
+}
+
+fn seed_pending_revenue(
+    deps: &mut TestDeps,
+    world_nft_id: &str,
+    pending_points: u128,
+    pending_pasg: u128,
+    last_distribution: Option<Timestamp>,
+) {
+    PENDING_REVENUE
+        .save(
+            deps.as_mut().storage,
+            world_nft_id,
+            &PendingRevenue {
+                world_nft_id: world_nft_id.to_string(),
+                pending_points: Uint128::new(pending_points),
+                pending_pasg: Uint128::new(pending_pasg),
+                last_distribution,
+            },
+        )
+        .unwrap();
 }
 
 fn seed_user_balance(deps: &mut TestDeps, env: &cosmwasm_std::Env, user: &str, points: u128) {
@@ -504,6 +536,161 @@ fn instantiate_rejects_zero_pasg_conversion_rate() {
     .unwrap_err();
 
     assert_eq!(err, ContractError::InvalidConversionRate {});
+}
+
+#[test]
+fn instantiate_marks_non_native_denom_as_compatibility_only() {
+    let mut deps = mock_dependencies();
+
+    instantiate_contract_with_denom(&mut deps, Some(BACKEND), Some(FIAT_ORACLE), "legacy-pasg");
+
+    let response: ConfigResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+
+    assert_eq!(response.pasg_denom, "upasg");
+    let shim = response
+        .pasg_utility
+        .compatibility_shim
+        .expect("legacy denom should expose compatibility shim metadata");
+    assert_eq!(shim.kind, PasgCompatibilityShimKind::NativeDenomAdapter);
+    assert!(shim.forwards_to_native_denom);
+    assert!(response
+        .pasg_utility
+        .compatibility_note
+        .contains("native upasg settlement"));
+}
+
+#[test]
+fn deposit_crypto_accepts_native_upasg_and_updates_balance() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+
+    let response = execute(
+        deps.as_mut(),
+        env,
+        message_info(&addr(USER), &coins(12, "upasg")),
+        ExecuteMsg::DepositCrypto {},
+    )
+    .unwrap();
+
+    assert!(response
+        .attributes
+        .iter()
+        .any(|attr| attr.key == "action" && attr.value == "deposit_crypto"));
+    assert!(response
+        .attributes
+        .iter()
+        .any(|attr| attr.key == "pasg_amount" && attr.value == "12"));
+
+    let balance: UserBalanceResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::UserBalance {
+            user: addr(USER).to_string(),
+        })
+        .unwrap())
+        .unwrap();
+
+    assert_eq!(balance.points_balance, Uint128::new(1_200));
+    assert_eq!(balance.total_deposited_pasg, Uint128::new(12));
+}
+
+#[test]
+fn deposit_crypto_rejects_non_pasg_funds() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+
+    let err = execute(
+        deps.as_mut(),
+        env,
+        message_info(&addr(USER), &coins(12, "ujuno")),
+        ExecuteMsg::DepositCrypto {},
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        err,
+        ContractError::InvalidPayment {
+            expected: "upasg".to_string(),
+            denom: "ujuno".to_string(),
+        }
+    );
+}
+
+#[test]
+fn withdraw_points_returns_native_upasg() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+    seed_user_balance(&mut deps, &env, USER, 10_000);
+
+    let response = execute(
+        deps.as_mut(),
+        env,
+        message_info(&addr(USER), &[]),
+        ExecuteMsg::WithdrawPoints {
+            points: Uint128::new(10_000),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(response.messages.len(), 1);
+    match &response.messages[0].msg {
+        CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
+            assert_eq!(to_address, &addr(USER).to_string());
+            assert_eq!(amount, &coins(98, "upasg"));
+        }
+        other => panic!("expected bank send, got {other:?}"),
+    }
+
+    let balance: UserBalanceResponse =
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::UserBalance {
+            user: addr(USER).to_string(),
+        })
+        .unwrap())
+        .unwrap();
+    assert_eq!(balance.points_balance, Uint128::zero());
+}
+
+#[test]
+fn distribute_world_revenue_uses_native_upasg_funds() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+    seed_world_config(&mut deps, &env, WORLD_ID, WORLD_COLLECTION, "creator", 120);
+    seed_pending_revenue(&mut deps, WORLD_ID, 300, 3, None);
+
+    let response = execute(
+        deps.as_mut(),
+        env,
+        message_info(&addr(USER), &[]),
+        ExecuteMsg::DistributeWorldRevenue {
+            world_nft_id: WORLD_ID.to_string(),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(response.messages.len(), 1);
+    match &response.messages[0].msg {
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr,
+            funds,
+            ..
+        }) => {
+            assert_eq!(contract_addr, &addr(SPLIT_ROUTER).to_string());
+            assert_eq!(funds, &coins(3, "upasg"));
+        }
+        other => panic!("expected wasm execute, got {other:?}"),
+    }
+
+    let pending = PENDING_REVENUE.load(deps.as_ref().storage, WORLD_ID).unwrap();
+    assert_eq!(pending.pending_points, Uint128::zero());
+    assert_eq!(pending.pending_pasg, Uint128::zero());
+    assert!(pending.last_distribution.is_some());
 }
 
 #[test]
