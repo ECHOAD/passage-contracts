@@ -51,3 +51,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
         .add_attribute("ecosystem_id", pending.ecosystem_id)
         .add_attribute("nft_type", record.nft_type.to_string()))
 }
+
+#[cfg(test)]
+mod tests;

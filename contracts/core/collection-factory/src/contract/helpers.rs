@@ -48,14 +48,60 @@ pub(super) fn extract_contract_address_from_reply(msg: &Reply) -> Result<String,
         .into_result()
         .map_err(|_| ContractError::InvalidInstantiateReplyData {})?;
 
-    res.events
-        .iter()
-        .find(|e| e.ty == "instantiate")
-        .and_then(|e| {
-            e.attributes
-                .iter()
-                .find(|a| a.key == "_contract_address")
-                .map(|a| a.value.clone())
-        })
-        .ok_or(ContractError::InvalidInstantiateReplyData {})
+    let instantiate_data = res
+        .msg_responses
+        .first()
+        .map(|response| response.value.as_slice())
+        .ok_or(ContractError::InvalidInstantiateReplyData {})?;
+
+    parse_instantiate_response_data(instantiate_data)
+}
+
+fn parse_instantiate_response_data(data: &[u8]) -> Result<String, ContractError> {
+    let mut remaining = data;
+
+    while !remaining.is_empty() {
+        let (field_number, wire_type, after_key) = read_key(remaining)?;
+        if wire_type != 2 {
+            return Err(ContractError::InvalidInstantiateReplyData {});
+        }
+
+        let (value, after_value) = read_length_delimited(after_key)?;
+        if field_number == 1 {
+            return String::from_utf8(value).map_err(|_| ContractError::InvalidInstantiateReplyData {});
+        }
+
+        remaining = after_value;
+    }
+
+    Err(ContractError::InvalidInstantiateReplyData {})
+}
+
+fn read_key(data: &[u8]) -> Result<(u32, u8, &[u8]), ContractError> {
+    let (raw_key, rest) = read_varint(data)?;
+    Ok(((raw_key >> 3) as u32, (raw_key & 0x07) as u8, rest))
+}
+
+fn read_length_delimited(data: &[u8]) -> Result<(Vec<u8>, &[u8]), ContractError> {
+    let (len, rest) = read_varint(data)?;
+    if rest.len() < len {
+        return Err(ContractError::InvalidInstantiateReplyData {});
+    }
+
+    Ok((rest[..len].to_vec(), &rest[len..]))
+}
+
+fn read_varint(data: &[u8]) -> Result<(usize, &[u8]), ContractError> {
+    let mut value: usize = 0;
+    let mut shift = 0usize;
+
+    for (index, byte) in data.iter().enumerate().take(9) {
+        value |= ((byte & 0x7f) as usize) << shift;
+        if byte & 0x80 == 0 {
+            return Ok((value, &data[index + 1..]));
+        }
+        shift += 7;
+    }
+
+    Err(ContractError::InvalidInstantiateReplyData {})
 }

@@ -496,25 +496,22 @@ fn query_is_minter_authorized(
 fn query_authorized_minters(
     deps: Deps,
     collection_address: String,
-    _start_after: Option<String>,
+    start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<AuthorizedMintersResponse> {
     let collection_addr = deps.api.addr_validate(&collection_address)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|minter| deps.api.addr_validate(&minter))
+        .transpose()?
+        .map(Bound::exclusive);
 
     let minters: Vec<Addr> = AUTHORIZED_MINTERS
-        .range(deps.storage, None, None, Order::Ascending)
-        .filter_map(|item| {
-            item.ok().and_then(|((coll, minter), _)| {
-                if coll == collection_addr {
-                    Some(minter)
-                } else {
-                    None
-                }
-            })
-        })
+        .prefix(collection_addr)
+        .range(deps.storage, start, None, Order::Ascending)
+        .map(|item| item.map(|(minter, _)| minter))
         .take(limit)
-        .collect();
+        .collect::<StdResult<Vec<_>>>()?;
 
     Ok(AuthorizedMintersResponse { minters })
 }

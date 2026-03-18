@@ -1,4 +1,5 @@
 use super::*;
+use cw_utils::parse_instantiate_response_data;
 
 pub(super) fn is_admin(config: &Config, addr: &Addr) -> bool {
     config.admin == *addr
@@ -27,4 +28,27 @@ pub(super) fn validate_request_input(
         return Err(ContractError::EmptyImages {});
     }
     Ok(())
+}
+pub(super) fn extract_collection_factory_address_from_reply(
+    msg: &Reply,
+) -> Result<String, ContractError> {
+    let res = msg
+        .result
+        .clone()
+        .into_result()
+        .map_err(|e| ContractError::Std(cosmwasm_std::StdError::generic_err(format!(
+            "SubMsg failed: {}",
+            e
+        ))))?;
+
+    let instantiate_data = res
+        .msg_responses
+        .first()
+        .map(|response| response.value.as_slice())
+        .ok_or(ContractError::ReplyParseError {})?;
+
+    let parsed = parse_instantiate_response_data(instantiate_data)
+        .map_err(|_| ContractError::ReplyParseError {})?;
+
+    Ok(parsed.contract_address)
 }

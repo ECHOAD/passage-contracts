@@ -251,17 +251,24 @@ fn query_asks_by_collection(
 fn query_asks_by_seller(
     deps: Deps,
     seller: String,
-    _start_after: Option<(String, TokenId)>,
+    start_after: Option<(String, TokenId)>,
     limit: Option<u32>,
 ) -> StdResult<AsksResponse> {
     let seller_addr = deps.api.addr_validate(&seller)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|(collection, token_id)| {
+            deps.api
+                .addr_validate(&collection)
+                .map(|collection_addr| Bound::exclusive((collection_addr, token_id)))
+        })
+        .transpose()?;
 
     let ask_list: Vec<Ask> = asks()
         .idx
         .seller
         .prefix(seller_addr)
-        .range(deps.storage, None, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<Vec<_>>>()?;
@@ -271,35 +278,61 @@ fn query_asks_by_seller(
 
 fn query_asks_by_price(
     deps: Deps,
-    _collection: Option<String>,
+    collection: Option<String>,
     start_after: Option<u128>,
     limit: Option<u32>,
     descending: Option<bool>,
 ) -> StdResult<AsksResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let order = if descending.unwrap_or(false) {
+    let descending = descending.unwrap_or(false);
+    let order = if descending {
         Order::Descending
     } else {
         Order::Ascending
     };
     let start =
         start_after.map(|price| Bound::exclusive((price, (Addr::unchecked(""), String::new()))));
+    let collection_addr = collection
+        .map(|collection| deps.api.addr_validate(&collection))
+        .transpose()?;
+    let (min, max) = if descending {
+        (None, start)
+    } else {
+        (start, None)
+    };
 
     let ask_list: Vec<Ask> = asks()
         .idx
         .price
-        .range(deps.storage, start, None, order)
-        .take(limit)
+        .range(deps.storage, min, max, order)
         .map(|item| item.map(|(_, v)| v))
-        .collect::<StdResult<Vec<_>>>()?;
+        .collect::<StdResult<Vec<_>>>()?
+        .into_iter()
+        .filter(|ask| {
+            collection_addr
+                .as_ref()
+                .map_or(true, |collection_addr| &ask.collection == collection_addr)
+        })
+        .take(limit)
+        .collect();
 
     Ok(AsksResponse { asks: ask_list })
 }
 
-fn query_ask_count(deps: Deps, _collection: Option<String>) -> StdResult<CountResponse> {
-    let count = asks()
-        .range(deps.storage, None, None, Order::Ascending)
-        .count() as u64;
+fn query_ask_count(deps: Deps, collection: Option<String>) -> StdResult<CountResponse> {
+    let count = if let Some(collection) = collection {
+        let collection_addr = deps.api.addr_validate(&collection)?;
+        asks()
+            .idx
+            .collection
+            .prefix(collection_addr)
+            .range(deps.storage, None, None, Order::Ascending)
+            .count() as u64
+    } else {
+        asks()
+            .range(deps.storage, None, None, Order::Ascending)
+            .count() as u64
+    };
     Ok(CountResponse { count })
 }
 
@@ -320,17 +353,26 @@ fn query_bids_by_token(
     deps: Deps,
     collection: String,
     token_id: TokenId,
-    _start_after: Option<String>,
+    start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<BidsResponse> {
     let collection_addr = deps.api.addr_validate(&collection)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let end = start_after
+        .map(|bidder| {
+            deps.api
+                .addr_validate(&bidder)
+                .map(|bidder_addr| {
+                    Bound::exclusive((collection_addr.clone(), token_id.clone(), bidder_addr))
+                })
+        })
+        .transpose()?;
 
     let bid_list: Vec<Bid> = bids()
         .idx
         .token
         .prefix((collection_addr, token_id))
-        .range(deps.storage, None, None, Order::Descending)
+        .range(deps.storage, None, end, Order::Descending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<Vec<_>>>()?;
@@ -341,17 +383,26 @@ fn query_bids_by_token(
 fn query_bids_by_bidder(
     deps: Deps,
     bidder: String,
-    _start_after: Option<(String, TokenId)>,
+    start_after: Option<(String, TokenId)>,
     limit: Option<u32>,
 ) -> StdResult<BidsResponse> {
     let bidder_addr = deps.api.addr_validate(&bidder)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|(collection, token_id)| {
+            deps.api
+                .addr_validate(&collection)
+                .map(|collection_addr| {
+                    Bound::exclusive((collection_addr, token_id, bidder_addr.clone()))
+                })
+        })
+        .transpose()?;
 
     let bid_list: Vec<Bid> = bids()
         .idx
         .bidder
         .prefix(bidder_addr)
-        .range(deps.storage, None, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<Vec<_>>>()?;
@@ -374,17 +425,24 @@ fn query_collection_bid(
 fn query_collection_bids_by_collection(
     deps: Deps,
     collection: String,
-    _start_after: Option<String>,
+    start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<CollectionBidsResponse> {
     let collection_addr = deps.api.addr_validate(&collection)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let end = start_after
+        .map(|bidder| {
+            deps.api
+                .addr_validate(&bidder)
+                .map(|bidder_addr| Bound::exclusive((collection_addr.clone(), bidder_addr)))
+        })
+        .transpose()?;
 
     let bid_list: Vec<CollectionBid> = collection_bids()
         .idx
         .collection
         .prefix(collection_addr)
-        .range(deps.storage, None, None, Order::Descending)
+        .range(deps.storage, None, end, Order::Descending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<Vec<_>>>()?;
@@ -395,17 +453,24 @@ fn query_collection_bids_by_collection(
 fn query_collection_bids_by_bidder(
     deps: Deps,
     bidder: String,
-    _start_after: Option<String>,
+    start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<CollectionBidsResponse> {
     let bidder_addr = deps.api.addr_validate(&bidder)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|collection| {
+            deps.api
+                .addr_validate(&collection)
+                .map(|collection_addr| Bound::exclusive((collection_addr, bidder_addr.clone())))
+        })
+        .transpose()?;
 
     let bid_list: Vec<CollectionBid> = collection_bids()
         .idx
         .bidder
         .prefix(bidder_addr)
-        .range(deps.storage, None, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<Vec<_>>>()?;
@@ -451,3 +516,6 @@ fn query_preview_sale(
         seller_proceeds,
     })
 }
+
+#[cfg(test)]
+mod tests;
