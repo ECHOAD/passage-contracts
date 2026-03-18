@@ -6,6 +6,7 @@ pub struct InstantiateMsg {
     pub admin: String,
     pub split_router: String,
     pub registry: String,
+    pub backend_operator: Option<String>,
 
     // Payment configuration
     pub denom: String,  // e.g., "upasg"
@@ -22,6 +23,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<String>,
         split_router: Option<String>,
+        backend_operator: Option<String>,
         fiat_oracle: Option<String>,
         stripe_webhook_validator: Option<String>,
         paused: Option<bool>,
@@ -165,6 +167,7 @@ pub struct ConfigResponse {
     pub admin: Addr,
     pub split_router: Addr,
     pub registry: Addr,
+    pub backend_operator: Option<Addr>,
     pub pasg_denom: String,
     pub points_per_pasg: Uint128,
     pub fiat_oracle: Option<Addr>,
@@ -270,6 +273,34 @@ pub struct PlatformStatsResponse {
     pub total_points_issued: Uint128,
     pub total_pasg_volume: Uint128,
     pub active_sessions: u64,
+}
+
+#[cw_serde]
+pub enum RegistryQueryMsg {
+    Collection { address: String },
+}
+
+#[cw_serde]
+pub struct RegistryCollectionResponse {
+    pub collection: Option<RegistryCollection>,
+}
+
+#[cw_serde]
+pub struct RegistryCollection {
+    pub address: Addr,
+}
+
+#[cw_serde]
+pub enum Cw721QueryMsg {
+    OwnerOf {
+        token_id: String,
+        include_expired: Option<bool>,
+    },
+}
+
+#[cw_serde]
+pub struct OwnerOfResponse {
+    pub owner: String,
 }
 
 // ========================================

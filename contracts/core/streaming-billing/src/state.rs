@@ -9,6 +9,7 @@ pub struct Config {
     pub admin: Addr,
     pub split_router: Addr,
     pub registry: Addr,
+    pub backend_operator: Option<Addr>,
     pub pasg_denom: String,
     pub points_per_pasg: Uint128,
     pub fiat_oracle: Option<Addr>,
@@ -102,6 +103,9 @@ pub const PURCHASES: Map<(&Addr, u64), Purchase> = Map::new("purchases");
 
 /// Purchase counter per user: user_addr -> count
 pub const PURCHASE_COUNTER: Map<&Addr, u64> = Map::new("purchase_counter");
+
+/// Global fiat purchase transaction index: transaction_id -> seen
+pub const FIAT_PURCHASE_TX_IDS: Map<&str, bool> = Map::new("fiat_purchase_tx_ids");
 
 /// Active streaming sessions: session_id -> StreamingSession
 pub const SESSIONS: Map<u64, StreamingSession> = Map::new("sessions");

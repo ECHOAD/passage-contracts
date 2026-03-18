@@ -62,4 +62,7 @@ pub enum ContractError {
 
     #[error("Invalid world owner")]
     InvalidWorldOwner {},
+
+    #[error("Invalid world collection: {reason}")]
+    InvalidWorldCollection { reason: String },
 }

@@ -1,24 +1,41 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, coins, entry_point, to_json_binary, Addr, BankMsg, Binary, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Response, StdResult, Uint128, WasmMsg,
+    coins, entry_point, to_json_binary, Addr, BankMsg, Binary, Decimal, Deps, DepsMut, Env,
+    MessageInfo, QueryRequest, Response, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::msg::{
-    ConfigResponse, ConversionRateResponse, ExecuteMsg, InstantiateMsg, PendingRevenueResponse,
-    PlatformStatsResponse, PurchaseHistoryResponse, PurchaseRecord, PurchaseType, QueryMsg,
+    ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
+    OwnerOfResponse, PendingRevenueResponse, PlatformStatsResponse, PurchaseHistoryResponse,
+    PurchaseRecord, PurchaseType, QueryMsg, RegistryCollectionResponse, RegistryQueryMsg,
     SessionResponse, SessionStatus, UserBalanceResponse, UserSessionsResponse, WorldConfigResponse,
     WorldStatsResponse,
 };
 use crate::state::{
     Config, PendingRevenue, PlatformStats, Purchase, StreamingSession, UserBalance, WorldConfig,
-    WorldStats, CONFIG, PENDING_REVENUE, PLATFORM_STATS, PURCHASES, PURCHASE_COUNTER, SESSIONS,
-    SESSION_COUNTER, USER_BALANCES, USER_SESSIONS, WORLD_CONFIGS, WORLD_STATS, WORLD_USERS,
+    WorldStats, CONFIG, FIAT_PURCHASE_TX_IDS, PENDING_REVENUE, PLATFORM_STATS, PURCHASES,
+    PURCHASE_COUNTER, SESSIONS, SESSION_COUNTER, USER_BALANCES, USER_SESSIONS, WORLD_CONFIGS,
+    WORLD_STATS, WORLD_USERS,
 };
 
 const CONTRACT_NAME: &str = "crates.io:streaming-billing";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const MAX_FIAT_REPORT_AGE_SECONDS: u64 = 900;
+const MAX_SESSION_DURATION_SECONDS: u64 = 86_400;
+
+#[cw_serde]
+struct SplitRouterRouteWorldRevenueExecuteMsg {
+    route_world_revenue: RouteWorldRevenuePayload,
+}
+
+#[cw_serde]
+struct RouteWorldRevenuePayload {
+    world_nft_id: String,
+    world_collection: String,
+}
 
 // ========================================
 // INSTANTIATE
@@ -36,6 +53,10 @@ pub fn instantiate(
     let admin = deps.api.addr_validate(&msg.admin)?;
     let split_router = deps.api.addr_validate(&msg.split_router)?;
     let registry = deps.api.addr_validate(&msg.registry)?;
+    let backend_operator = msg
+        .backend_operator
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
 
     let fiat_oracle = msg
         .fiat_oracle
@@ -51,6 +72,7 @@ pub fn instantiate(
         admin,
         split_router,
         registry,
+        backend_operator,
         pasg_denom: msg.denom,
         points_per_pasg: msg.points_per_denom,
         fiat_oracle,
@@ -96,6 +118,7 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             admin,
             split_router,
+            backend_operator,
             fiat_oracle,
             stripe_webhook_validator,
             paused,
@@ -104,6 +127,7 @@ pub fn execute(
             info,
             admin,
             split_router,
+            backend_operator,
             fiat_oracle,
             stripe_webhook_validator,
             paused,
@@ -174,6 +198,7 @@ fn execute_update_config(
     info: MessageInfo,
     admin: Option<String>,
     split_router: Option<String>,
+    backend_operator: Option<String>,
     fiat_oracle: Option<String>,
     stripe_webhook_validator: Option<String>,
     paused: Option<bool>,
@@ -190,6 +215,9 @@ fn execute_update_config(
     if let Some(split_router) = split_router {
         config.split_router = deps.api.addr_validate(&split_router)?;
     }
+    if let Some(backend_operator) = backend_operator {
+        config.backend_operator = Some(deps.api.addr_validate(&backend_operator)?);
+    }
     if let Some(fiat_oracle) = fiat_oracle {
         config.fiat_oracle = Some(deps.api.addr_validate(&fiat_oracle)?);
     }
@@ -203,6 +231,74 @@ fn execute_update_config(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "update_config"))
+}
+
+fn ensure_backend_operator(config: &Config, sender: &Addr) -> Result<(), ContractError> {
+    if *sender == config.admin || config.backend_operator.as_ref() == Some(sender) {
+        return Ok(());
+    }
+
+    Err(ContractError::Unauthorized {})
+}
+
+fn query_registered_world_collection(
+    deps: Deps,
+    registry: &Addr,
+    world_collection: &str,
+) -> Result<Addr, ContractError> {
+    let world_collection_addr = deps.api.addr_validate(world_collection)?;
+    let response: RegistryCollectionResponse =
+        deps.querier
+            .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: registry.to_string(),
+                msg: to_json_binary(&RegistryQueryMsg::Collection {
+                    address: world_collection_addr.to_string(),
+                })?,
+            }))
+            .map_err(|_| ContractError::InvalidWorldCollection {
+                reason: format!(
+                    "collection {} could not be resolved from registry",
+                    world_collection_addr
+                ),
+            })?;
+
+    let collection = response
+        .collection
+        .ok_or_else(|| ContractError::InvalidWorldCollection {
+            reason: format!("collection {} is not registered", world_collection_addr),
+        })?;
+
+    if collection.address != world_collection_addr {
+        return Err(ContractError::InvalidWorldCollection {
+            reason: format!(
+                "registry returned {} for requested collection {}",
+                collection.address, world_collection_addr
+            ),
+        });
+    }
+
+    Ok(collection.address)
+}
+
+fn query_world_owner(
+    deps: Deps,
+    world_collection: &Addr,
+    world_nft_id: &str,
+) -> Result<Addr, ContractError> {
+    let response: OwnerOfResponse = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: world_collection.to_string(),
+            msg: to_json_binary(&Cw721QueryMsg::OwnerOf {
+                token_id: world_nft_id.to_string(),
+                include_expired: None,
+            })?,
+        }))
+        .map_err(|_| ContractError::InvalidWorldOwner {})?;
+
+    deps.api
+        .addr_validate(&response.owner)
+        .map_err(ContractError::from)
 }
 
 /// User deposits PASG directly to buy streaming points
@@ -303,21 +399,26 @@ fn execute_report_fiat_purchase(
         return Err(ContractError::Unauthorized {});
     }
 
+    let block_time = env.block.time.seconds();
+    let report_time = timestamp.seconds();
+    if report_time > block_time {
+        return Err(ContractError::InvalidFiatPurchase {
+            reason: "fiat report timestamp cannot be in the future".to_string(),
+        });
+    }
+    if block_time.saturating_sub(report_time) > MAX_FIAT_REPORT_AGE_SECONDS {
+        return Err(ContractError::InvalidFiatPurchase {
+            reason: "fiat report timestamp is older than allowed".to_string(),
+        });
+    }
+
     let user_addr = deps.api.addr_validate(&user)?;
 
-    // Check for duplicate transaction
-    // This prevents replay attacks or double-reporting
-    let existing_purchases = PURCHASES
-        .prefix(&user_addr)
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .filter_map(|item| item.ok())
-        .find(|(_, purchase)| {
-            purchase.transaction_id.as_ref() == Some(&transaction_id)
-        });
-
-    if existing_purchases.is_some() {
+    if FIAT_PURCHASE_TX_IDS.has(deps.storage, transaction_id.as_str()) {
         return Err(ContractError::DuplicateTransaction { transaction_id });
     }
+
+    FIAT_PURCHASE_TX_IDS.save(deps.storage, transaction_id.as_str(), &true)?;
 
     // Update user balance
     let mut user_balance = USER_BALANCES
@@ -407,7 +508,9 @@ fn execute_withdraw_points(
         .map_err(|_| ContractError::InvalidConversionRate {})?;
 
     let fee = pasg_amount.multiply_ratio(2u128, 100u128); // 2% fee
-    let amount_to_return = pasg_amount.checked_sub(fee)?;
+    let amount_to_return = pasg_amount
+        .checked_sub(fee)
+        .map_err(|_| ContractError::WithdrawalTooSmall {})?;
 
     if amount_to_return.is_zero() {
         return Err(ContractError::WithdrawalTooSmall {});
@@ -437,13 +540,14 @@ fn execute_withdraw_points(
 fn execute_start_session(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     user: String,
     world_nft_id: String,
     world_collection: String,
 ) -> Result<Response, ContractError> {
     let user_addr = deps.api.addr_validate(&user)?;
-    let world_collection_addr = deps.api.addr_validate(&world_collection)?;
+    let config = CONFIG.load(deps.storage)?;
+    ensure_backend_operator(&config, &info.sender)?;
 
     // Load world config
     let world_config = WORLD_CONFIGS
@@ -454,6 +558,18 @@ fn execute_start_session(
 
     if !world_config.active {
         return Err(ContractError::WorldNotActive { world_nft_id });
+    }
+
+    if !world_collection.is_empty() {
+        let hinted_collection = deps.api.addr_validate(&world_collection)?;
+        if hinted_collection != world_config.world_collection {
+            return Err(ContractError::InvalidWorldCollection {
+                reason: format!(
+                    "expected {}, got {}",
+                    world_config.world_collection, hinted_collection
+                ),
+            });
+        }
     }
 
     // Verify user has balance
@@ -478,7 +594,7 @@ fn execute_start_session(
         session_id,
         user: user_addr.clone(),
         world_nft_id: world_nft_id.clone(),
-        world_collection: world_collection_addr,
+        world_collection: world_config.world_collection.clone(),
         start_time: env.block.time,
         end_time: None,
         points_rate_per_hour: world_config.points_per_hour,
@@ -506,11 +622,12 @@ fn execute_start_session(
 fn execute_stop_session(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     session_id: u64,
     duration_seconds: u64,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    ensure_backend_operator(&config, &info.sender)?;
 
     let mut session = SESSIONS
         .load(deps.storage, session_id)
@@ -520,13 +637,16 @@ fn execute_stop_session(
         return Err(ContractError::SessionAlreadyStopped { session_id });
     }
 
-    if duration_seconds == 0 {
+    if duration_seconds == 0 || duration_seconds > MAX_SESSION_DURATION_SECONDS {
         return Err(ContractError::InvalidDuration { duration_seconds });
     }
 
     // Calculate points to charge
-    let hours = Decimal::from_ratio(duration_seconds, 3600u64);
-    let points_to_charge = session.points_rate_per_hour * hours;
+    let hours = Decimal::from_ratio(duration_seconds as u128, 3600u128);
+    let points_to_charge = session
+        .points_rate_per_hour
+        .checked_mul_floor(hours)
+        .map_err(|_| ContractError::InvalidConversionRate {})?;
 
     // Load user balance
     let mut user_balance = USER_BALANCES.load(deps.storage, &session.user)?;
@@ -651,15 +771,19 @@ fn execute_set_world_rate(
     world_collection: String,
     points_per_hour: Uint128,
 ) -> Result<Response, ContractError> {
-    let world_collection_addr = deps.api.addr_validate(&world_collection)?;
+    let config = CONFIG.load(deps.storage)?;
+    let world_collection_addr =
+        query_registered_world_collection(deps.as_ref(), &config.registry, &world_collection)?;
+    let verified_owner = query_world_owner(deps.as_ref(), &world_collection_addr, &world_nft_id)?;
 
-    // TODO: Query registry to verify world ownership
-    // For now, accept any caller (will be restricted in production)
+    if info.sender != config.admin && info.sender != verified_owner {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let world_config = WorldConfig {
         world_nft_id: world_nft_id.clone(),
         world_collection: world_collection_addr,
-        owner: info.sender.clone(),
+        owner: verified_owner,
         points_per_hour,
         active: true,
         created_at: env.block.time,
@@ -724,12 +848,12 @@ fn execute_distribute_world_revenue(
     // Split-router will read revenue_shares from World NFT and distribute
     let distribute_msg = WasmMsg::Execute {
         contract_addr: config.split_router.to_string(),
-        msg: to_json_binary(&serde_json::json!({
-            "route_world_revenue": {
-                "world_nft_id": world_nft_id,
-                "world_collection": world_config.world_collection.to_string(),
-            }
-        }))?,
+        msg: to_json_binary(&SplitRouterRouteWorldRevenueExecuteMsg {
+            route_world_revenue: RouteWorldRevenuePayload {
+                world_nft_id: world_nft_id.clone(),
+                world_collection: world_config.world_collection.to_string(),
+            },
+        })?,
         funds: coins(pending.pending_pasg.u128(), &config.pasg_denom),
     };
 
@@ -748,7 +872,7 @@ fn execute_distribute_world_revenue(
 }
 
 fn execute_batch_distribute_revenue(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     world_nft_ids: Vec<String>,
@@ -759,7 +883,7 @@ fn execute_batch_distribute_revenue(
         match execute_distribute_world_revenue(deps.branch(), env.clone(), info.clone(), world_nft_id.clone()) {
             Ok(res) => {
                 response = response.add_attributes(res.attributes);
-                response = response.add_messages(res.messages);
+                response = response.add_submessages(res.messages);
             }
             Err(_) => {
                 // Skip worlds with no pending revenue
@@ -809,6 +933,7 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
         admin: config.admin,
         split_router: config.split_router,
         registry: config.registry,
+        backend_operator: config.backend_operator,
         pasg_denom: config.pasg_denom,
         points_per_pasg: config.points_per_pasg,
         fiat_oracle: config.fiat_oracle,
@@ -843,7 +968,7 @@ fn query_purchase_history(
         .prefix(&user_addr)
         .range(
             deps.storage,
-            start_after.map(cosmwasm_std::Bound::exclusive),
+            start_after.map(Bound::exclusive),
             None,
             cosmwasm_std::Order::Ascending,
         )
@@ -866,13 +991,6 @@ fn query_purchase_history(
 
 fn query_session(deps: Deps, session_id: u64) -> StdResult<SessionResponse> {
     let session = SESSIONS.load(deps.storage, session_id)?;
-
-    let config = CONFIG.load(deps.storage)?;
-    let pasg_rate = session
-        .points_rate_per_hour
-        .checked_div(config.points_per_pasg)
-        .unwrap_or(Uint128::zero());
-
     Ok(SessionResponse {
         session_id: session.session_id,
         user: session.user,
