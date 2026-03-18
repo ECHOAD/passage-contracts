@@ -14,6 +14,15 @@ With the Split Router, all revenue flows through a single, configurable contract
 - Tracks all financial events for auditing
 - Supports split wallets for complex multi-party distributions
 
+## PASG Integration Boundary
+
+`split-router` is a generic routing primitive, not the canonical PASG policy surface.
+
+- It accepts and distributes whatever native funds producers attach, including `upasg`.
+- It does not define PASG conversion rules, wrapper behavior, fee treatment policy, or subscription semantics.
+- Integrators that need canonical PASG utility semantics should query `streaming-billing` via `QueryMsg::PasgUtility {}` and then forward native funds into the router.
+- Platform billing and subscription policy remain off-chain even when routed funds are PASG-denominated.
+
 ## Features
 
 ### Distribution Rules

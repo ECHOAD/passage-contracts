@@ -114,6 +114,15 @@ From the Blockchain Smart Contract Engineer skill profile:
 
 **Scope discipline**: Contracts must not absorb platform logic. Billing, subscription, and tier enforcement belong off-chain. On-chain contracts provide primitives that platform services invoke.
 
+## PASG Utility Stance
+
+- `upasg` is the canonical PASG settlement denom in this repository.
+- `contracts/core/streaming-billing/src/msg.rs` is the source-of-truth PASG utility surface for native-denom settlement, conversion semantics, and compatibility metadata.
+- Integrators should prefer `QueryMsg::PasgUtility {}` in `streaming-billing` when they need the canonical PASG contract interface.
+- `revenue-router` / `split-router` must stay denom-agnostic. It can route native `upasg`, but it does not own PASG policy.
+- No contract in this repo should absorb platform billing, subscription, or other off-chain business rules.
+- If a PASG wrapper or adapter appears later, it is compatibility-only and must forward to native `upasg` semantics.
+
 ## Documentation
 
 See `docs/` for comprehensive guides:

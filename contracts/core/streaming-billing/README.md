@@ -130,6 +130,15 @@ Returns the source-of-truth PASG interface:
 
 Returns the current `points_per_pasg`, `pasg_per_point`, and configured PASG denom for callers that only need conversion math.
 
+## Integrator Entry Points
+
+Consumers should treat this contract as the PASG policy source rather than inferring PASG behavior locally.
+
+- Query `PasgUtility` for the canonical denom, conversion semantics, compatibility stance, and scope boundary.
+- Use `ConversionRate` only for lightweight read paths that already trust the canonical PASG stance.
+- Route PASG utility executes through `DepositCrypto`, `ReportFiatPurchase`, `WithdrawPoints`, `DistributeWorldRevenue`, and `BatchDistributeRevenue`.
+- Keep `marketplace-v3`, `minter-v2`, `auction-english`, and `split-router` as consumers of native `upasg` settlement, not owners of PASG business policy.
+
 ## Recommended Verification After Changes
 
 - `cargo test -p streaming-billing --lib`
