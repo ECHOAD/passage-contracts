@@ -20,6 +20,10 @@ pub enum ExecuteMsg {
         active: Option<bool>,
     },
     Split {},
+    RouteWorldRevenue {
+        world_nft_id: String,
+        world_collection: String,
+    },
 }
 
 #[cw_serde]
@@ -43,6 +47,8 @@ pub enum QueryMsg {
     },
     #[returns(SplitPreviewResponse)]
     PreviewSplit { funds: Vec<Coin> },
+    #[returns(RoutingMetadataResponse)]
+    RoutingMetadata {},
 }
 
 #[cw_serde]
@@ -65,3 +71,25 @@ pub struct SplitPreviewResponse {
     pub total_funds: Vec<Coin>,
     pub recipient_amounts: Vec<(String, Vec<Coin>)>,
 }
+
+#[cw_serde]
+pub enum RoutingPreviewRoute {
+    PreviewSplit,
+}
+
+#[cw_serde]
+pub enum RoutingExecuteRoute {
+    Split,
+    RouteWorldRevenue,
+}
+
+#[cw_serde]
+pub struct RoutingMetadataResponse {
+    pub forwards_attached_funds: bool,
+    pub preserves_input_denoms: bool,
+    pub preview_query: RoutingPreviewRoute,
+    pub execute_routes: Vec<RoutingExecuteRoute>,
+}
+
+
+

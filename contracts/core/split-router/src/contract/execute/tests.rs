@@ -173,3 +173,44 @@ fn split_fails_when_inactive() {
 
     assert_eq!(err, ContractError::SplitInactive {});
 }
+
+#[test]
+fn route_world_revenue_reuses_generic_split_logic() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
+    let sender = deps.api.addr_make("streaming-billing");
+
+    save_base_state(deps.as_mut());
+
+    let res = execute(
+        deps.as_mut(),
+        env,
+        message_info(&sender, &[Coin::new(101u128, "upasg")]),
+        ExecuteMsg::RouteWorldRevenue {
+            world_nft_id: "world-1".to_string(),
+            world_collection: "collection-1".to_string(),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(res.messages.len(), 2);
+    assert!(res
+        .attributes
+        .iter()
+        .any(|attr| attr.key == "action" && attr.value == "route_world_revenue"));
+    assert!(res
+        .attributes
+        .iter()
+        .any(|attr| attr.key == "preserves_input_denoms" && attr.value == "true"));
+
+    let event = SPLIT_EVENTS.load(deps.as_ref().storage, 1).unwrap();
+    assert_eq!(event.total_funds, vec![Coin::new(101u128, "upasg")]);
+    assert_eq!(
+        event.recipient_amounts[0].1,
+        vec![Coin::new(25u128, "upasg")]
+    );
+    assert_eq!(
+        event.recipient_amounts[1].1,
+        vec![Coin::new(76u128, "upasg")]
+    );
+}

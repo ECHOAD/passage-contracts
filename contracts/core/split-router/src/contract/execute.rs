@@ -22,6 +22,10 @@ pub fn execute(
             execute_update_split(deps, env, info, recipients, active)
         }
         ExecuteMsg::Split {} => execute_split(deps, env, info),
+        ExecuteMsg::RouteWorldRevenue {
+            world_nft_id,
+            world_collection,
+        } => execute_route_world_revenue(deps, env, info, world_nft_id, world_collection),
     }
 }
 
@@ -113,8 +117,27 @@ fn execute_split(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response,
         .add_messages(messages)
         .add_attribute("action", "split")
         .add_attribute("funds_count", info.funds.len().to_string())
+        .add_attribute("preserves_input_denoms", "true")
         .add_attribute("event_id", event_id.to_string()))
+}
+
+fn execute_route_world_revenue(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    world_nft_id: String,
+    world_collection: String,
+) -> Result<Response, ContractError> {
+    let mut response = execute_split(deps, env, info)?;
+    response.attributes.retain(|attr| attr.key != "action");
+
+    Ok(response
+        .add_attribute("action", "route_world_revenue")
+        .add_attribute("world_nft_id", world_nft_id)
+        .add_attribute("world_collection", world_collection))
 }
 
 #[cfg(test)]
 mod tests;
+
+

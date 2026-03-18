@@ -10,6 +10,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&query_split_events(deps, start_after, limit)?)
         }
         QueryMsg::PreviewSplit { funds } => to_json_binary(&query_preview_split(deps, funds)?),
+        QueryMsg::RoutingMetadata {} => to_json_binary(&query_routing_metadata()),
     }
 }
 
@@ -55,5 +56,19 @@ fn query_preview_split(deps: Deps, funds: Vec<Coin>) -> StdResult<SplitPreviewRe
     })
 }
 
+fn query_routing_metadata() -> RoutingMetadataResponse {
+    RoutingMetadataResponse {
+        forwards_attached_funds: true,
+        preserves_input_denoms: true,
+        preview_query: RoutingPreviewRoute::PreviewSplit,
+        execute_routes: vec![
+            RoutingExecuteRoute::Split,
+            RoutingExecuteRoute::RouteWorldRevenue,
+        ],
+    }
+}
+
 #[cfg(test)]
 mod tests;
+
+

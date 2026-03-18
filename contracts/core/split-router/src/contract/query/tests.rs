@@ -1,6 +1,8 @@
 use super::*;
 use cosmwasm_std::{testing::mock_dependencies, Addr, Coin, Decimal};
 
+use crate::msg::{RoutingExecuteRoute, RoutingPreviewRoute};
+
 #[test]
 fn preview_split_handles_multiple_denoms() {
     let mut deps = mock_dependencies();
@@ -51,5 +53,22 @@ fn preview_split_handles_multiple_denoms() {
             "creator".to_string(),
             vec![Coin::new(76u128, "upasg"), Coin::new(6u128, "uatom")]
         )
+    );
+}
+
+
+#[test]
+fn routing_metadata_reports_generic_passthrough_surface() {
+    let response = query_routing_metadata();
+
+    assert!(response.forwards_attached_funds);
+    assert!(response.preserves_input_denoms);
+    assert_eq!(response.preview_query, RoutingPreviewRoute::PreviewSplit);
+    assert_eq!(
+        response.execute_routes,
+        vec![
+            RoutingExecuteRoute::Split,
+            RoutingExecuteRoute::RouteWorldRevenue,
+        ]
     );
 }

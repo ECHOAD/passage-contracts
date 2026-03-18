@@ -7,8 +7,9 @@ pub(super) use cw_storage_plus::Bound;
 
 pub(super) use crate::error::ContractError;
 pub(super) use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RecipientInput, SplitConfigResponse,
-    SplitEventsResponse, SplitPreviewResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, RecipientInput, RoutingExecuteRoute,
+    RoutingMetadataResponse, RoutingPreviewRoute, SplitConfigResponse, SplitEventsResponse,
+    SplitPreviewResponse,
 };
 pub(super) use crate::state::{
     Config, Recipient, SplitConfig, SplitEvent, CONFIG, SPLIT_CONFIG, SPLIT_EVENTS,
@@ -30,3 +31,4 @@ mod query;
 pub use execute::execute;
 pub use instantiate::instantiate;
 pub use query::query;
+
