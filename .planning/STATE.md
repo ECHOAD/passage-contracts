@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-19T00:17:10Z"
-last_activity: 2026-03-18 - Phase 2 plan 02 executed, verified, and documented
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-19T00:43:57Z"
+last_activity: 2026-03-18 - Phase 2 completed; PASG utility docs, examples, and schema surfaces verified
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 20
-  completed_plans: 5
-  percent: 25
+  completed_plans: 6
+  percent: 30
 ---
 
 # Project State
@@ -21,33 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** PASG must provide real on-chain utility for payments, governance, staking, and creator monetization while keeping platform UX and infrastructure concerns off-chain.
-**Current focus:** Phase 2 - PASG Utility Surface
+**Current focus:** Phase 3 - PASG Governance
 
 ## Current Position
 
-Phase: 2 of 7 (PASG Utility Surface)
-Plan: 2 of 3 in current phase
-Status: In Progress
-Last activity: 2026-03-18 - Phase 2 plan 02 executed, verified, and documented
+Phase: 3 of 7 (PASG Governance)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-03-18 - Phase 2 completed; PASG utility docs, examples, and schema surfaces verified
 
-Progress: [###-------] 25%
+Progress: [###-------] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 75 min
-- Total execution time: 6.3 hours
+- Total plans completed: 6
+- Average duration: 65 min
+- Total execution time: 6.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Protocol Hardening & Boundaries | 3 | 170 min | 57 min |
-| 2. PASG Utility Surface | 2 | 207 min | 104 min |
+| 2. PASG Utility Surface | 3 | 222 min | 74 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03, 02-01, 02-02
+- Last 5 plans: 01-02, 01-03, 02-01, 02-02, 02-03
 - Trend: Stable
 
 ## Accumulated Context
@@ -68,6 +68,8 @@ Recent decisions affecting current work:
 - [Phase 2]: split-router stays denom-agnostic while billing and subscription policy remain off-chain
 - [Phase 2]: split-router accepts streaming-billing `route_world_revenue` calls via a generic compatibility alias
 - [Phase 2]: marketplace, minter-v2, and auction-english now emit canonical PASG utility reference attributes on fee-bearing flows
+- [Phase 2]: contract docs and JSON examples now require query-first PASG verification instead of contract-local assumptions
+- [Phase 2]: minter-v2 schema outputs are checked in and split-router schema now exposes inspectable routing metadata
 
 ### Pending Todos
 
@@ -75,12 +77,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- Workspace-wide verification is still blocked by `ecosystem-factory`: missing `REQUESTS_BY_CREATOR` imports in `src/contract/execute.rs:188` and `src/contract/query.rs:84`.
-- Workspace-wide verification is also blocked by `minter-metadata-onchain`: `Pg721InstantiateMsg` initialization is missing `nft_type` in `src/contract.rs:102`.
+- `cargo unit-test` and `cargo check --workspace` remain blocked by `ecosystem-factory`: missing `REQUESTS_BY_CREATOR` imports in `src/contract/execute.rs:188` and `src/contract/query.rs:84`.
+- `cargo check --workspace` remains additionally blocked by `minter-metadata-onchain`: `Pg721InstantiateMsg` initialization is missing `nft_type` in `src/contract.rs:102`.
 - Several active core contracts still have no migrate entrypoint, so future upgrades will require explicit redeploy-and-cutover planning.
 
 ## Session Continuity
 
-Last session: 2026-03-19 00:17 UTC
-Stopped at: Completed 02-02-PLAN.md
-Resume file: .planning/phases/02-pasg-utility-surface/02-03-PLAN.md
+Last session: 2026-03-19 00:43 UTC
+Stopped at: Completed Phase 2 PASG Utility Surface
+Resume file: .planning/ROADMAP.md

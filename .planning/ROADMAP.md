@@ -11,7 +11,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 - Decimal phases (2.1, 2.2): Urgent insertions if brownfield realities require them later
 
 - [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
-- [ ] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
+- [x] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
 - [ ] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics.
 - [ ] **Phase 4: PASG Staking & Rewards** - Add staking, unbonding, and emission logic aligned to the token program.
 - [ ] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
@@ -50,7 +50,7 @@ Plans:
 Plans:
 - [x] 02-01: Define the PASG utility interface and native-denom or adapter strategy
 - [x] 02-02: Integrate PASG fee-treatment hooks into target payment and routing flows
-- [ ] 02-03: Document and verify PASG utility semantics across contracts and service touchpoints
+- [x] 02-03: Document and verify PASG utility semantics across contracts and service touchpoints
 
 ### Phase 3: PASG Governance
 **Goal**: Deliver PASG-scoped governance for proposals, voting, delegation, quorum, and executable protocol changes.
@@ -139,10 +139,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
-| 2. PASG Utility Surface | 2/3 | In Progress | - |
+| 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
 | 3. PASG Governance | 0/3 | Not started | - |
 | 4. PASG Staking & Rewards | 0/3 | Not started | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
+
 
