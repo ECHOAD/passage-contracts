@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("insufficient deposited voting power: required {required}, actual {actual}")]
     InsufficientVotingPower { required: Uint128, actual: Uint128 },
 
+    #[error("insufficient unlocked voting power: requested {requested}, unlocked {unlocked}")]
+    InsufficientUnlockedBalance { requested: Uint128, unlocked: Uint128 },
+
     #[error("proposal not found: {proposal_id}")]
     ProposalNotFound { proposal_id: u64 },
 
@@ -47,4 +50,25 @@ pub enum ContractError {
 
     #[error("title cannot be empty")]
     EmptyTitle {},
+
+    #[error("cannot delegate to self")]
+    SelfDelegation {},
+
+    #[error("cycle in delegation")]
+    CycleInDelegation {},
+
+    #[error("quorum not met")]
+    QuorumNotMet {},
+
+    #[error("pass threshold not met")]
+    PassThresholdNotMet {},
+
+    #[error("scope violation: {reason}")]
+    ScopeViolation { reason: String },
+
+    #[error("unsupported admin action: {reason}")]
+    UnsupportedAdminAction { reason: String },
+
+    #[error("off-chain operation forbidden: {target}")]
+    OffChainOperationForbidden { target: String },
 }

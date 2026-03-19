@@ -21,12 +21,10 @@ pub struct PasgUtilityConfig {
 }
 
 #[cw_serde]
-pub enum AdminAction {
-    UpdateStreamingBillingConfig {
-        contract_addr: String,
-        backend_operator: Option<String>,
-        paused: Option<bool>,
-    },
+pub struct Delegation {
+    pub delegator: Addr,
+    pub delegate: Addr,
+    pub created_at: u64,
 }
 
 #[cw_serde]
@@ -60,6 +58,22 @@ pub struct Proposal {
 }
 
 #[cw_serde]
+pub struct ProposalSnapshot {
+    pub proposal_id: u64,
+    pub total_power: Uint128,
+    pub quorum_bps: u64,
+    pub pass_bps: u64,
+    pub created_at: u64,
+}
+
+#[cw_serde]
+pub struct LockedBalance {
+    pub proposal_id: u64,
+    pub address: Addr,
+    pub amount: Uint128,
+}
+
+#[cw_serde]
 pub struct Ballot {
     pub voter: Addr,
     pub vote: Vote,
@@ -71,7 +85,7 @@ pub struct Ballot {
 pub struct RatifiedAdminAction {
     pub proposal_id: u64,
     pub admin_multisig: Addr,
-    pub action: AdminAction,
+    pub action: crate::msg::AdminAction,
     pub payload_hash: String,
     pub ratified_at: u64,
 }
@@ -81,6 +95,9 @@ pub const PROPOSAL_COUNT: Item<u64> = Item::new("proposal_count");
 pub const PASG_UTILITY_CONFIG: Item<PasgUtilityConfig> = Item::new("pasg_utility_config");
 pub const TOTAL_DEPOSITED: Item<Uint128> = Item::new("total_deposited");
 pub const DEPOSITS: Map<&Addr, Uint128> = Map::new("deposits");
+pub const DELEGATIONS: Map<&Addr, Delegation> = Map::new("delegations");
 pub const PROPOSALS: Map<u64, Proposal> = Map::new("proposals");
+pub const PROPOSAL_SNAPSHOTS: Map<u64, ProposalSnapshot> = Map::new("proposal_snapshots");
+pub const LOCKED_BALANCES: Map<(&Addr, u64), LockedBalance> = Map::new("locked_balances");
 pub const BALLOTS: Map<(u64, &Addr), Ballot> = Map::new("ballots");
 pub const RATIFIED_ADMIN_ACTIONS: Map<u64, RatifiedAdminAction> = Map::new("ratified_admin_actions");

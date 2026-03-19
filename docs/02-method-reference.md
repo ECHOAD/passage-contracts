@@ -439,3 +439,47 @@ If the goal is a secondary sale, the minimum path is usually:
 2. `collection-factory` + `pg721`
 3. `split-router`
 4. `marketplace-v3` or `auction-english`
+
+## `pasg-governance`
+
+Role:
+
+- PASG-holder governance contract that is separate from multisig
+- directly executes governance-owned PASG parameter updates
+- ratifies scoped admin actions for multisig follow-through
+
+Instantiate:
+
+- `InstantiateMsg { admin_multisig, native_denom, proposal_deposit, voting_period_secs, quorum_bps, pass_bps }`
+
+Most important execute messages:
+
+- `DepositVotingPower`
+- `WithdrawVotingPower`
+- `Delegate`
+- `Undelegate`
+- `Propose`
+- `Vote`
+- `ExecuteProposal`
+- `Close`
+
+Typed admin actions:
+
+- `StreamingBillingUpdateConfig`
+- `MarketplaceV3UpdateConfig`
+- `AuctionEnglishUpdateConfig`
+
+Most useful queries:
+
+- `VotingPower`
+- `Proposal`
+- `Proposals`
+- `Vote`
+- `Votes`
+- `PasgUtilityConfig`
+- `ratified_admin_action`
+
+Handoff rule:
+
+- PASG governance ratifies the scoped action.
+- multisig remains the owner-admin executor and mirrors the typed action into its own `Propose` / `Vote` / `Execute` flow.

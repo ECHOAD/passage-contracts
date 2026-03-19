@@ -1,9 +1,9 @@
 use crate::contract::{execute, instantiate, query};
 use crate::msg::{
-    DepositResponse, ExecuteMsg, InstantiateMsg, PasgUtilityConfigResponse, ProposalAction,
+    AdminAction, DepositResponse, ExecuteMsg, InstantiateMsg, PasgUtilityConfigResponse, ProposalAction,
     ProposalResponse, QueryMsg, RatifiedAdminActionResponse,
 };
-use crate::state::{AdminAction, ProposalStatus};
+use crate::state::ProposalStatus;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coin, coins, from_json, Addr, Uint128};
 
@@ -120,9 +120,11 @@ fn stage_admin_action_records_handoff_without_dispatch() {
             title: "Stage admin change".to_string(),
             description: None,
             action: ProposalAction::StageAdminAction {
-                action: AdminAction::UpdateStreamingBillingConfig {
+                action: AdminAction::StreamingBillingUpdateConfig {
                     contract_addr: "passage1billing000000000000000000000000000".to_string(),
                     backend_operator: Some("passage1ops0000000000000000000000000000000".to_string()),
+                    fiat_oracle: None,
+                    stripe_webhook_validator: None,
                     paused: Some(false),
                 },
             },
@@ -221,3 +223,7 @@ fn deposit_query_reports_balance() {
 
     assert_eq!(deposit.deposited, Uint128::new(123));
 }
+
+
+
+

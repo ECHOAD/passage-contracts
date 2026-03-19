@@ -357,3 +357,9 @@ Without steps 3 and 4, `minter-v2` can be blocked if `registry` is configured, b
 For exact JSON messages, also use:
 
 - `03-json-examples.md`
+
+## PASG governance note
+
+PASG governance is a separate layer from multisig.
+
+Use `pasg-governance` for PASG-holder voting and ratification, but keep `multisig` as the owner-admin executor for `registry`, `marketplace-v3`, `auction-english`, and similar protocol contracts. A passed PASG admin proposal should be read through `ratified_admin_action` and then mirrored into a normal `multisig.Propose` flow.

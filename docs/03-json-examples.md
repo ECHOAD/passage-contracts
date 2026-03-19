@@ -1071,3 +1071,109 @@ wasmd query wasm contract-state smart <contract_addr> '<json_query>'
 ```
 
 If you are operating from backend or frontend code, you can reuse these exact payloads as the CosmWasm message body.
+
+## 11. `pasg-governance`
+
+### Propose a direct PASG utility change
+
+```json
+{
+  "propose": {
+    "title": "Tune PASG utility",
+    "description": "Adjust utility conversion and session caps",
+    "action": {
+      "set_pasg_utility_config": {
+        "points_per_pasg": "250",
+        "max_fiat_report_age_secs": 900,
+        "max_session_duration_secs": 7200
+      }
+    }
+  }
+}
+```
+
+### Propose a scoped admin handoff for `streaming-billing`
+
+```json
+{
+  "propose": {
+    "title": "Pause streaming billing",
+    "description": "Ratify a scoped admin handoff for multisig follow-through",
+    "action": {
+      "stage_admin_action": {
+        "action": {
+          "streaming_billing_update_config": {
+            "contract_addr": "passage1streaming...",
+            "backend_operator": null,
+            "fiat_oracle": null,
+            "stripe_webhook_validator": null,
+            "paused": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Query the `ratified_admin_action`
+
+```json
+{
+  "ratified_admin_action": {
+    "proposal_id": 7
+  }
+}
+```
+
+Expected shape:
+
+```json
+{
+  "action": {
+    "proposal_id": 7,
+    "admin_multisig": "passage1multisig...",
+    "action": {
+      "streaming_billing_update_config": {
+        "contract_addr": "passage1streaming...",
+        "backend_operator": null,
+        "fiat_oracle": null,
+        "stripe_webhook_validator": null,
+        "paused": true
+      }
+    },
+    "payload_hash": "<deterministic_hash>",
+    "ratified_at": 1773597600
+  }
+}
+```
+
+### Mirror the ratified action through `multisig`
+
+Human-readable multisig payload for the same `StreamingBillingUpdateConfig` intent:
+
+```json
+{
+  "propose": {
+    "title": "Mirror PASG ratified streaming change",
+    "description": "payload_hash must match the governance ratification record",
+    "msgs": [
+      {
+        "wasm": {
+          "execute": {
+            "contract_addr": "passage1streaming...",
+            "msg": "<base64 of streaming-billing update_config>",
+            "funds": []
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+Other scoped admin catalog entries follow the same model:
+
+- `StreamingBillingUpdateConfig`
+- `MarketplaceV3UpdateConfig`
+- `AuctionEnglishUpdateConfig`

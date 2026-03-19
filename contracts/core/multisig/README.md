@@ -1,8 +1,12 @@
 # Passage Multisig
 
-`multisig` is a proposal-based administrative multisig contract for Passage.
+`multisig` is a proposal-based administrative multisig contract for Passage. `multisig` remains the owner-admin executor.
 
-It is designed to hold administrative control over contracts such as `registry`, `ecosystem-factory`, `marketplace-v3`, and `auction-english` without forcing those contracts to know anything about multisig internals.
+## Role in the corrected governance model
+
+- `multisig` owns and administers contracts such as `registry`, `ecosystem-factory`, `marketplace-v3`, and `auction-english`.
+- PASG governance is a separate layer from multisig and does not replace signer-threshold semantics.
+- PASG governance can ratify scoped protocol changes, but final owner/admin execution still happens through standard `multisig.Propose`, `Vote`, and `Execute`.
 
 ## Core Flow
 
@@ -20,15 +24,13 @@ Signer rotation is handled by the multisig itself:
 - use `ExecuteMsg::UpdateMembers`
 - once executed, the signer set and threshold are updated in place
 
-This keeps the multisig address stable while allowing compromised signers to be removed.
-
 ## Execute Messages
 
 - `Propose`
 - `Vote`
 - `Execute`
 - `Close`
-- `UpdateMembers` (self-call only)
+- `UpdateMembers`
 
 ## Query Messages
 
@@ -40,3 +42,5 @@ This keeps the multisig address stable while allowing compromised signers to be 
 - `Vote`
 - `Votes`
 - `CanExecute`
+
+multisig remains the owner-admin executor.

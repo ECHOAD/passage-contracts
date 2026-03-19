@@ -1,158 +1,39 @@
 # Multisig Governance
 
-This guide explains the recommended Passage admin pattern: use `multisig` as the admin address for `registry` and other critical contracts.
+This guide explains the corrected Passage governance model.
 
-## Why `multisig`
+## Two-layer model
 
-Recommended reasons:
+PASG governance is a separate layer from multisig.
 
-- one signer compromise does not automatically compromise the full admin surface
-- admin actions become auditable proposals instead of direct wallet actions
-- signer rotation can happen without changing the multisig address
+- `pasg-governance` handles PASG-holder proposals, deposited `upasg` voting power, delegation, quorum, pass thresholds, and governance-owned PASG utility parameter updates.
+- `multisig` remains the owner-admin executor for `registry` and other protocol contracts.
+- PASG governance can ratify only scoped protocol admin actions and exposes them through `ratified_admin_action` records.
 
-## Recommended ownership model
+`multisig` remains the owner-admin executor.
 
-For `registry`:
+## Why `multisig` stays separate
+
+- registry and protocol ownership remain under explicit signer control
+- PASG governance does not get arbitrary raw message dispatch
+- multisig signers can review the deterministic `payload_hash` before mirroring the action into `Propose`
+
+## Handoff flow
+
+1. PASG holders deposit `upasg` in `pasg-governance`.
+2. A holder creates a proposal with either `SetPasgUtilityConfig` or a scoped admin action such as `StreamingBillingUpdateConfig`, `MarketplaceV3UpdateConfig`, or `AuctionEnglishUpdateConfig`.
+3. If the PASG proposal passes, `pasg-governance` either executes the PASG-owned parameter change directly or stores a `ratified_admin_action` record with `proposal_id`, `admin_multisig`, typed `action`, and `payload_hash`.
+4. Multisig signers create a normal `multisig.Propose` carrying the equivalent contract `update_config` call.
+5. Multisig members `Vote` and then `Execute`.
+
+## Example relationship
 
 - `registry InstantiateMsg.admin = <multisig_addr>`
 - CosmWasm instance admin for `registry` = `<multisig_addr>`
-- `operators` remain separate and should be less trusted than the multisig
+- PASG governance does not replace that owner/admin relationship
 
-## Deployment order
+## Operational rule
 
-1. Store and instantiate `multisig`.
-2. Store and instantiate `registry`.
-3. In `registry` instantiate:
-   - set `admin = <multisig_addr>`
-4. In the CosmWasm instantiate transaction:
-   - set instance admin to `<multisig_addr>`
-5. Deploy `ecosystem-factory`.
-6. Use a multisig proposal to wire `registry.UpdateConfig { ecosystem_factory }`.
+Never treat PASG governance as a drop-in replacement for multisig membership. PASG governance ratifies scoped protocol intent; multisig performs final owner/admin execution.
 
-## How proposals work
-
-1. A signer sends `multisig.Propose`.
-2. The proposal contains one or more `CosmosMsg` messages.
-3. Other signers vote with `Approve` or `Reject`.
-4. Once the threshold is reached, anyone can call `multisig.Execute`.
-
-Important detail:
-
-- if the proposal wraps a `WasmMsg::Execute`, the inner contract message is stored as base64-encoded binary
-
-## Example: update `registry` config through `multisig`
-
-Inner `registry` message:
-
-```json
-{
-  "update_config": {
-    "admin": null,
-    "operators": ["passage1ops1...", "passage1ops2..."],
-    "ecosystem_factory": "passage1factory...",
-    "paused": null
-  }
-}
-```
-
-Outer `multisig` proposal:
-
-```json
-{
-  "propose": {
-    "title": "Wire ecosystem factory",
-    "description": "Authorize the deployed ecosystem factory in registry",
-    "msgs": [
-      {
-        "wasm": {
-          "execute": {
-            "contract_addr": "passage1registry...",
-            "msg": "<base64 of the inner registry message>",
-            "funds": []
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-Then:
-
-```json
-{
-  "vote": {
-    "proposal_id": 1,
-    "vote": "approve"
-  }
-}
-```
-
-And finally:
-
-```json
-{
-  "execute": {
-    "proposal_id": 1
-  }
-}
-```
-
-## Example: rotate a compromised signer
-
-Because `UpdateMembers` is self-call only, signer rotation is done by proposing a `WasmMsg::Execute` that targets the multisig itself.
-
-Inner `multisig` message:
-
-```json
-{
-  "update_members": {
-    "members": [
-      "passage1signer1...",
-      "passage1signer2...",
-      "passage1signer4..."
-    ],
-    "threshold": 2,
-    "max_voting_period_secs": 86400
-  }
-}
-```
-
-Outer proposal:
-
-```json
-{
-  "propose": {
-    "title": "Replace compromised signer",
-    "description": "Remove signer3 and add signer4",
-    "msgs": [
-      {
-        "wasm": {
-          "execute": {
-            "contract_addr": "passage1multisig...",
-            "msg": "<base64 of the inner multisig message>",
-            "funds": []
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-## Operational guidance
-
-Recommended defaults for Passage:
-
-- use a contract multisig, not a native multisig account
-- use `2 of 3` for a small operating team or `3 of 5` for a more institutional setup
-- use hardware wallets for all signers
-- avoid giving `operators` the same authority as the multisig
-
-What the multisig should own:
-
-- `registry`
-- `ecosystem-factory`
-- `marketplace-v3`
-- `auction-english`
-- any future contract with upgrade or config authority
+multisig remains the owner-admin executor.
