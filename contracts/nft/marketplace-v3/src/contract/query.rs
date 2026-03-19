@@ -360,11 +360,9 @@ fn query_bids_by_token(
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let end = start_after
         .map(|bidder| {
-            deps.api
-                .addr_validate(&bidder)
-                .map(|bidder_addr| {
-                    Bound::exclusive((collection_addr.clone(), token_id.clone(), bidder_addr))
-                })
+            deps.api.addr_validate(&bidder).map(|bidder_addr| {
+                Bound::exclusive((collection_addr.clone(), token_id.clone(), bidder_addr))
+            })
         })
         .transpose()?;
 
@@ -390,11 +388,9 @@ fn query_bids_by_bidder(
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after
         .map(|(collection, token_id)| {
-            deps.api
-                .addr_validate(&collection)
-                .map(|collection_addr| {
-                    Bound::exclusive((collection_addr, token_id, bidder_addr.clone()))
-                })
+            deps.api.addr_validate(&collection).map(|collection_addr| {
+                Bound::exclusive((collection_addr, token_id, bidder_addr.clone()))
+            })
         })
         .transpose()?;
 

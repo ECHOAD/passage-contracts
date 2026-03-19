@@ -70,5 +70,3 @@ fn query_routing_metadata() -> RoutingMetadataResponse {
 
 #[cfg(test)]
 mod tests;
-
-

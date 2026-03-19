@@ -90,6 +90,3 @@ pub struct RoutingMetadataResponse {
     pub preview_query: RoutingPreviewRoute,
     pub execute_routes: Vec<RoutingExecuteRoute>,
 }
-
-
-

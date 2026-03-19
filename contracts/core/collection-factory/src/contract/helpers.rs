@@ -68,7 +68,8 @@ fn parse_instantiate_response_data(data: &[u8]) -> Result<String, ContractError>
 
         let (value, after_value) = read_length_delimited(after_key)?;
         if field_number == 1 {
-            return String::from_utf8(value).map_err(|_| ContractError::InvalidInstantiateReplyData {});
+            return String::from_utf8(value)
+                .map_err(|_| ContractError::InvalidInstantiateReplyData {});
         }
 
         remaining = after_value;

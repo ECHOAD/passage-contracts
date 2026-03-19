@@ -1,8 +1,8 @@
 use cosmwasm_std::{
     coins, from_json,
     testing::{message_info, mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_json_binary, Addr, BankMsg, ContractResult, CosmosMsg, OwnedDeps, SystemError,
-    SystemResult, Timestamp, Uint128, WasmQuery, WasmMsg,
+    to_json_binary, Addr, BankMsg, ContractResult, CosmosMsg, OwnedDeps, SystemError, SystemResult,
+    Timestamp, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::{
@@ -16,9 +16,9 @@ use crate::{
         UserBalanceResponse,
     },
     state::{
-        Config, PendingRevenue, PlatformStats, StreamingSession, UserBalance, WorldConfig,
-        CONFIG, PENDING_REVENUE, PLATFORM_STATS, SESSIONS, SESSION_COUNTER, USER_BALANCES,
-        USER_SESSIONS, WORLD_CONFIGS,
+        Config, PendingRevenue, PlatformStats, StreamingSession, UserBalance, WorldConfig, CONFIG,
+        PENDING_REVENUE, PLATFORM_STATS, SESSIONS, SESSION_COUNTER, USER_BALANCES, USER_SESSIONS,
+        WORLD_CONFIGS,
     },
 };
 
@@ -584,12 +584,17 @@ fn deposit_crypto_accepts_native_upasg_and_updates_balance() {
         .iter()
         .any(|attr| attr.key == "pasg_amount" && attr.value == "12"));
 
-    let balance: UserBalanceResponse =
-        from_json(query(deps.as_ref(), mock_env(), QueryMsg::UserBalance {
-            user: addr(USER).to_string(),
-        })
-        .unwrap())
-        .unwrap();
+    let balance: UserBalanceResponse = from_json(
+        query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::UserBalance {
+                user: addr(USER).to_string(),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
 
     assert_eq!(balance.points_balance, Uint128::new(1_200));
     assert_eq!(balance.total_deposited_pasg, Uint128::new(12));
@@ -646,12 +651,17 @@ fn withdraw_points_returns_native_upasg() {
         other => panic!("expected bank send, got {other:?}"),
     }
 
-    let balance: UserBalanceResponse =
-        from_json(query(deps.as_ref(), mock_env(), QueryMsg::UserBalance {
-            user: addr(USER).to_string(),
-        })
-        .unwrap())
-        .unwrap();
+    let balance: UserBalanceResponse = from_json(
+        query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::UserBalance {
+                user: addr(USER).to_string(),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
     assert_eq!(balance.points_balance, Uint128::zero());
 }
 
@@ -687,7 +697,9 @@ fn distribute_world_revenue_uses_native_upasg_funds() {
         other => panic!("expected wasm execute, got {other:?}"),
     }
 
-    let pending = PENDING_REVENUE.load(deps.as_ref().storage, WORLD_ID).unwrap();
+    let pending = PENDING_REVENUE
+        .load(deps.as_ref().storage, WORLD_ID)
+        .unwrap();
     assert_eq!(pending.pending_points, Uint128::zero());
     assert_eq!(pending.pending_pasg, Uint128::zero());
     assert!(pending.last_distribution.is_some());

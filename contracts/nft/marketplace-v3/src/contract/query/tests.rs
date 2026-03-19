@@ -50,7 +50,11 @@ fn save_bid(
     bids()
         .save(
             storage,
-            (bid.collection.clone(), bid.token_id.clone(), bid.bidder.clone()),
+            (
+                bid.collection.clone(),
+                bid.token_id.clone(),
+                bid.bidder.clone(),
+            ),
             &bid,
         )
         .unwrap();
@@ -64,10 +68,34 @@ fn asks_by_price_respects_collection_filter() {
     let collection_b = deps.api.addr_make("collection_b");
     let seller = deps.api.addr_make("seller");
 
-    save_ask(deps.as_mut().storage, collection_b.as_str(), "1", seller.as_str(), 50);
-    save_ask(deps.as_mut().storage, collection_b.as_str(), "2", seller.as_str(), 75);
-    save_ask(deps.as_mut().storage, collection_a.as_str(), "1", seller.as_str(), 100);
-    save_ask(deps.as_mut().storage, collection_a.as_str(), "2", seller.as_str(), 125);
+    save_ask(
+        deps.as_mut().storage,
+        collection_b.as_str(),
+        "1",
+        seller.as_str(),
+        50,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_b.as_str(),
+        "2",
+        seller.as_str(),
+        75,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        seller.as_str(),
+        100,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "2",
+        seller.as_str(),
+        125,
+    );
 
     let response: AsksResponse = from_json(
         query(
@@ -108,9 +136,27 @@ fn asks_by_seller_respects_start_after() {
     ];
     ordered_collections.sort_by(|left, right| left.as_str().cmp(right.as_str()));
 
-    save_ask(deps.as_mut().storage, collection_a.as_str(), "1", seller.as_str(), 100);
-    save_ask(deps.as_mut().storage, collection_b.as_str(), "1", seller.as_str(), 110);
-    save_ask(deps.as_mut().storage, collection_c.as_str(), "1", seller.as_str(), 120);
+    save_ask(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        seller.as_str(),
+        100,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_b.as_str(),
+        "1",
+        seller.as_str(),
+        110,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_c.as_str(),
+        "1",
+        seller.as_str(),
+        120,
+    );
 
     let response: AsksResponse = from_json(
         query(
@@ -139,9 +185,27 @@ fn ask_count_respects_collection_filter() {
     let collection_b = deps.api.addr_make("collection_b");
     let seller = deps.api.addr_make("seller");
 
-    save_ask(deps.as_mut().storage, collection_a.as_str(), "1", seller.as_str(), 100);
-    save_ask(deps.as_mut().storage, collection_a.as_str(), "2", seller.as_str(), 110);
-    save_ask(deps.as_mut().storage, collection_b.as_str(), "1", seller.as_str(), 120);
+    save_ask(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        seller.as_str(),
+        100,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "2",
+        seller.as_str(),
+        110,
+    );
+    save_ask(
+        deps.as_mut().storage,
+        collection_b.as_str(),
+        "1",
+        seller.as_str(),
+        120,
+    );
 
     let response: CountResponse = from_json(
         query(
@@ -169,9 +233,27 @@ fn bids_by_token_respects_start_after() {
     let mut ordered_bidders = vec![bidder_a.clone(), bidder_b.clone(), bidder_c.clone()];
     ordered_bidders.sort_by(|left, right| right.as_str().cmp(left.as_str()));
 
-    save_bid(deps.as_mut().storage, collection_a.as_str(), "1", bidder_c.as_str(), 100);
-    save_bid(deps.as_mut().storage, collection_a.as_str(), "1", bidder_b.as_str(), 100);
-    save_bid(deps.as_mut().storage, collection_a.as_str(), "1", bidder_a.as_str(), 100);
+    save_bid(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        bidder_c.as_str(),
+        100,
+    );
+    save_bid(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        bidder_b.as_str(),
+        100,
+    );
+    save_bid(
+        deps.as_mut().storage,
+        collection_a.as_str(),
+        "1",
+        bidder_a.as_str(),
+        100,
+    );
 
     let response: BidsResponse = from_json(
         query(

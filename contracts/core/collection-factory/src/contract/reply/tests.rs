@@ -140,5 +140,8 @@ fn reply_rejects_missing_pending_creation() {
         .unwrap();
 
     let err = reply(deps.as_mut(), env, make_reply("collection-addr")).unwrap_err();
-    assert_eq!(err, crate::error::ContractError::PendingCreationNotFound { id: 7 });
+    assert_eq!(
+        err,
+        crate::error::ContractError::PendingCreationNotFound { id: 7 }
+    );
 }

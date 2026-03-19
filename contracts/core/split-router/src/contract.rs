@@ -31,4 +31,3 @@ mod query;
 pub use execute::execute;
 pub use instantiate::instantiate;
 pub use query::query;
-

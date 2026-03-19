@@ -56,7 +56,6 @@ fn preview_split_handles_multiple_denoms() {
     );
 }
 
-
 #[test]
 fn routing_metadata_reports_generic_passthrough_surface() {
     let response = query_routing_metadata();

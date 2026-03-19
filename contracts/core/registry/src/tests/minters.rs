@@ -36,9 +36,21 @@ fn authorized_minters_respects_start_after() {
     let mut ordered_minters = vec![minter_a.clone(), minter_b.clone(), minter_c.clone()];
     ordered_minters.sort_by(|left, right| left.as_str().cmp(right.as_str()));
 
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_a.as_str());
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_b.as_str());
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_c.as_str());
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_a.as_str(),
+    );
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_b.as_str(),
+    );
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_c.as_str(),
+    );
 
     let response: AuthorizedMintersResponse = from_json(
         query(
@@ -54,7 +66,10 @@ fn authorized_minters_respects_start_after() {
     )
     .unwrap();
 
-    assert_eq!(response.minters, vec![ordered_minters[1].clone(), ordered_minters[2].clone()]);
+    assert_eq!(
+        response.minters,
+        vec![ordered_minters[1].clone(), ordered_minters[2].clone()]
+    );
 }
 
 #[test]
@@ -74,10 +89,26 @@ fn authorized_minters_respects_limit() {
     ];
     ordered_minters.sort_by(|left, right| left.as_str().cmp(right.as_str()));
 
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_a.as_str());
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_b.as_str());
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_c.as_str());
-    save_authorized_minter(deps.as_mut().storage, collection.as_str(), minter_d.as_str());
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_a.as_str(),
+    );
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_b.as_str(),
+    );
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_c.as_str(),
+    );
+    save_authorized_minter(
+        deps.as_mut().storage,
+        collection.as_str(),
+        minter_d.as_str(),
+    );
 
     let first_page: AuthorizedMintersResponse = from_json(
         query(
