@@ -85,6 +85,69 @@ fn off_scope_admin_action_is_rejected() {
 }
 
 #[test]
+fn registry_staking_validator_handoff_is_metadata_only() {
+    let mut ctx = instantiate_contract();
+
+    execute(
+        ctx.deps.as_mut(),
+        mock_env(),
+        mock_info(&ctx.alice, &coins(200, "upasg")),
+        ExecuteMsg::DepositVotingPower {},
+    )
+    .unwrap();
+
+    let action = AdminAction::RegistryUpsertStakingValidator {
+        contract_addr: "passage1registry000000000000000000000000".to_string(),
+        operator_address: "passagevaloper1alpha".to_string(),
+        moniker: "Passage Alpha".to_string(),
+        website: Some("https://alpha.passage.io".to_string()),
+        active: true,
+    };
+
+    execute(
+        ctx.deps.as_mut(),
+        mock_env(),
+        mock_info(&ctx.alice, &[]),
+        ExecuteMsg::Propose {
+            title: "ratify validator metadata".to_string(),
+            description: Some("stage registry staking metadata".to_string()),
+            action: ProposalAction::StageAdminAction {
+                action: action.clone(),
+            },
+        },
+    )
+    .unwrap();
+
+    let response = execute(
+        ctx.deps.as_mut(),
+        mock_env(),
+        mock_info("executor", &[]),
+        ExecuteMsg::ExecuteProposal { proposal_id: 1 },
+    )
+    .unwrap();
+
+    assert!(response.messages.is_empty());
+    assert!(response
+        .attributes
+        .iter()
+        .any(|attr| attr.key == "proposal_action" && attr.value == "stage_admin_action"));
+
+    let ratified: RatifiedAdminActionResponse = from_json(
+        query(
+            ctx.deps.as_ref(),
+            mock_env(),
+            QueryMsg::RatifiedAdminAction { proposal_id: 1 },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    let action_record = ratified.action.unwrap();
+    assert_eq!(action_record.action, action);
+    assert!(!action_record.payload_hash.is_empty());
+}
+
+#[test]
 fn ratified_admin_action_query_matches_multisig_payload() {
     let mut ctx = instantiate_contract();
 
