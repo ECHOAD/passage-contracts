@@ -13,8 +13,8 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 - [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
 - [x] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
 - [x] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics without repurposing the existing admin-owner multisig.
-- [ ] **Phase 4: PASG Validator Staking & Rewards** - Align PASG with native validator delegation, chain-level unbonding, validator fee participation, and token rewards.
-- [ ] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
+- [x] **Phase 4: PASG Validator Staking & Rewards** - Align PASG with native validator delegation, chain-level unbonding, validator fee participation, and token rewards.
+- [x] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
 - [ ] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
 - [ ] **Phase 7: Audit Readiness & Launch Hardening** - Raise test coverage, fuzzing, docs, and migration discipline to audit grade.
 
@@ -97,9 +97,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Reconcile and complete typed collection and extension models
-- [ ] 05-02: Harden creator monetization rules for worlds, plugins, templates, and marketplace assets
-- [ ] 05-03: Align collection factory, registry, and revenue-routing integration for asset lifecycles
+- [x] 05-01: Rebuild ecosystem-centric registry affiliation and direct collection lifecycle
+- [x] 05-02: Complete typed creator asset metadata and keep monetization routing generic
+- [x] 05-03: Align docs, examples, and verification to the ecosystem-centric creator asset model
 
 ### Phase 6: Multi-Economy Settlement
 **Goal**: Let worlds run local economies that settle against PASG and support hybrid payment paths safely.
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
 | 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
 | 4. PASG Validator Staking & Rewards | 3/3 | Complete | 2026-03-19 |
-| 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
+| 5. Creator Asset Contracts & Monetization | 3/3 | Complete | 2026-03-19 |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
 | 8. Documentacion completa bilingue de contratos en docs | 0/0 | Not started | - |
@@ -173,6 +173,8 @@ Plans:
 - [x] 09-01-PLAN.md - Simplify marketplace config to global fee plus collection-scoped denom with mandatory registration
 - [x] 09-02-PLAN.md - Add owner validation plus request/approval flows for register and update
 - [x] 09-03-PLAN.md - Align queries, schema, and docs to the redesigned public surface
+
+
 
 
 

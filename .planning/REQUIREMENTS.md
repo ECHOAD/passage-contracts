@@ -31,13 +31,13 @@
 
 ### NFT Assets & Creator Monetization
 
-- [ ] **NFT-01**: Creator can create typed Passage NFT collections through factories with correct collection metadata, royalties, and registration behavior.
-- [ ] **NFT-02**: Required world, plugin, achievement, avatar, companion, and component extensions are implemented or explicitly retired in docs and code with no silent drift.
-- [ ] **NFT-03**: Cross-world usage and monetization rules for Passage assets are enforced through on-chain primitives plus documented off-chain coordination.
+- [x] **NFT-01**: Creator can create typed Passage NFT collections through factories with correct collection metadata, royalties, and registration behavior.
+- [x] **NFT-02**: Required world, plugin, achievement, avatar, companion, and component extensions are implemented or explicitly retired in docs and code with no silent drift.
+- [x] **NFT-03**: Cross-world usage and monetization rules for Passage assets are enforced through on-chain primitives plus documented off-chain coordination.
 
 ### Revenue Execution
 
-- [ ] **REV-01**: Platform services can execute creator/platform/partner revenue splits for world, marketplace, and asset flows from on-chain rules.
+- [x] **REV-01**: Platform services can execute creator/platform/partner revenue splits for world, marketplace, and asset flows from on-chain rules.
 - [ ] **REV-02**: Revenue execution supports session-based billing, escrow, and refund-safe settlement where the product architecture requires it.
 - [x] **REV-03**: Fiat-assisted purchase flows into PASG-denominated accounting are protected by explicit oracle, replay, and freshness controls.
 
@@ -83,10 +83,10 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | STAK-01 | Phase 4 | Complete |
 | STAK-02 | Phase 4 | Complete |
 | STAK-03 | Phase 4 | Complete |
-| NFT-01 | Phase 5 | Pending |
-| NFT-02 | Phase 5 | Pending |
-| NFT-03 | Phase 5 | Pending |
-| REV-01 | Phase 5 | Pending |
+| NFT-01 | Phase 5 | Complete |
+| NFT-02 | Phase 5 | Complete |
+| NFT-03 | Phase 5 | Complete |
+| REV-01 | Phase 5 | Complete |
 | ECON-01 | Phase 6 | Pending |
 | ECON-02 | Phase 6 | Pending |
 | REV-02 | Phase 6 | Pending |
@@ -101,7 +101,8 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 4 completion*
+*Last updated: 2026-03-19 after Phase 5 completion*
+
 
 
 
