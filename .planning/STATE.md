@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-18T20:42:08Z"
-last_activity: 2026-03-18 - Phase 2 plan 01 executed, verified, and documented
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-19T00:17:10Z"
+last_activity: 2026-03-18 - Phase 2 plan 02 executed, verified, and documented
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 20
-  completed_plans: 4
-  percent: 20
+  completed_plans: 5
+  percent: 25
 ---
 
 # Project State
@@ -26,28 +26,28 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 2 of 7 (PASG Utility Surface)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In Progress
-Last activity: 2026-03-18 - Phase 2 plan 01 executed, verified, and documented
+Last activity: 2026-03-18 - Phase 2 plan 02 executed, verified, and documented
 
-Progress: [##--------] 20%
+Progress: [###-------] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 44 min
-- Total execution time: 2.9 hours
+- Total plans completed: 5
+- Average duration: 75 min
+- Total execution time: 6.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Protocol Hardening & Boundaries | 3 | 170 min | 57 min |
-| 2. PASG Utility Surface | 1 | 6 min | 6 min |
+| 2. PASG Utility Surface | 2 | 207 min | 104 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01, 01-02, 01-03, 02-01
+- Last 5 plans: 01-01, 01-02, 01-03, 02-01, 02-02
 - Trend: Stable
 
 ## Accumulated Context
@@ -66,6 +66,8 @@ Recent decisions affecting current work:
 - [Phase 2]: streaming-billing owns the canonical PASG utility interface via `QueryMsg::PasgUtility`
 - [Phase 2]: `upasg` remains the only in-repo PASG settlement model; wrappers are compatibility-only shims
 - [Phase 2]: split-router stays denom-agnostic while billing and subscription policy remain off-chain
+- [Phase 2]: split-router accepts streaming-billing `route_world_revenue` calls via a generic compatibility alias
+- [Phase 2]: marketplace, minter-v2, and auction-english now emit canonical PASG utility reference attributes on fee-bearing flows
 
 ### Pending Todos
 
@@ -73,11 +75,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- Workspace-wide `cargo unit-test` and `cargo check --workspace` are currently blocked by a pre-existing `ecosystem-factory` compile error: missing `REQUESTS_BY_CREATOR` imports in `src/contract/execute.rs:188` and `src/contract/query.rs:84`.
+- Workspace-wide verification is still blocked by `ecosystem-factory`: missing `REQUESTS_BY_CREATOR` imports in `src/contract/execute.rs:188` and `src/contract/query.rs:84`.
+- Workspace-wide verification is also blocked by `minter-metadata-onchain`: `Pg721InstantiateMsg` initialization is missing `nft_type` in `src/contract.rs:102`.
 - Several active core contracts still have no migrate entrypoint, so future upgrades will require explicit redeploy-and-cutover planning.
 
 ## Session Continuity
 
-Last session: 2026-03-18 20:42 UTC
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-pasg-utility-surface/02-02-PLAN.md
+Last session: 2026-03-19 00:17 UTC
+Stopped at: Completed 02-02-PLAN.md
+Resume file: .planning/phases/02-pasg-utility-surface/02-03-PLAN.md

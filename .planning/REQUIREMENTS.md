@@ -13,7 +13,7 @@
 
 ### PASG Utility
 
-- [ ] **PASG-01**: User can pay supported protocol-facing fees with PASG and receive on-chain-verifiable fee treatment where configured.
+- [x] **PASG-01**: User can pay supported protocol-facing fees with PASG and receive on-chain-verifiable fee treatment where configured.
 - [x] **PASG-02**: Protocol contracts expose a canonical PASG utility interface instead of duplicating fee or discount logic contract by contract.
 - [x] **PASG-03**: PASG utility works with the existing `upasg` settlement model or a documented wrapper/adapter path, with no ambiguity for integrators.
 
@@ -74,7 +74,7 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | ARCH-02 | Phase 1 | Complete |
 | ARCH-03 | Phase 1 | Complete |
 | REV-03 | Phase 1 | Complete |
-| PASG-01 | Phase 2 | Pending |
+| PASG-01 | Phase 2 | Complete |
 | PASG-02 | Phase 2 | Complete |
 | PASG-03 | Phase 2 | Complete |
 | GOV-01 | Phase 3 | Pending |
@@ -101,5 +101,5 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-18 after Phase 2 Plan 01 completion*
+*Last updated: 2026-03-18 after Phase 2 Plan 02 completion*
 

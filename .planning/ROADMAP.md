@@ -49,7 +49,7 @@ Plans:
 
 Plans:
 - [x] 02-01: Define the PASG utility interface and native-denom or adapter strategy
-- [ ] 02-02: Integrate PASG fee-treatment hooks into target payment and routing flows
+- [x] 02-02: Integrate PASG fee-treatment hooks into target payment and routing flows
 - [ ] 02-03: Document and verify PASG utility semantics across contracts and service touchpoints
 
 ### Phase 3: PASG Governance
@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
-| 2. PASG Utility Surface | 1/3 | In Progress | - |
+| 2. PASG Utility Surface | 2/3 | In Progress | - |
 | 3. PASG Governance | 0/3 | Not started | - |
 | 4. PASG Staking & Rewards | 0/3 | Not started | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
