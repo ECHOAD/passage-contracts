@@ -1,5 +1,24 @@
-# Invalidated Verification
+# Phase 03 Verification
 
-This verification file was invalidated by the `phase-3-multisig-intent-mismatch` debug session because it closed Phase 3 against the wrong architectural intent.
+Phase 3 is complete against the corrected intent recorded in `03-INTENT-CORRECTION.md`.
 
-See `.planning/phases/03-pasg-governance/03-INTENT-CORRECTION.md` and replan Phase 3 before recording new verification.
+## Outcome
+
+- `GOV-01`: complete
+- `GOV-02`: complete
+- `GOV-03`: complete
+
+## Verification Commands
+
+Passed:
+- `cargo check -p pasg-governance`
+- `cargo test -p pasg-governance --lib`
+- `cargo test -p multisig --lib --tests`
+- `cargo check -p multisig`
+
+## Architecture Check
+
+- PASG governance now lives in `contracts/core/pasg-governance`.
+- `multisig` remains the owner-admin executor.
+- Governance-owned PASG utility updates execute directly in `pasg-governance`.
+- Protocol-scoped admin updates leave governance only as typed `ratified_admin_action` records for multisig follow-through.

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Reopened Phase 3 after correcting the multisig architectural intent mismatch
-last_updated: "2026-03-18T23:59:00Z"
-last_activity: 2026-03-18 - Phase 3 reopened after correcting the multisig architectural intent mismatch
+stopped_at: Completed Phase 3 PASG Governance; Phase 4 is now ready to plan
+last_updated: "2026-03-19T16:30:48Z"
+last_activity: 2026-03-19 - Completed Phase 3 PASG Governance and moved focus to PASG Staking & Rewards
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 20
-  completed_plans: 6
-  percent: 30
+  completed_plans: 9
+  percent: 45
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** PASG must provide real on-chain utility for payments, governance, staking, and creator monetization while keeping platform UX and infrastructure concerns off-chain.
-**Current focus:** Phase 3 - PASG Governance (reopened after intent correction)
+**Current focus:** Phase 4 - PASG Staking & Rewards
 
 ## Current Position
 
-Phase: 3 of 8 (PASG Governance)
+Phase: 4 of 8 (PASG Staking & Rewards)
 Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-03-18 - Phase 3 reopened after correcting the multisig architectural intent mismatch
+Last activity: 2026-03-19 - Completed Phase 3 PASG Governance and moved focus to PASG Staking & Rewards
 
-Progress: [###-------] 30%
+Progress: [####------] 45%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 65 min
-- Total execution time: 6.5 hours
+- Total plans completed: 9
+- Average duration: 61 min
+- Total execution time: 9.2 hours
 
 **By Phase:**
 
@@ -45,9 +45,10 @@ Progress: [###-------] 30%
 |-------|-------|-------|----------|
 | 1. Protocol Hardening & Boundaries | 3 | 170 min | 57 min |
 | 2. PASG Utility Surface | 3 | 222 min | 74 min |
+| 3. PASG Governance | 3 | 160 min | 53 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02, 01-03, 02-01, 02-02, 02-03
+- Last 5 plans: 02-02, 02-03, 03-01, 03-02, 03-03
 - Trend: Stable
 
 ## Accumulated Context
@@ -71,6 +72,7 @@ Recent decisions affecting current work:
 - [Phase 2]: contract docs and JSON examples now require query-first PASG verification instead of contract-local assumptions
 - [Phase 2]: minter-v2 schema outputs are checked in and split-router schema now exposes inspectable routing metadata
 - [Debug 2026-03-18]: `multisig` must remain the admin-owner control plane; PASG governance must be designed as a separate voting/proposal layer instead of replacing that contract
+- [Phase 3]: PASG governance now lives in `contracts/core/pasg-governance`, while `multisig` remains the owner-admin executor with typed handoff through `ratified_admin_action`
 
 ### Roadmap Evolution
 
@@ -86,7 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19 00:43 UTC
-Stopped at: Completed Phase 2 PASG Utility Surface
+Last session: 2026-03-19 16:30 UTC
+Stopped at: Completed Phase 3 PASG Governance
 Resume file: .planning/ROADMAP.md
-

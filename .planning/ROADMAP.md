@@ -12,7 +12,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 
 - [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
 - [x] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
-- [ ] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics without repurposing the existing admin-owner multisig.
+- [x] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics without repurposing the existing admin-owner multisig.
 - [ ] **Phase 4: PASG Staking & Rewards** - Add staking, unbonding, and emission logic aligned to the token program.
 - [ ] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
 - [ ] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
@@ -65,9 +65,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md - Build the separate PASG governance contract and governance-owned parameter surface
-- [ ] 03-02-PLAN.md - Add deposited voting power, delegation, quorum, and lock enforcement
-- [ ] 03-03-PLAN.md - Add scoped multisig handoff, corrected docs, and governance guardrails
+- [x] 03-01-PLAN.md - Build the separate PASG governance contract and governance-owned parameter surface
+- [x] 03-02-PLAN.md - Add deposited voting power, delegation, quorum, and lock enforcement
+- [x] 03-03-PLAN.md - Add scoped multisig handoff, corrected docs, and governance guardrails
 
 ### Phase 4: PASG Staking & Rewards
 **Goal**: Add PASG staking, 21-day unbonding, emission logic, and the path toward fee-backed rewards.
@@ -141,7 +141,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
 | 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
-| 3. PASG Governance | 0/3 | Not started | - |
+| 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
 | 4. PASG Staking & Rewards | 0/3 | Not started | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
@@ -158,3 +158,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 8 to break down)
+
