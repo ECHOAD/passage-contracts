@@ -1120,7 +1120,79 @@ wasmd query wasm contract-state smart <contract_addr> '<json_query>'
 
 If you are operating from backend or frontend code, you can reuse these exact payloads as the CosmWasm message body.
 
-## 11. `pasg-governance`
+## 11. Chain-native PASG staking
+
+Validator fee participation and PASG rewards are chain-native outcomes. Use the staking and distribution modules for delegation, undelegation, and reward-state reads; use `registry` only if you need Passage-curated validator metadata.
+
+### Conceptual delegate transaction
+
+```bash
+passage tx staking delegate <validator_operator_addr> 1000000upasg --from <delegator>
+```
+
+### Conceptual undelegation transaction
+
+```bash
+passage tx staking undelegate <validator_operator_addr> 250000upasg --from <delegator>
+```
+
+### Conceptual reward-state query
+
+```bash
+passage query distribution rewards <delegator> <validator_operator_addr>
+```
+
+### Conceptual undelegation-state query
+
+```bash
+passage query staking unbonding-delegation <delegator> <validator_operator_addr>
+```
+
+### Optional Passage validator metadata query
+
+```json
+{
+  "staking_validators": {
+    "active_only": true,
+    "start_after": null,
+    "limit": 20
+  }
+}
+```
+
+Expected shape:
+
+```json
+{
+  "validators": [
+    {
+      "operator_address": "passagevaloper1alpha...",
+      "moniker": "Passage Alpha",
+      "website": "https://alpha.passage.io",
+      "active": true,
+      "updated_by": "passage1multisig...",
+      "updated_at": 1773597600
+    }
+  ]
+}
+```
+
+### Curate Passage validator metadata in `registry`
+
+```json
+{
+  "upsert_staking_validator": {
+    "operator_address": "passagevaloper1alpha...",
+    "moniker": "Passage Alpha",
+    "website": "https://alpha.passage.io",
+    "active": true
+  }
+}
+```
+
+This is metadata only. It must not be used as a delegated balance, unbond queue, or reward-state ledger.
+
+## 12. `pasg-governance`
 
 ### Propose a direct PASG utility change
 
@@ -1156,6 +1228,30 @@ If you are operating from backend or frontend code, you can reuse these exact pa
             "fiat_oracle": null,
             "stripe_webhook_validator": null,
             "paused": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Propose a scoped admin handoff for `registry` staking metadata
+
+```json
+{
+  "propose": {
+    "title": "Refresh Passage validator metadata",
+    "description": "Update the optional registry allowlist without changing chain-native staking rewards",
+    "action": {
+      "stage_admin_action": {
+        "action": {
+          "registry_upsert_staking_validator": {
+            "contract_addr": "passage1registry...",
+            "operator_address": "passagevaloper1alpha...",
+            "moniker": "Passage Alpha",
+            "website": "https://alpha.passage.io",
+            "active": true
           }
         }
       }

@@ -66,6 +66,8 @@ Most important execute messages:
 - `UpdateCollectionModeration`
 - `SetEcosystemRecoveryPolicy`
 - `SetCollectionRecoveryPolicy`
+- `UpsertStakingValidator`
+- `RemoveStakingValidator`
 - `RegisterEcosystemFromFactory`
 - `UpdateEcosystem`
 - `ApproveEcosystemMember`
@@ -96,12 +98,15 @@ When to use them:
 - `RegisterExistingCollection`: manually onboard an already deployed collection
 - `UpdateCollection`: store runtime pointers such as `minter` and `marketplace`
 - `AuthorizeMinter`: required if a `minter-v2` instance will operate with `registry` enabled
+- `UpsertStakingValidator`: curate the optional Passage validator allowlist and display metadata that wallets or services can consume before submitting native staking transactions
 - `OpenRecoveryCase`: open either `lost_access` or `abandonment` recovery
 - `ResolveRecoveryCase`: recovery authority decision after the contest window
 
 Most useful queries:
 
 - `Config`
+- `StakingValidator`
+- `StakingValidators`
 - `Ecosystem`
 - `Ecosystems`
 - `CanCreateEcosystem`
@@ -472,8 +477,10 @@ Expected action surface:
 
 Operational notes:
 
+- Validator fee participation and PASG rewards are outputs of the chain staking and token program. Wallets and services should read reward-state and undelegation status from chain-native staking and distribution queries rather than from a contract-local reward engine.
 - Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a contract-local claim queue.
 - Validator selection belongs to wallet and service UX. Choose one or more Passage validators using validator identity, commission, uptime, and any Passage governance or operator policy guidance.
+- If Passage wants a curated validator allowlist, query `registry.StakingValidators` or `registry.StakingValidator`. That registry surface stores operator addresses plus display metadata only. It does not store delegated balances, undelegation queues, or reward-state accrual.
 - If a repo-local adapter ever appears, it should normalize metadata or observability around the chain-native staking flow rather than duplicate staking balances.
 
 ## `pasg-governance`
@@ -501,6 +508,8 @@ Most important execute messages:
 
 Typed admin actions:
 
+- `RegistryUpsertStakingValidator`
+- `RegistryRemoveStakingValidator`
 - `StreamingBillingUpdateConfig`
 - `MarketplaceV3UpdateConfig`
 - `AuctionEnglishUpdateConfig`
@@ -518,4 +527,5 @@ Most useful queries:
 Handoff rule:
 
 - PASG governance ratifies the scoped action.
+- Staking-related governance handoffs are limited to validator metadata such as the optional `registry` allowlist. They do not custody validator stake, calculate PASG rewards, or alter undelegation state.
 - multisig remains the owner-admin executor and mirrors the typed action into its own `Propose` / `Vote` / `Execute` flow.
