@@ -107,23 +107,6 @@ pub fn execute(
             delegate,
             designated_successor,
         ),
-        ExecuteMsg::UpsertStakingValidator {
-            operator_address,
-            moniker,
-            website,
-            active,
-        } => execute_upsert_staking_validator(
-            deps,
-            env,
-            info,
-            operator_address,
-            moniker,
-            website,
-            active,
-        ),
-        ExecuteMsg::RemoveStakingValidator { operator_address } => {
-            execute_remove_staking_validator(deps, info, operator_address)
-        }
 
         // Ecosystem operations
         ExecuteMsg::RegisterEcosystemFromFactory {
@@ -614,76 +597,6 @@ fn execute_set_collection_recovery_policy(
         .add_attribute("collection", collection_addr)
         .add_attribute("delegate", delegate_attr)
         .add_attribute("designated_successor", successor_attr))
-}
-
-fn execute_upsert_staking_validator(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    operator_address: String,
-    moniker: String,
-    website: Option<String>,
-    active: bool,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if !is_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let operator_address = operator_address.trim().to_string();
-    if operator_address.is_empty() {
-        return Err(ContractError::InvalidValidatorOperatorAddress { operator_address });
-    }
-
-    let moniker = moniker.trim().to_string();
-    if moniker.is_empty() {
-        return Err(ContractError::EmptyValidatorMoniker {});
-    }
-
-    let website = website.and_then(|value| {
-        let trimmed = value.trim().to_string();
-        (!trimmed.is_empty()).then_some(trimmed)
-    });
-    let validator = StakingValidator {
-        operator_address: operator_address.clone(),
-        moniker,
-        website,
-        active,
-        updated_by: info.sender.clone(),
-        updated_at: env.block.time.seconds(),
-    };
-
-    STAKING_VALIDATORS.save(deps.storage, operator_address.clone(), &validator)?;
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-
-    Ok(Response::new()
-        .add_attribute("action", "upsert_staking_validator")
-        .add_attribute("operator_address", operator_address)
-        .add_attribute("active", active.to_string()))
-}
-
-fn execute_remove_staking_validator(
-    deps: DepsMut,
-    info: MessageInfo,
-    operator_address: String,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if !is_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let operator_address = operator_address.trim().to_string();
-    if operator_address.is_empty()
-        || !STAKING_VALIDATORS.has(deps.storage, operator_address.clone())
-    {
-        return Err(ContractError::StakingValidatorNotFound { operator_address });
-    }
-
-    STAKING_VALIDATORS.remove(deps.storage, operator_address.clone());
-
-    Ok(Response::new()
-        .add_attribute("action", "remove_staking_validator")
-        .add_attribute("operator_address", operator_address))
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -98,15 +98,6 @@ pub enum ContractError {
     #[error("Only collection creator can perform this action")]
     NotCollectionCreator {},
 
-    #[error("Invalid validator operator address: {operator_address}")]
-    InvalidValidatorOperatorAddress { operator_address: String },
-
-    #[error("Validator moniker cannot be empty")]
-    EmptyValidatorMoniker {},
-
-    #[error("Staking validator not found: {operator_address}")]
-    StakingValidatorNotFound { operator_address: String },
-
     #[error("Recovery configuration is invalid")]
     InvalidRecoveryConfig {},
 

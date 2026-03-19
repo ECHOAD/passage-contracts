@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 04-02 minimal staking adapter and docs; Phase 4 wave 3 is next
+stopped_at: Completed Phase 4 closeout; Phase 5 planning is next
 last_updated: "2026-03-19T20:30:00Z"
-last_activity: 2026-03-19 - Completed 04-02 with metadata-only staking adapter and governance handoff
+last_activity: 2026-03-19 - Reverted validator metadata overreach and closed Phase 4 as chain-native staking only
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 23
-  completed_plans: 14
-  percent: 61
+  completed_plans: 15
+  percent: 65
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** PASG must provide real on-chain utility for payments, governance, staking, and creator monetization while keeping platform UX and infrastructure concerns off-chain.
-**Current focus:** Phase 4 - PASG Validator Staking & Rewards
+**Current focus:** Phase 5 - Creator Asset Contracts & Monetization
 
 ## Current Position
 
-Phase: 4 of 9 (PASG Validator Staking & Rewards)
-Plan: 2 of 3 in current phase
-Status: Wave 3 ready
-Last activity: 2026-03-19 - Completed 04-02 with metadata-only staking adapter and governance handoff
+Phase: 5 of 9 (Creator Asset Contracts & Monetization)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-03-19 - Reverted validator metadata overreach and closed Phase 4 as chain-native staking only
 
-Progress: [#######---] 61%
+Progress: [#######---] 65%
 
 ## Performance Metrics
 
@@ -49,8 +49,8 @@ Progress: [#######---] 61%
 | 9. Marketplace-v3 Registration Redesign | 3 | 70 min | 23 min |
 
 **Recent Trend:**
-- Last 5 plans: 09-01, 09-02, 09-03, 04-01, 04-02
-- Trend: Stable with docs plus minimal adapter work for the corrected staking scope
+- Last 5 plans: 09-02, 09-03, 04-01, 04-02, 04-03
+- Trend: Stable with docs-only closeout after reverting the validator metadata overreach
 
 ## Accumulated Context
 
@@ -77,8 +77,8 @@ Recent decisions affecting current work:
 - [Phase 9]: `marketplace-v3` now enforces mandatory collection registration, a marketplace-global fee, collection-scoped denoms, and owner-request/admin-approval flows
 - [Debug 2026-03-19]: Phase 4 PASG staking means chain-native delegation to Passage validators; existing `contracts/staking/*` remain NFT staking primitives, not the default PASG staking target
 - [Phase 4]: 04-01 locked README and contract docs to the native validator delegation model and chain-owned unbonding boundary
-- [Phase 04]: contracts/staking/* remain NFT staking primitives unless a later scoped adapter is explicitly justified
-- [Phase 4]: 04-02 added optional validator metadata in registry and governance handoff support without introducing a duplicate staking ledger
+- [Phase 04]: contracts/staking/* remain NFT staking primitives and are not PASG validator staking contracts
+- [Phase 4]: validator discovery, rewards, and undelegation stay chain-native; no registry or governance validator metadata adapter remains in scope
 
 ### Roadmap Evolution
 
@@ -97,8 +97,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-19 20:30 UTC
-Stopped at: Completed 04-02 minimal staking adapter and docs; Phase 4 wave 3 is next
+Stopped at: Completed Phase 4 closeout; Phase 5 planning is next
 Resume file: .planning/phases/04-pasg-staking-rewards/04-03-PLAN.md
+
 
 
 

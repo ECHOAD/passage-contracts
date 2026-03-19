@@ -96,7 +96,10 @@ pub fn execute(
             description,
             action,
         } => execute_propose(deps, env, info, title, description, action),
-        ExecuteMsg::Vote { proposal_id, vote } => execute_vote(deps, env, info, proposal_id, vote),
+        ExecuteMsg::Vote {
+            proposal_id,
+            vote,
+        } => execute_vote(deps, env, info, proposal_id, vote),
         ExecuteMsg::ExecuteProposal { proposal_id } => {
             execute_execute_proposal(deps, env, proposal_id)
         }
@@ -111,9 +114,7 @@ fn execute_deposit(deps: DepsMut, info: MessageInfo) -> Result<Response, Contrac
     DEPOSITS.update(deps.storage, &info.sender, |current| -> StdResult<_> {
         Ok(current.unwrap_or_default() + amount)
     })?;
-    TOTAL_DEPOSITED.update(deps.storage, |current| -> StdResult<_> {
-        Ok(current + amount)
-    })?;
+    TOTAL_DEPOSITED.update(deps.storage, |current| -> StdResult<_> { Ok(current + amount) })?;
 
     Ok(Response::new()
         .add_attribute("action", "deposit")
@@ -127,9 +128,7 @@ fn execute_withdraw(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let deposited = DEPOSITS
-        .may_load(deps.storage, &info.sender)?
-        .unwrap_or_default();
+    let deposited = DEPOSITS.may_load(deps.storage, &info.sender)?.unwrap_or_default();
     if deposited < amount || amount.is_zero() {
         return Err(ContractError::InsufficientVotingPower {
             required: amount,
@@ -212,9 +211,7 @@ fn execute_propose(
     validate_proposal_action(&action)?;
 
     let config = CONFIG.load(deps.storage)?;
-    let deposited = DEPOSITS
-        .may_load(deps.storage, &info.sender)?
-        .unwrap_or_default();
+    let deposited = DEPOSITS.may_load(deps.storage, &info.sender)?.unwrap_or_default();
     if deposited < config.proposal_deposit {
         return Err(ContractError::InsufficientVotingPower {
             required: config.proposal_deposit,
@@ -482,15 +479,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Proposal { proposal_id } => {
             let proposal = PROPOSALS.load(deps.storage, proposal_id)?;
             let config = CONFIG.load(deps.storage)?;
-            let snapshot = PROPOSAL_SNAPSHOTS
-                .may_load(deps.storage, proposal_id)?
-                .unwrap_or(ProposalSnapshot {
+            let snapshot = PROPOSAL_SNAPSHOTS.may_load(deps.storage, proposal_id)?.unwrap_or(
+                ProposalSnapshot {
                     proposal_id,
                     total_power: proposal.total_power_snapshot,
                     quorum_bps: config.quorum_bps,
                     pass_bps: config.pass_bps,
                     created_at: proposal.created_at,
-                });
+                },
+            );
             let computed_status = computed_status(&proposal, env.block.time.seconds(), &snapshot);
             to_json_binary(&ProposalResponse {
                 proposal,
@@ -499,9 +496,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             })
         }
         QueryMsg::Proposals { start_after, limit } => {
-            let limit = limit
-                .unwrap_or(DEFAULT_PAGE_LIMIT as u32)
-                .min(MAX_PAGE_LIMIT as u32) as usize;
+            let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT as u32).min(MAX_PAGE_LIMIT as u32)
+                as usize;
             let start = start_after.map(Bound::exclusive);
             let proposals = PROPOSALS
                 .range(deps.storage, start, None, Order::Ascending)
@@ -521,9 +517,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         } => {
-            let limit = limit
-                .unwrap_or(DEFAULT_PAGE_LIMIT as u32)
-                .min(MAX_PAGE_LIMIT as u32) as usize;
+            let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT as u32).min(MAX_PAGE_LIMIT as u32)
+                as usize;
             let start_after = start_after
                 .map(|value| deps.api.addr_validate(&value))
                 .transpose()?;
@@ -595,29 +590,6 @@ fn validate_admin_action(action: &AdminAction) -> Result<(), ContractError> {
             {
                 return Err(ContractError::UnsupportedAdminAction {
                     reason: "streaming-billing update must change at least one field".to_string(),
-                });
-            }
-            Ok(())
-        }
-        AdminAction::RegistryUpsertStakingValidator {
-            contract_addr,
-            operator_address,
-            moniker,
-            ..
-        } => {
-            validate_protocol_contract_addr(contract_addr)?;
-            validate_staking_validator_metadata(operator_address, moniker)?;
-            Ok(())
-        }
-        AdminAction::RegistryRemoveStakingValidator {
-            contract_addr,
-            operator_address,
-        } => {
-            validate_protocol_contract_addr(contract_addr)?;
-            if operator_address.trim().is_empty() {
-                return Err(ContractError::UnsupportedAdminAction {
-                    reason: "registry staking validator removal requires an operator address"
-                        .to_string(),
                 });
             }
             Ok(())
@@ -708,23 +680,6 @@ fn validate_protocol_contract_addr(contract_addr: &str) -> Result<(), ContractEr
     Ok(())
 }
 
-fn validate_staking_validator_metadata(
-    operator_address: &str,
-    moniker: &str,
-) -> Result<(), ContractError> {
-    if operator_address.trim().is_empty() {
-        return Err(ContractError::UnsupportedAdminAction {
-            reason: "registry staking validator update requires an operator address".to_string(),
-        });
-    }
-    if moniker.trim().is_empty() {
-        return Err(ContractError::UnsupportedAdminAction {
-            reason: "registry staking validator update requires a moniker".to_string(),
-        });
-    }
-    Ok(())
-}
-
 fn ensure_no_delegation_cycle(
     deps: Deps,
     delegator: &Addr,
@@ -767,9 +722,7 @@ fn delegated_addresses(deps: Deps, delegate: &Addr) -> StdResult<Vec<Addr>> {
     DELEGATIONS
         .range(deps.storage, None, None, Order::Ascending)
         .filter_map(|item| match item {
-            Ok((_, delegation)) if delegation.delegate == *delegate => {
-                Some(Ok(delegation.delegator))
-            }
+            Ok((_, delegation)) if delegation.delegate == *delegate => Some(Ok(delegation.delegator)),
             Ok(_) => None,
             Err(err) => Some(Err(err)),
         })
@@ -780,9 +733,7 @@ fn delegated_power(deps: Deps, delegate: &Addr) -> StdResult<Uint128> {
     let delegators = delegated_addresses(deps, delegate)?;
     let mut power = Uint128::zero();
     for delegator in delegators {
-        power += DEPOSITS
-            .may_load(deps.storage, &delegator)?
-            .unwrap_or_default();
+        power += DEPOSITS.may_load(deps.storage, &delegator)?.unwrap_or_default();
     }
     Ok(power)
 }
@@ -795,8 +746,7 @@ fn proposal_meets_quorum(proposal: &Proposal, snapshot: &ProposalSnapshot) -> bo
     let participation = proposal.yes_power + proposal.no_power;
     !participation.is_zero()
         && !snapshot.total_power.is_zero()
-        && participation.u128() * BPS_SCALE
-            >= snapshot.total_power.u128() * snapshot.quorum_bps as u128
+        && participation.u128() * BPS_SCALE >= snapshot.total_power.u128() * snapshot.quorum_bps as u128
 }
 
 fn proposal_meets_pass_threshold(proposal: &Proposal, snapshot: &ProposalSnapshot) -> bool {
@@ -851,10 +801,7 @@ fn unlock_proposal_balances(
 
 fn locked_balance(deps: Deps, address: &Addr) -> StdResult<Uint128> {
     let mut max_locked = Uint128::zero();
-    for item in LOCKED_BALANCES
-        .prefix(address)
-        .range(deps.storage, None, None, Order::Ascending)
-    {
+    for item in LOCKED_BALANCES.prefix(address).range(deps.storage, None, None, Order::Ascending) {
         let (_, locked) = item?;
         if locked.amount > max_locked {
             max_locked = locked.amount;
@@ -872,9 +819,7 @@ fn computed_status(proposal: &Proposal, now: u64, snapshot: &ProposalSnapshot) -
         return ProposalStatus::Executed;
     }
 
-    if proposal_meets_quorum(proposal, snapshot)
-        && proposal_meets_pass_threshold(proposal, snapshot)
-    {
+    if proposal_meets_quorum(proposal, snapshot) && proposal_meets_pass_threshold(proposal, snapshot) {
         return ProposalStatus::Passed;
     }
 

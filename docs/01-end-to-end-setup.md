@@ -376,6 +376,6 @@ Use `pasg-governance` for PASG-holder voting and ratification, but keep `multisi
 PASG staking follows chain-native staking through native validator delegation on Passage, not a duplicate CosmWasm staking vault.
 
 - Expected actions: delegate `upasg`, undelegate from a validator, redelegate between validators, and query delegations, undelegations, validator assignments, and rewards through chain-native surfaces.
-- Validator selection belongs to wallet or service UX. Use Passage validator metadata, commission, uptime, and policy guidance to choose one or more validators rather than assuming a single contract-owned validator.
+- Validator selection belongs to wallet or service UX. Use chain-native validator metadata, commission, uptime, and policy guidance to choose one or more validators rather than assuming a single contract-owned validator.
 - Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a repo-local claim queue.
 - `contracts/staking/nft-vault`, `contracts/staking/stake-rewards`, and `contracts/staking/vault-factory` remain NFT staking primitives and factory tooling, not the default PASG staking path.

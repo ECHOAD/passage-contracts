@@ -18,12 +18,8 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     DepositVotingPower {},
-    WithdrawVotingPower {
-        amount: Uint128,
-    },
-    Delegate {
-        delegate: String,
-    },
+    WithdrawVotingPower { amount: Uint128 },
+    Delegate { delegate: String },
     Undelegate {},
     Propose {
         title: String,
@@ -50,17 +46,6 @@ pub enum AdminAction {
         fiat_oracle: Option<String>,
         stripe_webhook_validator: Option<String>,
         paused: Option<bool>,
-    },
-    RegistryUpsertStakingValidator {
-        contract_addr: String,
-        operator_address: String,
-        moniker: String,
-        website: Option<String>,
-        active: bool,
-    },
-    RegistryRemoveStakingValidator {
-        contract_addr: String,
-        operator_address: String,
     },
     MarketplaceV3UpdateConfig {
         contract_addr: String,

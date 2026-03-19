@@ -1,21 +1,16 @@
 ---
 phase: 04-pasg-staking-rewards
 plan: 02
-subsystem: staking-metadata-and-query-surface
-tags: [pasg, staking, registry, governance, docs]
+subsystem: native-reward-and-query-surface
+tags: [pasg, staking, docs, governance]
 provides:
-  - optional registry validator metadata surface
-  - governance handoff for staking metadata only
-  - chain-native reward and undelegation query examples
-affects: [registry, pasg-governance, docs]
+  - chain-native reward and undelegation guidance
+  - explicit no-adapter stance for validator discovery and rewards
+  - governance boundary alignment for native staking
+affects: [docs, pasg-governance]
 key-files:
   modified:
-    - contracts/core/registry/src/msg.rs
-    - contracts/core/registry/src/contract/execute.rs
-    - contracts/core/registry/src/contract/query.rs
-    - contracts/core/registry/src/tests/staking.rs
-    - contracts/core/pasg-governance/src/msg.rs
-    - contracts/core/pasg-governance/src/tests/admin_handoff.rs
+    - docs/02-method-reference.md
     - docs/03-json-examples.md
     - docs/04-multisig-governance.md
 completed: 2026-03-19
@@ -23,25 +18,22 @@ completed: 2026-03-19
 
 # Phase 04 Plan 02 Summary
 
-Plan 04-02 added the minimum repo-local staking integration surface without creating a second staking ledger.
+Plan 04-02 closed the reward and query model around chain-native staking without keeping any validator metadata surface in repo-local contracts.
 
 Delivered outcomes:
-- added `registry` execute and query support for optional Passage validator metadata through `UpsertStakingValidator`, `RemoveStakingValidator`, `StakingValidator`, and `StakingValidators`
-- kept the registry surface metadata-only: no delegated balances, unbond queues, reward-per-token accounting, or emission-rate state
-- extended `pasg-governance` with typed admin actions for `RegistryUpsertStakingValidator` and `RegistryRemoveStakingValidator`, keeping staking governance limited to metadata and policy edges
-- added `registry` and `pasg-governance` tests proving the staking metadata surface stays queryable and does not dispatch arbitrary staking custody logic
-- aligned `docs/03-json-examples.md` and `docs/04-multisig-governance.md` with chain-native reward-state queries, undelegation reads, and the optional metadata flow
+- aligned `docs/02-method-reference.md` to treat validator discovery, delegations, undelegations, and rewards as chain-native reads
+- aligned `docs/03-json-examples.md` to show staking and distribution CLI/query examples only, with no `registry` validator metadata path
+- tightened `docs/04-multisig-governance.md` so PASG governance does not stage validator metadata actions through `multisig`
+- removed the temporary `registry` and `pasg-governance` validator metadata overreach after review confirmed the node endpoint already covers validator discovery
 
 Verification recorded for this plan:
 - `cargo check -p registry -p pasg-governance`
 - `cargo test -p registry --lib`
 - `cargo test -p pasg-governance --lib`
 
-Notes:
-- `cargo test -p pasg-governance --lib` passed with existing `mock_info` deprecation warnings in tests; no functional failures remained.
 ## Deviations from Plan
 
-None - the plan stayed within the intended native-staking boundary and only added the optional validator metadata surface that the docs now reference.
+The earlier adapter interpretation was reverted. Final phase outcome is the stricter no-adapter stance: validator metadata, rewards, and validator discovery stay chain-native.
 
 ## Auth Gates
 
@@ -49,8 +41,6 @@ None.
 
 ## Self-Check: PASSED
 
-- Found `.planning/phases/04-pasg-staking-rewards/04-02-SUMMARY.md`
-- Found commit `821230c`
-- Found commit `4918ddc`
-- Found commit `5b724be`
-
+- Overreach removed from `registry`
+- Overreach removed from `pasg-governance`
+- Staking docs now reference chain-native surfaces only

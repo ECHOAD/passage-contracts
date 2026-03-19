@@ -53,19 +53,6 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-/// Optional Passage-curated validator metadata for chain-native staking UX.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct StakingValidator {
-    pub operator_address: String,
-    pub moniker: String,
-    pub website: Option<String>,
-    pub active: bool,
-    pub updated_by: Addr,
-    pub updated_at: u64,
-}
-
-pub const STAKING_VALIDATORS: Map<String, StakingValidator> = Map::new("staking_validators");
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EcosystemType {
