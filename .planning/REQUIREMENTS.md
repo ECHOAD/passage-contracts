@@ -52,6 +52,12 @@
 - [ ] **QUAL-02**: In-scope contracts reach >95% branch coverage with fuzzing or invariants on economic logic.
 - [ ] **QUAL-03**: Audit-ready documentation, migration guides, and schema outputs match actual contract behavior.
 
+### Documentation
+
+- [ ] **DOC-01**: Every workspace contract has mirrored English and Spanish documentation that explains purpose, instantiation, key messages, actors, permissions, and dependencies.
+- [ ] **DOC-02**: Documentation includes cross-contract relationship guides and hypothetical business/technical examples that explain how the protocol works end to end.
+- [ ] **DOC-03**: Explicitly legacy or historical contracts are documented as reference material and clearly separated from the recommended current integration path.
+
 ## v2 Requirements
 
 None currently. The active program intentionally keeps all eight stakeholder-requested deliverable areas in scope for this initialization cycle.
@@ -93,15 +99,20 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
 | QUAL-03 | Phase 7 | Pending |
+| DOC-01 | Phase 8 | Pending |
+| DOC-02 | Phase 8 | Pending |
+| DOC-03 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 23 total
-- Mapped to phases: 23
+- v1 requirements: 26 total
+- Mapped to phases: 26
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 6 completion*
+*Last updated: 2026-03-19 after Phase 8 planning*
+
+
 
 
 
