@@ -1,7 +1,5 @@
 use super::*;
 
-// ========== Helpers ==========
-
 pub(super) fn is_admin(config: &Config, addr: &Addr) -> bool {
     config.admin == *addr
 }
@@ -19,7 +17,6 @@ pub(super) fn is_cross_ecosystem_admin(config: &Config, addr: &Addr) -> bool {
 }
 
 pub(super) fn validate_id(id: &str) -> Result<(), ContractError> {
-    // ID must be alphanumeric with hyphens, 3-64 characters
     if id.len() < 3 || id.len() > 64 {
         return Err(ContractError::InvalidIdFormat { id: id.to_string() });
     }
@@ -40,7 +37,7 @@ pub(super) fn validate_ecosystem_policy(
 ) -> Result<(), ContractError> {
     match ecosystem_type {
         EcosystemType::Public => {
-            if !matches!(policy, CollectionCreationPolicy::ApprovalRequired) {
+            if !matches!(policy, CollectionCreationPolicy::Open) {
                 return Err(ContractError::InvalidEcosystemPolicyCombination {});
             }
         }
@@ -211,9 +208,7 @@ pub(super) fn can_create_collection_in_ecosystem(
 
     match ecosystem.collection_creation_policy {
         CollectionCreationPolicy::Open => true,
-        CollectionCreationPolicy::Permissioned | CollectionCreationPolicy::ApprovalRequired => {
-            is_member
-        }
+        CollectionCreationPolicy::Permissioned => is_member,
     }
 }
 
@@ -226,9 +221,11 @@ pub(super) fn can_mint_collection(
         return Ok(false);
     }
 
-    let ecosystem_rules = ecosystem_moderation(storage, &collection.ecosystem_id)?;
-    if !ecosystem_rules.mint_enabled {
-        return Ok(false);
+    if let Some(ecosystem_id) = &collection.ecosystem_id {
+        let ecosystem_rules = ecosystem_moderation(storage, ecosystem_id)?;
+        if !ecosystem_rules.mint_enabled {
+            return Ok(false);
+        }
     }
 
     let collection_rules = collection_moderation(storage, &collection.address)?;
@@ -244,9 +241,11 @@ pub(super) fn can_trade_collection(
         return Ok(false);
     }
 
-    let ecosystem_rules = ecosystem_moderation(storage, &collection.ecosystem_id)?;
-    if !ecosystem_rules.trade_enabled {
-        return Ok(false);
+    if let Some(ecosystem_id) = &collection.ecosystem_id {
+        let ecosystem_rules = ecosystem_moderation(storage, ecosystem_id)?;
+        if !ecosystem_rules.trade_enabled {
+            return Ok(false);
+        }
     }
 
     let collection_rules = collection_moderation(storage, &collection.address)?;
@@ -259,7 +258,15 @@ pub(super) fn can_manage_collection(
     collection: &Collection,
     sender: &Addr,
 ) -> StdResult<bool> {
-    let ecosystem = ECOSYSTEMS.may_load(storage, collection.ecosystem_id.clone())?;
+    if collection.creator == *sender {
+        return Ok(true);
+    }
+
+    let Some(ecosystem_id) = &collection.ecosystem_id else {
+        return Ok(false);
+    };
+
+    let ecosystem = ECOSYSTEMS.may_load(storage, ecosystem_id.clone())?;
 
     if is_cross_ecosystem_admin(config, sender)
         && ecosystem
@@ -268,10 +275,6 @@ pub(super) fn can_manage_collection(
             .unwrap_or(false)
     {
         return Ok(false);
-    }
-
-    if collection.creator == *sender {
-        return Ok(true);
     }
 
     if !is_cross_ecosystem_admin(config, sender) {
@@ -309,9 +312,7 @@ pub(super) fn recovery_policy_for_target(
     target: &RecoveryTarget,
 ) -> StdResult<RecoveryPolicy> {
     match target {
-        RecoveryTarget::Ecosystem { ecosystem_id } => {
-            ecosystem_recovery_policy(storage, ecosystem_id)
-        }
+        RecoveryTarget::Ecosystem { ecosystem_id } => ecosystem_recovery_policy(storage, ecosystem_id),
         RecoveryTarget::Collection { address } => collection_recovery_policy(storage, address),
     }
 }

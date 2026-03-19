@@ -165,23 +165,6 @@ pub fn execute(
             ecosystem_id,
             member,
         } => execute_revoke_ecosystem_member(deps, info, ecosystem_id, member),
-        ExecuteMsg::SubmitCollectionCreationRequest { ecosystem_id, note } => {
-            execute_submit_collection_creation_request(deps, env, info, ecosystem_id, note)
-        }
-        ExecuteMsg::ResolveCollectionCreationRequest {
-            ecosystem_id,
-            creator,
-            approved,
-            note,
-        } => execute_resolve_collection_creation_request(
-            deps,
-            env,
-            info,
-            ecosystem_id,
-            creator,
-            approved,
-            note,
-        ),
 
         // Collection operations
         ExecuteMsg::RegisterCollection {
@@ -222,6 +205,13 @@ pub fn execute(
             creator,
             nft_type,
         ),
+        ExecuteMsg::DeregisterCollection { address } => {
+            execute_deregister_collection(deps, env, info, address)
+        }
+        ExecuteMsg::RehomeCollection {
+            address,
+            ecosystem_id,
+        } => execute_rehome_collection(deps, env, info, address, ecosystem_id),
         ExecuteMsg::UpdateCollection {
             address,
             name,
@@ -839,133 +829,6 @@ fn execute_revoke_ecosystem_member(
         .add_attribute("member", member_addr))
 }
 
-fn execute_submit_collection_creation_request(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    ecosystem_id: String,
-    note: Option<String>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let ecosystem = ECOSYSTEMS
-        .load(deps.storage, ecosystem_id.clone())
-        .map_err(|_| ContractError::EcosystemNotFound {
-            id: ecosystem_id.clone(),
-        })?;
-
-    if ecosystem.collection_creation_policy != CollectionCreationPolicy::ApprovalRequired {
-        return Err(ContractError::CollectionCreationRequestNotAllowed { ecosystem_id });
-    }
-
-    if !creator_moderation(deps.storage, &info.sender)?.collection_creation_enabled
-        || !ecosystem_moderation(deps.storage, &ecosystem.id)?.collection_creation_enabled
-    {
-        return Err(ContractError::CollectionCreationDisabled { ecosystem_id });
-    }
-
-    if can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &info.sender) {
-        return Ok(Response::new()
-            .add_attribute("action", "submit_collection_creation_request")
-            .add_attribute("ecosystem_id", ecosystem_id)
-            .add_attribute("creator", info.sender)
-            .add_attribute("already_approved", "true"));
-    }
-
-    let key = (ecosystem_id.clone(), info.sender.clone());
-    if let Some(existing) = COLLECTION_CREATION_REQUESTS.may_load(deps.storage, key.clone())? {
-        if existing.status == CollectionCreationRequestStatus::Pending {
-            return Err(ContractError::CollectionCreationRequestAlreadyPending { ecosystem_id });
-        }
-    }
-
-    let request = CollectionCreationRequest {
-        ecosystem_id: ecosystem_id.clone(),
-        creator: info.sender.clone(),
-        note,
-        status: CollectionCreationRequestStatus::Pending,
-        submitted_at: env.block.time.seconds(),
-        reviewed_at: None,
-        reviewed_by: None,
-        review_note: None,
-    };
-
-    COLLECTION_CREATION_REQUESTS.save(deps.storage, key, &request)?;
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-
-    Ok(Response::new()
-        .add_attribute("action", "submit_collection_creation_request")
-        .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", info.sender))
-}
-
-fn execute_resolve_collection_creation_request(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    ecosystem_id: String,
-    creator: String,
-    approved: bool,
-    note: Option<String>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let ecosystem = ECOSYSTEMS
-        .load(deps.storage, ecosystem_id.clone())
-        .map_err(|_| ContractError::EcosystemNotFound {
-            id: ecosystem_id.clone(),
-        })?;
-
-    if !can_manage_ecosystem(&config, &ecosystem, &info.sender) {
-        if is_cross_ecosystem_admin(&config, &info.sender)
-            && is_owner_controlled_ecosystem(&config, &ecosystem)
-        {
-            return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
-        }
-        return Err(ContractError::NotEcosystemAdmin {});
-    }
-
-    let creator_addr = deps.api.addr_validate(&creator)?;
-    let key = (ecosystem_id.clone(), creator_addr.clone());
-    let mut request = COLLECTION_CREATION_REQUESTS
-        .may_load(deps.storage, key.clone())?
-        .ok_or(ContractError::CollectionCreationRequestNotFound {
-            ecosystem_id: ecosystem_id.clone(),
-        })?;
-
-    if request.status != CollectionCreationRequestStatus::Pending {
-        return Err(ContractError::CollectionCreationRequestAlreadyResolved {
-            ecosystem_id: ecosystem_id.clone(),
-        });
-    }
-
-    request.status = if approved {
-        CollectionCreationRequestStatus::Approved
-    } else {
-        CollectionCreationRequestStatus::Rejected
-    };
-    request.reviewed_at = Some(env.block.time.seconds());
-    request.reviewed_by = Some(info.sender.clone());
-    request.review_note = note;
-
-    COLLECTION_CREATION_REQUESTS.save(deps.storage, key, &request)?;
-
-    if approved {
-        ECOSYSTEM_MEMBERS.save(
-            deps.storage,
-            (ecosystem_id.clone(), creator_addr.clone()),
-            &true,
-        )?;
-    }
-
-    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-    touch_creator_activity(deps.storage, &creator_addr, env.block.time.seconds())?;
-
-    Ok(Response::new()
-        .add_attribute("action", "resolve_collection_creation_request")
-        .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", creator_addr)
-        .add_attribute("approved", approved.to_string()))
-}
-
 fn execute_register_collection(
     deps: DepsMut,
     env: Env,
@@ -978,7 +841,6 @@ fn execute_register_collection(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&address)?;
 
-    // Check ecosystem exists
     let ecosystem = ECOSYSTEMS
         .load(deps.storage, ecosystem_id.clone())
         .map_err(|_| ContractError::EcosystemNotFound {
@@ -995,14 +857,15 @@ fn execute_register_collection(
         {
             return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
         }
-        return Err(ContractError::EcosystemMemberNotApproved { ecosystem_id });
+        return Err(ContractError::EcosystemMemberNotApproved {
+            ecosystem_id: ecosystem.id,
+        });
     }
 
     if name.is_empty() {
         return Err(ContractError::EmptyName {});
     }
 
-    // Check if collection already registered
     if collections().has(deps.storage, collection_addr.clone()) {
         return Err(ContractError::CollectionAlreadyRegistered { address });
     }
@@ -1010,7 +873,7 @@ fn execute_register_collection(
     let creator = effective_collection_creator(&config, &ecosystem, &info.sender);
     let collection = Collection {
         address: collection_addr.clone(),
-        ecosystem_id: ecosystem_id.clone(),
+        ecosystem_id: Some(ecosystem_id.clone()),
         name,
         nft_type: nft_type.clone(),
         creator: creator.clone(),
@@ -1053,13 +916,12 @@ fn execute_register_collection_from_factory(
             id: ecosystem_id.clone(),
         })?;
 
-    let authorized_factory =
-        ecosystem
-            .collection_factory
-            .clone()
-            .ok_or(ContractError::CollectionFactoryRequired {
-                ecosystem_id: ecosystem_id.clone(),
-            })?;
+    let authorized_factory = ecosystem
+        .collection_factory
+        .clone()
+        .ok_or(ContractError::CollectionFactoryRequired {
+            ecosystem_id: ecosystem_id.clone(),
+        })?;
 
     if info.sender != authorized_factory {
         if !can_cross_admin_manage_ecosystem(&config, &ecosystem, &info.sender) {
@@ -1092,7 +954,7 @@ fn execute_register_collection_from_factory(
     let final_creator = effective_collection_creator(&config, &ecosystem, &creator_addr);
     let collection = Collection {
         address: collection_addr.clone(),
-        ecosystem_id: ecosystem_id.clone(),
+        ecosystem_id: Some(ecosystem_id.clone()),
         name,
         nft_type: nft_type.clone(),
         creator: final_creator.clone(),
@@ -1127,42 +989,35 @@ fn execute_register_existing_collection(
     nft_type: NftType,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-
-    // Only admin can register existing collections
-    if !is_admin(&config, &info.sender) {
-        return Err(ContractError::Unauthorized {});
-    }
-
     let collection_addr = deps.api.addr_validate(&address)?;
     let creator_addr = deps.api.addr_validate(&creator)?;
 
-    // Check ecosystem exists
     let ecosystem = ECOSYSTEMS
         .load(deps.storage, ecosystem_id.clone())
         .map_err(|_| ContractError::EcosystemNotFound {
             id: ecosystem_id.clone(),
         })?;
 
-    if !can_cross_admin_manage_ecosystem(&config, &ecosystem, &info.sender) {
-        if is_owner_controlled_ecosystem(&config, &ecosystem) {
+    if !can_manage_ecosystem(&config, &ecosystem, &info.sender) {
+        if is_cross_ecosystem_admin(&config, &info.sender)
+            && is_owner_controlled_ecosystem(&config, &ecosystem)
+        {
             return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
         }
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::NotEcosystemAdmin {});
     }
 
-    // Check if collection already registered
     if collections().has(deps.storage, collection_addr.clone()) {
         return Err(ContractError::CollectionAlreadyRegistered { address });
     }
 
-    let final_creator = effective_collection_creator(&config, &ecosystem, &creator_addr);
     let collection = Collection {
         address: collection_addr.clone(),
-        ecosystem_id: ecosystem_id.clone(),
+        ecosystem_id: Some(ecosystem_id.clone()),
         name,
         nft_type: nft_type.clone(),
-        creator: final_creator.clone(),
-        verified: true, // Existing collections registered by admin are verified
+        creator: creator_addr.clone(),
+        verified: true,
         minter: None,
         marketplace: None,
         created_at: env.block.time.seconds(),
@@ -1171,15 +1026,109 @@ fn execute_register_existing_collection(
 
     collections().save(deps.storage, collection_addr.clone(), &collection)?;
     touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
-    touch_creator_activity(deps.storage, &final_creator, env.block.time.seconds())?;
     touch_creator_activity(deps.storage, &creator_addr, env.block.time.seconds())?;
 
     Ok(Response::new()
         .add_attribute("action", "register_existing_collection")
         .add_attribute("collection", collection_addr)
         .add_attribute("ecosystem_id", ecosystem_id)
-        .add_attribute("creator", final_creator)
+        .add_attribute("creator", creator_addr)
         .add_attribute("nft_type", nft_type.to_string()))
+}
+
+fn execute_deregister_collection(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let collection_addr = deps.api.addr_validate(&address)?;
+
+    let mut collection = collections()
+        .load(deps.storage, collection_addr.clone())
+        .map_err(|_| ContractError::CollectionNotFound {
+            address: address.clone(),
+        })?;
+
+    let ecosystem_id = collection
+        .ecosystem_id
+        .clone()
+        .ok_or(ContractError::CollectionNotAffiliated { address })?;
+
+    let ecosystem = ECOSYSTEMS
+        .load(deps.storage, ecosystem_id.clone())
+        .map_err(|_| ContractError::EcosystemNotFound {
+            id: ecosystem_id.clone(),
+        })?;
+
+    if !can_manage_ecosystem(&config, &ecosystem, &info.sender) {
+        if is_cross_ecosystem_admin(&config, &info.sender)
+            && is_owner_controlled_ecosystem(&config, &ecosystem)
+        {
+            return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
+        }
+        return Err(ContractError::NotEcosystemAdmin {});
+    }
+
+    collection.ecosystem_id = None;
+    collection.updated_at = env.block.time.seconds();
+    collections().save(deps.storage, collection_addr.clone(), &collection)?;
+    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+
+    Ok(Response::new()
+        .add_attribute("action", "deregister_collection")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("ecosystem_id", ecosystem_id))
+}
+
+fn execute_rehome_collection(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+    ecosystem_id: String,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let collection_addr = deps.api.addr_validate(&address)?;
+
+    let mut collection = collections()
+        .load(deps.storage, collection_addr.clone())
+        .map_err(|_| ContractError::CollectionNotFound {
+            address: address.clone(),
+        })?;
+
+    if let Some(current_ecosystem_id) = &collection.ecosystem_id {
+        return Err(ContractError::CollectionAlreadyAffiliated {
+            ecosystem_id: current_ecosystem_id.clone(),
+        });
+    }
+
+    let ecosystem = ECOSYSTEMS
+        .load(deps.storage, ecosystem_id.clone())
+        .map_err(|_| ContractError::EcosystemNotFound {
+            id: ecosystem_id.clone(),
+        })?;
+
+    if !can_manage_ecosystem(&config, &ecosystem, &info.sender) {
+        if is_cross_ecosystem_admin(&config, &info.sender)
+            && is_owner_controlled_ecosystem(&config, &ecosystem)
+        {
+            return Err(ContractError::CrossAdminCannotManageOwnerEcosystem {});
+        }
+        return Err(ContractError::NotEcosystemAdmin {});
+    }
+
+    collection.ecosystem_id = Some(ecosystem_id.clone());
+    collection.updated_at = env.block.time.seconds();
+    collections().save(deps.storage, collection_addr.clone(), &collection)?;
+    touch_creator_activity(deps.storage, &info.sender, env.block.time.seconds())?;
+
+    Ok(Response::new()
+        .add_attribute("action", "rehome_collection")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("ecosystem_id", ecosystem_id)
+        .add_attribute("creator", collection.creator))
 }
 
 fn execute_update_collection(
@@ -1684,3 +1633,5 @@ fn has_open_case_for_target(deps: Deps, target: &RecoveryTarget) -> StdResult<bo
     }
     Ok(false)
 }
+
+

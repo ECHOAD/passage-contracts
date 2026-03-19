@@ -24,6 +24,16 @@ PASG staking in this repo means chain-native staking through native validator de
 - Validator selection: wallets and services should choose one or more Passage validators using chain-native validator metadata, commission, uptime, and operator policy guidance rather than assuming a hardcoded validator inside a contract.
 - Non-target crates: `contracts/staking/nft-vault` and `contracts/staking/stake-rewards` are NFT staking primitives, not PASG validator staking contracts.
 
+## Creator Asset Model
+
+This workspace uses an ecosystem-centric creator asset model.
+
+- `registry` is the canonical ledger for ecosystems and collection affiliation.
+- Collections are independent on-chain contracts, usually deployed through per-ecosystem `collection-factory` instances.
+- A collection can be deregistered from one ecosystem and later re-homed into another without losing creator provenance.
+- Shared typed asset semantics live in `pg721` and `pg721-updatable` for `component`, `avatar`, `companion`, `world`, `plugin`, `achievement`, and `world_template`.
+- Runtime, rendering, and Unreal-specific payloads remain off-chain.
+
 ## Diagram
 
 ![Diagram Protocol](Passage%20Protocol%20-%20Contract%20Interactions%20-%20DIAGRAM.png)

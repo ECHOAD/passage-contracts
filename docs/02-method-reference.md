@@ -48,7 +48,7 @@ Most useful queries:
 
 Role:
 
-- source of truth for ecosystems, collections, and authorized minters
+- source of truth for ecosystems, mutable collection affiliation, typed collection classes, and authorized minters
 
 Instantiate:
 
@@ -66,17 +66,15 @@ Most important execute messages:
 - `UpdateCollectionModeration`
 - `SetEcosystemRecoveryPolicy`
 - `SetCollectionRecoveryPolicy`
-- `UpsertStakingValidator`
-- `RemoveStakingValidator`
 - `RegisterEcosystemFromFactory`
 - `UpdateEcosystem`
 - `ApproveEcosystemMember`
 - `RevokeEcosystemMember`
-- `SubmitCollectionCreationRequest`
-- `ResolveCollectionCreationRequest`
 - `RegisterCollection`
 - `RegisterCollectionFromFactory`
 - `RegisterExistingCollection`
+- `DeregisterCollection`
+- `RehomeCollection`
 - `UpdateCollection`
 - `TransferCollectionOwnership`
 - `AuthorizeMinter`
@@ -95,7 +93,9 @@ When to use them:
 - `SetCollectionRecoveryPolicy`: define who can open a lost-access recovery case for a collection and who should receive control if approved
 - `RegisterEcosystemFromFactory`: callback from `ecosystem-factory`; this is the only ecosystem creation path
 - `RegisterCollectionFromFactory`: callback from `collection-factory`
-- `RegisterExistingCollection`: manually onboard an already deployed collection
+- `RegisterExistingCollection`: manually onboard an already deployed collection into an ecosystem
+- `DeregisterCollection`: detach a collection from its current ecosystem without destroying the contract
+- `RehomeCollection`: attach an unaffiliated collection to a new ecosystem while preserving creator provenance
 - `UpdateCollection`: store runtime pointers such as `minter` and `marketplace`
 - `AuthorizeMinter`: required if a `minter-v2` instance will operate with `registry` enabled
 - `OpenRecoveryCase`: open either `lost_access` or `abandonment` recovery
@@ -117,6 +117,8 @@ Most useful queries:
 - `CollectionRecoveryPolicy`
 - `Collection`
 - `CollectionsByEcosystem`
+- `UnaffiliatedCollections`
+- `CollectionsByNftType`
 - `IsCollectionVerified`
 - `IsMinterAuthorized`
 - `AuthorizedMinters`
@@ -192,6 +194,16 @@ Notes:
 - it always also queries `registry.CanCreateCollectionInEcosystem`
 - in `reply`, the factory calls `registry.RegisterCollectionFromFactory`
 
+## Creator Asset Contracts
+
+This repo uses an ecosystem-centric creator asset model:
+
+- `registry` is the canonical ledger for ecosystems and collection affiliation
+- collection address is the canonical collection identity
+- ecosystem affiliation can be detached and later re-homed
+- typed asset semantics live in the shared `pg721` family
+- runtime, rendering, and Unreal-specific behavior stay off-chain
+
 ## `pg721`
 
 Role:
@@ -200,7 +212,7 @@ Role:
 
 Instantiate:
 
-- `InstantiateMsg { name, symbol, minter, collection_info }`
+- `InstantiateMsg { name, symbol, minter, nft_type, collection_info }`
 
 Relevant execute messages:
 
@@ -230,6 +242,48 @@ Commerce usage:
 
 - `Approve` or `ApproveAll` for `marketplace-v3` and `auction-english`
 - `CollectionInfo` to resolve royalties
+
+Supported asset classes:
+
+- `component`
+- `avatar`
+- `companion`
+- `world`
+- `plugin`
+- `achievement`
+- `world_template`
+
+Typed extension variants:
+
+- `Component(ComponentExtension)`
+- `Avatar(AvatarExtension)`
+- `Companion(CompanionExtension)`
+- `World(WorldExtension)`
+- `Plugin(PluginExtension)`
+- `Achievement(AchievementExtension)`
+- `WorldTemplate(WorldTemplateExtension)`
+
+Notes:
+
+- `WorldExtension` carries `revenue_shares` for world revenue routing
+- plugin, achievement, and world_template metadata stay compact and contract-facing
+- runtime and rendering metadata stay off-chain
+
+## `pg721-updatable`
+
+Role:
+
+- typed NFT collection contract with creator-controlled token URI updates until frozen
+
+Instantiate:
+
+- `InstantiateMsg { name, symbol, minter, nft_type, collection_info }`
+
+Additional execute and query messages:
+
+- `UpdateTokenMetadata`
+- `FreezeTokenMetadata`
+- `FrozenTokenMetadata`
 
 ## `split-router`
 

@@ -35,7 +35,7 @@ fn approved_recovery_case_transfers_collection_creator() {
             Addr::unchecked("collection"),
             &Collection {
                 address: Addr::unchecked("collection"),
-                ecosystem_id: "eco".to_string(),
+                ecosystem_id: Some("eco".to_string()),
                 name: "Collection".to_string(),
                 nft_type: NftType::Component,
                 creator: Addr::unchecked("old_creator"),
@@ -138,7 +138,7 @@ fn lost_access_case_requires_delegate_or_recovery_authority() {
             collection_addr.clone(),
             &Collection {
                 address: collection_addr.clone(),
-                ecosystem_id: "eco".to_string(),
+                ecosystem_id: Some("eco".to_string()),
                 name: "Collection".to_string(),
                 nft_type: NftType::Avatar,
                 creator: creator_addr.clone(),
@@ -246,7 +246,7 @@ fn abandonment_case_requires_inactivity_threshold() {
             collection_addr.clone(),
             &Collection {
                 address: collection_addr.clone(),
-                ecosystem_id: "eco".to_string(),
+                ecosystem_id: Some("eco".to_string()),
                 name: "Collection".to_string(),
                 nft_type: NftType::Companion,
                 creator: creator_addr.clone(),
@@ -290,3 +290,4 @@ fn abandonment_case_requires_inactivity_threshold() {
         }
     );
 }
+

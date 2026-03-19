@@ -119,6 +119,30 @@ pub struct WorldExtension {
     pub revenue_shares: Vec<RevenueShare>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+pub struct PluginExtension {
+    pub plugin_id: String,
+    pub plugin_type: String,
+    pub license: String,
+    pub permissions_uri: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+pub struct AchievementExtension {
+    pub achievement_id: String,
+    pub achievement_type: String,
+    pub points: u32,
+    pub soulbound: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+pub struct WorldTemplateExtension {
+    pub template_id: String,
+    pub category: String,
+    pub branding_uri: Option<String>,
+    pub customization_uri: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NftTypeExtension {
@@ -126,6 +150,9 @@ pub enum NftTypeExtension {
     Avatar(AvatarExtension),
     Companion(CompanionExtension),
     World(WorldExtension),
+    Plugin(PluginExtension),
+    Achievement(AchievementExtension),
+    WorldTemplate(WorldTemplateExtension),
 }
 
 impl NftTypeExtension {
@@ -135,6 +162,9 @@ impl NftTypeExtension {
             Self::Avatar(_) => NftType::Avatar,
             Self::Companion(_) => NftType::Companion,
             Self::World(_) => NftType::World,
+            Self::Plugin(_) => NftType::Plugin,
+            Self::Achievement(_) => NftType::Achievement,
+            Self::WorldTemplate(_) => NftType::WorldTemplate,
         }
     }
 }

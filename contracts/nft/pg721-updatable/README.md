@@ -1,30 +1,41 @@
 # pg721-updatable
 
-Passage NFT collection contract with updatable token metadata
+`pg721-updatable` is the Passage collection contract for typed creator assets whose token URI must remain editable until the creator freezes it.
 
-## Overview
+## Supported Collection Types
 
-This contract is part of the Passage CosmWasm workspace.
+- `component`
+- `avatar`
+- `companion`
+- `world`
+- `plugin`
+- `achievement`
+- `world_template`
 
-## Build
+## Typed Metadata
 
-```bash
-cargo build --package pg721-updatable --release
-```
+It shares the same typed asset surface as `pg721`:
 
-## Generate Schema
+- `Component(ComponentExtension)`
+- `Avatar(AvatarExtension)`
+- `Companion(CompanionExtension)`
+- `World(WorldExtension)`
+- `Plugin(PluginExtension)`
+- `Achievement(AchievementExtension)`
+- `WorldTemplate(WorldTemplateExtension)`
 
-```bash
-cargo run --package pg721-updatable --example schema
-```
+The contract validates that token metadata and typed extensions match the collection `nft_type`.
 
-## Test
+## Additional Capabilities
 
-```bash
-cargo test --package pg721-updatable
-```
+- `UpdateTokenMetadata`
+- `FreezeTokenMetadata`
+- `FrozenTokenMetadata`
 
-## Notes
+Those controls affect mutable token URI behavior only. Asset runtime/rendering payloads still stay off-chain.
 
-- Source code: src/
-- Generated JSON schemas: schema/
+## Monetization Surface
+
+- Collection-level `royalty_info` remains queryable through `CollectionInfo`.
+- World tokens can carry `revenue_shares` in `WorldExtension`.
+- Secondary sale contracts continue to use generic split routing and royalty reads.

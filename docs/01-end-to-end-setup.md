@@ -90,6 +90,7 @@ Notes:
 
 - `enforce_local_allowlist = true` requires wallets to be approved locally through `ApproveCreator`.
 - Even if local allowlisting is disabled, `collection-factory` still queries `registry.CanCreateCollectionInEcosystem`.
+- Ecosystem admin and approved ecosystem members can create collections directly. Collection approval flow is not part of this model.
 
 ## 4. Create the `pg721` collection
 
@@ -122,6 +123,12 @@ Recommended checks:
 - `registry.Collection { address }`
 - `registry.CollectionsByEcosystem { ecosystem_id }`
 
+Lifecycle note:
+
+- the collection contract address is the canonical collection identity
+- later, `registry.DeregisterCollection` can detach it from the ecosystem without destroying the contract
+- an unaffiliated collection can later be attached to another ecosystem with `registry.RehomeCollection`
+
 ## 5. Instantiate `split-router`
 
 `split-router` routes creator proceeds and royalties.
@@ -148,6 +155,12 @@ Useful queries:
 ## 6. Fixed-price sale path with `marketplace-v3`
 
 `marketplace-v3` is for secondary sales. It does not create or custody collections.
+
+Creator asset boundary:
+
+- typed creator asset semantics such as `plugin`, `achievement`, and `world_template` live in the shared `pg721` metadata surface
+- royalty and monetization semantics stay contract-facing
+- runtime, rendering, and Unreal-specific payloads stay off-chain
 
 ### 6.1 Instantiate the marketplace
 

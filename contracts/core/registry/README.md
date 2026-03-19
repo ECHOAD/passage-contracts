@@ -1,58 +1,17 @@
-# Passage Registry Contract
+# registry
 
-The Registry contract is the on-chain source of truth for Passage marketplace structure:
+`registry` is the canonical Passage ledger for ecosystems, collection affiliation, creator provenance, and authorized minters.
 
-- `Ecosystem`: top-level ownership/admin domain.
-- `Collection`: pg721 collection associated directly to one ecosystem.
+## Core Model
 
-`World` is no longer modeled on-chain in this contract.
+- An ecosystem is an admin/team context, for example `Cyberpunk Universe`.
+- A collection is its own on-chain contract.
+- `registry` tracks which ecosystem, if any, currently hosts that collection.
+- A collection can be deregistered from an ecosystem and remain alive on-chain.
+- A deregistered collection can later be re-homed into a different ecosystem.
+- Re-homing changes affiliation, not creator provenance.
 
-## Overview
-
-Hierarchy:
-
-```
-Ecosystem
-  -> Collection (pg721)
-```
-
-## Features
-
-### Ecosystem management
-
-- Register approved ecosystems from `ecosystem-factory`.
-- Update ecosystem metadata/admin.
-- Approve/revoke ecosystem members (team) who can add collections.
-- Apply creator, ecosystem, and collection moderation.
-
-### Collection registration
-
-- Register new collections in an ecosystem.
-- Register existing collections retroactively (`admin` only).
-- Update collection metadata and linked runtime contracts (`minter`, `marketplace`).
-- Transfer collection ownership.
-
-### Minter authorization
-
-- Authorize/revoke minter contracts per collection.
-- Query authorization status.
-
-## Messages
-
-### Instantiate
-
-```json
-{
-  "admin": "passage1...",
-  "operators": ["passage1..."],
-  "recovery_council": ["passage1..."],
-  "ecosystem_factory": null
-}
-```
-
-After deployment, wire the authorized factory with `UpdateConfig { ecosystem_factory }`. Direct ecosystem creation is not supported.
-
-### Execute
+## Main Execute Messages
 
 - `UpdateConfig`
 - `UpdateCreatorModeration`
@@ -62,10 +21,13 @@ After deployment, wire the authorized factory with `UpdateConfig { ecosystem_fac
 - `SetCollectionRecoveryPolicy`
 - `RegisterEcosystemFromFactory`
 - `UpdateEcosystem`
-- `ApproveEcosystemMember { ecosystem_id, member }`
-- `RevokeEcosystemMember { ecosystem_id, member }`
-- `RegisterCollection { address, ecosystem_id, name }`
-- `RegisterExistingCollection { address, ecosystem_id, name, creator }`
+- `ApproveEcosystemMember`
+- `RevokeEcosystemMember`
+- `RegisterCollection`
+- `RegisterCollectionFromFactory`
+- `RegisterExistingCollection`
+- `DeregisterCollection`
+- `RehomeCollection`
 - `UpdateCollection`
 - `TransferCollectionOwnership`
 - `AuthorizeMinter`
@@ -75,101 +37,44 @@ After deployment, wire the authorized factory with `UpdateConfig { ecosystem_fac
 - `ContestRecoveryCase`
 - `ResolveRecoveryCase`
 
-### Query
+## Main Queries
 
-```rust
-Config {}
+- `Config`
+- `Ecosystem`
+- `Ecosystems`
+- `EcosystemsByAdmin`
+- `CanCreateEcosystem`
+- `IsEcosystemMember`
+- `CanCreateCollectionInEcosystem`
+- `Collection`
+- `Collections`
+- `CollectionsByEcosystem`
+- `UnaffiliatedCollections`
+- `CollectionsByCreator`
+- `CollectionsByNftType`
+- `CanMintCollection`
+- `CanTradeCollection`
+- `IsMinterAuthorized`
+- `AuthorizedMinters`
 
-Ecosystem { id }
-Ecosystems { start_after, limit }
-EcosystemsByAdmin { admin, start_after, limit }
-CanCreateEcosystem { creator }
-CreatorModeration { creator }
-EcosystemModeration { ecosystem_id }
-EcosystemRecoveryPolicy { ecosystem_id }
-IsEcosystemMember { ecosystem_id, member }
+## Authorization Model
 
-Collection { address }
-Collections { start_after, limit }
-CollectionsByEcosystem { ecosystem_id, start_after, limit }
-CollectionsByCreator { creator, start_after, limit }
-IsCollectionVerified { address }
-CanMintCollection { address }
-CanTradeCollection { address }
-CollectionModeration { address }
-CollectionRecoveryPolicy { address }
+- `ecosystem-factory` is the only ecosystem creation path.
+- Ecosystem admin and approved ecosystem members can add collections directly.
+- Collection request and approval flow is not part of the current model.
+- Unwanted collections are handled by membership revocation or by `DeregisterCollection`.
 
-IsMinterAuthorized { collection_address, minter_address }
-AuthorizedMinters { collection_address, start_after, limit }
+## Collection Lifecycle
 
-RecoveryConfig {}
-RecoveryCase { case_id }
-RecoveryCases { status, start_after, limit }
-```
+1. Ecosystem is approved and registered.
+2. Ecosystem admin or approved member creates a collection through the dedicated `collection-factory`, or admin manually registers an existing collection.
+3. `registry` stores the collection address as the canonical collection identity.
+4. The collection can later be:
+   - updated
+   - deregistered from its ecosystem
+   - re-homed into another ecosystem
+5. The original collection creator remains the creator of record unless `TransferCollectionOwnership` is used explicitly.
 
-## Access control
+## Typed Asset Scope
 
-| Action | Who can execute |
-|--------|-----------------|
-| Register Ecosystem | Configured `ecosystem-factory` only |
-| Update Ecosystem | Ecosystem admin or contract admin |
-| Approve Ecosystem Member | Ecosystem admin or contract admin |
-| Register Collection | Ecosystem admin, approved ecosystem member, or contract admin |
-| Register Existing Collection | Contract admin only |
-| Update Collection | Collection creator or contract admin |
-| Set verified status | Contract admin only |
-| Authorize/Revoke minter | Collection creator or contract admin |
-| Resolve Recovery Case | Recovery council or contract admin |
-
-## Migration strategy
-
-`registry` has no `migrate` entrypoint. Use deploy-and-backfill.
-See [`MIGRATION.md`](./MIGRATION.md).
-
-## State structure
-
-```rust
-Config {
-    admin: Addr,
-    operators: Vec<Addr>,
-    recovery_council: Vec<Addr>,
-    ecosystem_factory: Option<Addr>,
-    paused: bool,
-}
-
-Ecosystem {
-    id: String,
-    name: String,
-    admin: Addr,
-    description: String,
-    image_urls: Vec<String>,
-    animation_url: Option<String>,
-    url: Option<String>,
-    created_at: u64,
-    updated_at: u64,
-}
-
-Collection {
-    address: Addr,
-    ecosystem_id: String,
-    name: String,
-    creator: Addr,
-    verified: bool,
-    minter: Option<Addr>,
-    marketplace: Option<Addr>,
-    created_at: u64,
-    updated_at: u64,
-}
-```
-
-## Events
-
-All execute messages emit attributes for indexers:
-
-- `action`
-- entity identifiers such as `ecosystem_id` and `collection`
-- actor addresses such as `admin` and `creator`
-
-## License
-
-Apache-2.0
+`registry` stores `nft_type` at collection level so integrators can reason about creator asset classes without querying runtime or rendering systems. Runtime payloads, Unreal data, and rendering behavior stay off-chain.

@@ -36,18 +36,12 @@ impl fmt::Display for NftType {
     }
 }
 
-/// Contract configuration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    /// Admin address with full control
     pub admin: Addr,
-    /// Optional operator addresses that can register on behalf of creators
     pub operators: Vec<Addr>,
-    /// Dedicated recovery authority addresses for ownership recovery cases
     pub recovery_council: Vec<Addr>,
-    /// Ecosystem factory contract allowed to register approved ecosystems
     pub ecosystem_factory: Option<Addr>,
-    /// Whether registration is paused
     pub paused: bool,
 }
 
@@ -71,19 +65,17 @@ impl Default for EcosystemType {
 pub enum CollectionCreationPolicy {
     Open,
     Permissioned,
-    ApprovalRequired,
 }
 
 impl CollectionCreationPolicy {
     pub fn default_for_type(ecosystem_type: &EcosystemType) -> Self {
         match ecosystem_type {
-            EcosystemType::Public => Self::ApprovalRequired,
+            EcosystemType::Public => Self::Open,
             EcosystemType::Private => Self::Permissioned,
         }
     }
 }
 
-/// Represents an Ecosystem - top level organizational unit
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Ecosystem {
     pub id: String,
@@ -100,34 +92,25 @@ pub struct Ecosystem {
     pub updated_at: u64,
 }
 
-/// Primary key for ecosystems: ecosystem_id
 pub type EcosystemKey = String;
-
 pub const ECOSYSTEMS: Map<EcosystemKey, Ecosystem> = Map::new("ecosystems");
 
-/// Represents a Collection (pg721) registered within an Ecosystem
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Collection {
-    /// The pg721 contract address
     pub address: Addr,
-    pub ecosystem_id: String,
+    pub ecosystem_id: Option<String>,
     pub name: String,
     pub nft_type: NftType,
     pub creator: Addr,
-    /// Whether this collection is verified/official
     pub verified: bool,
-    /// Optional authorized minter address
     pub minter: Option<Addr>,
-    /// Optional marketplace address
     pub marketplace: Option<Addr>,
     pub created_at: u64,
     pub updated_at: u64,
 }
 
-/// Primary key for collections: contract address
 pub type CollectionKey = Addr;
 
-/// Indices for Collection
 pub struct CollectionIndices<'a> {
     pub ecosystem: MultiIndex<'a, String, Collection, CollectionKey>,
     pub creator: MultiIndex<'a, Addr, Collection, CollectionKey>,
@@ -144,7 +127,7 @@ impl<'a> IndexList<Collection> for CollectionIndices<'a> {
 pub fn collections<'a>() -> IndexedMap<CollectionKey, Collection, CollectionIndices<'a>> {
     let indexes = CollectionIndices {
         ecosystem: MultiIndex::new(
-            |_pk: &[u8], d: &Collection| d.ecosystem_id.clone(),
+            |_pk: &[u8], d: &Collection| d.ecosystem_id.clone().unwrap_or_default(),
             "collections",
             "collections__ecosystem",
         ),
@@ -162,7 +145,6 @@ pub fn collections<'a>() -> IndexedMap<CollectionKey, Collection, CollectionIndi
     IndexedMap::new("collections", indexes)
 }
 
-/// Authorized minter registration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct AuthorizedMinter {
     pub minter_address: Addr,
@@ -171,13 +153,9 @@ pub struct AuthorizedMinter {
     pub created_at: u64,
 }
 
-/// Primary key: (collection_address, minter_address)
 pub type MinterKey = (Addr, Addr);
-
 pub const AUTHORIZED_MINTERS: Map<MinterKey, AuthorizedMinter> = Map::new("auth_minters");
 
-/// Approved members allowed to register collections in an ecosystem.
-/// Key: (ecosystem_id, member_address)
 pub type EcosystemMemberKey = (String, Addr);
 pub const ECOSYSTEM_MEMBERS: Map<EcosystemMemberKey, bool> = Map::new("ecosystem_members");
 
@@ -215,51 +193,17 @@ pub struct CollectionModeration {
     pub moderated_at: Option<u64>,
 }
 
-pub const COLLECTION_MODERATION: Map<Addr, CollectionModeration> =
-    Map::new("collection_moderation");
+pub const COLLECTION_MODERATION: Map<Addr, CollectionModeration> = Map::new("collection_moderation");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum CollectionCreationRequestStatus {
-    Pending,
-    Approved,
-    Rejected,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CollectionCreationRequest {
-    pub ecosystem_id: String,
-    pub creator: Addr,
-    pub note: Option<String>,
-    pub status: CollectionCreationRequestStatus,
-    pub submitted_at: u64,
-    pub reviewed_at: Option<u64>,
-    pub reviewed_by: Option<Addr>,
-    pub review_note: Option<String>,
-}
-
-/// Key: (ecosystem_id, creator)
-pub type CollectionCreationRequestKey = (String, Addr);
-pub const COLLECTION_CREATION_REQUESTS: Map<
-    CollectionCreationRequestKey,
-    CollectionCreationRequest,
-> = Map::new("collection_creation_requests");
-
-/// Counter for generating unique IDs
 pub const ECOSYSTEM_COUNT: Item<u64> = Item::new("ecosystem_count");
 
-/// Recovery configuration for ownership recovery governance flow.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RecoveryConfig {
-    /// Inactivity signal window used only for abandonment cases.
     pub abandonment_inactivity_period_secs: u64,
-    /// Contest window after case creation.
     pub contest_period_secs: u64,
 }
 
 pub const RECOVERY_CONFIG: Item<RecoveryConfig> = Item::new("recovery_config");
-
-/// Tracks last known on-chain activity timestamp per creator/admin address.
 pub const LAST_CREATOR_ACTIVITY: Map<Addr, u64> = Map::new("last_creator_activity");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -270,12 +214,9 @@ pub struct RecoveryPolicy {
     pub updated_at: Option<u64>,
 }
 
-pub const ECOSYSTEM_RECOVERY_POLICIES: Map<String, RecoveryPolicy> =
-    Map::new("ecosystem_recovery_policies");
-pub const COLLECTION_RECOVERY_POLICIES: Map<Addr, RecoveryPolicy> =
-    Map::new("collection_recovery_policies");
+pub const ECOSYSTEM_RECOVERY_POLICIES: Map<String, RecoveryPolicy> = Map::new("ecosystem_recovery_policies");
+pub const COLLECTION_RECOVERY_POLICIES: Map<Addr, RecoveryPolicy> = Map::new("collection_recovery_policies");
 
-/// Recovery target for an ownership recovery case.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RecoveryTarget {
@@ -283,7 +224,6 @@ pub enum RecoveryTarget {
     Collection { address: Addr },
 }
 
-/// Ownership recovery case type.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RecoveryCaseKind {
@@ -291,7 +231,6 @@ pub enum RecoveryCaseKind {
     Abandonment,
 }
 
-/// Lifecycle of an ownership recovery case.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RecoveryCaseStatus {
@@ -300,7 +239,6 @@ pub enum RecoveryCaseStatus {
     Resolved,
 }
 
-/// Governance case data for ownership recovery.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RecoveryCase {
     pub case_id: u64,

@@ -1,32 +1,27 @@
 # ecosystem-factory
 
-Passage Ecosystem Factory - approval workflow for ecosystem creation
+`ecosystem-factory` is the governed onboarding flow for new ecosystems.
 
-## Overview
+## Role
 
-This contract is part of the Passage CosmWasm workspace.
+- Accept ecosystem creation requests.
+- Let protocol admin or operators approve or reject them.
+- Instantiate the dedicated `collection-factory` for the approved ecosystem.
+- Register the final ecosystem in `registry` through `RegisterEcosystemFromFactory`.
 
-## Build
+## Model
 
-```bash
-cargo build --package ecosystem-factory --release
-```
+- `registry` is the canonical ledger for ecosystems.
+- `ecosystem-factory` is the onboarding workflow, not the long-term source of truth.
+- Each approved ecosystem gets its own `collection-factory`, which then manages direct collection creation for that ecosystem team.
 
-## Generate Schema
+## Main Execute Messages
 
-```bash
-cargo run --package ecosystem-factory --example schema
-```
-
-## Test
-
-```bash
-cargo test --package ecosystem-factory
-```
+- `UpdateConfig`
+- `SubmitEcosystemCreationRequest`
+- `ResolveEcosystemCreationRequest`
 
 ## Notes
 
-- Users submit ecosystem creation requests without attaching funds.
-- Admins/operators approve requests and pay the gas for the instantiation transaction.
-- Successful approvals instantiate the per-ecosystem `collection-factory` and register the ecosystem in `registry`.
-- Request history is append-only: requests can be pending, rejected, cancelled, approved, or created.
+- Ecosystem approval happens here.
+- Collection approval does not. Once the ecosystem exists, collection creation is handled by ecosystem admin and approved members through the dedicated `collection-factory`.

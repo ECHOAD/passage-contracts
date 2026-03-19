@@ -184,7 +184,31 @@ Outer `multisig` proposal payload:
     "address": "passage1collection...",
     "ecosystem_id": "music",
     "name": "Genesis Music Collection",
-    "creator": "passage1creator..."
+    "creator": "passage1creator...",
+    "nft_type": "world_template"
+  }
+}
+```
+
+### Deregister collection from its ecosystem
+
+The collection contract keeps existing on-chain. Only the ecosystem affiliation is removed from `registry`.
+
+```json
+{
+  "deregister_collection": {
+    "address": "passage1collection..."
+  }
+}
+```
+
+### Re-home an unaffiliated collection into another ecosystem
+
+```json
+{
+  "rehome_collection": {
+    "address": "passage1collection...",
+    "ecosystem_id": "cyberpunk"
   }
 }
 ```
@@ -360,6 +384,17 @@ Outer `multisig` proposal payload:
 }
 ```
 
+### Query: list unaffiliated collections
+
+```json
+{
+  "unaffiliated_collections": {
+    "start_after": null,
+    "limit": 20
+  }
+}
+```
+
 ### Query: validate minter
 
 ```json
@@ -503,6 +538,7 @@ Outer `multisig` proposal payload:
   "name": "Genesis Music Collection",
   "symbol": "GMC",
   "minter": "passage1creator...",
+  "nft_type": "world_template",
   "collection_info": {
     "creator": "passage1creator...",
     "description": "Genesis collection for the music ecosystem",
@@ -587,6 +623,75 @@ Attach the PASG funds in the transaction.
     "points_awarded": "100",
     "transaction_id": "pi_123456789",
     "timestamp": "1773597600000000000"
+  }
+}
+```
+
+### Mint `plugin`
+
+```json
+{
+  "mint": {
+    "token_id": "plugin-1",
+    "owner": "passage1owner...",
+    "token_uri": "ipfs://bafy.../plugin-1.json",
+    "extension": {
+      "nft_type": "plugin",
+      "extension": {
+        "plugin": {
+          "plugin_id": "builder-tools",
+          "plugin_type": "world_editor",
+          "license": "commercial",
+          "permissions_uri": "ipfs://bafy.../plugin-permissions.json"
+        }
+      }
+    }
+  }
+}
+```
+
+### Mint `achievement`
+
+```json
+{
+  "mint": {
+    "token_id": "achievement-1",
+    "owner": "passage1owner...",
+    "token_uri": "ipfs://bafy.../achievement-1.json",
+    "extension": {
+      "nft_type": "achievement",
+      "extension": {
+        "achievement": {
+          "achievement_id": "season-one",
+          "achievement_type": "quest_completion",
+          "points": 250,
+          "soulbound": true
+        }
+      }
+    }
+  }
+}
+```
+
+### Mint `world_template`
+
+```json
+{
+  "mint": {
+    "token_id": "template-1",
+    "owner": "passage1owner...",
+    "token_uri": "ipfs://bafy.../template-1.json",
+    "extension": {
+      "nft_type": "world_template",
+      "extension": {
+        "world_template": {
+          "template_id": "cyberpunk-district",
+          "category": "cityscape",
+          "branding_uri": "ipfs://bafy.../branding.json",
+          "customization_uri": "ipfs://bafy.../customization.json"
+        }
+      }
+    }
   }
 }
 ```

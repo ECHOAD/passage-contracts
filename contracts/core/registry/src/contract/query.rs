@@ -5,14 +5,10 @@ use super::helpers::{
 };
 use super::*;
 
-// ========== Query ==========
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
-
-        // Ecosystem queries
         QueryMsg::Ecosystem { id } => to_json_binary(&query_ecosystem(deps, id)?),
         QueryMsg::Ecosystems { start_after, limit } => {
             to_json_binary(&query_ecosystems(deps, start_after, limit)?)
@@ -55,28 +51,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             ecosystem_id,
             creator,
         )?),
-        QueryMsg::CollectionCreationRequest {
-            ecosystem_id,
-            creator,
-        } => to_json_binary(&query_collection_creation_request(
-            deps,
-            ecosystem_id,
-            creator,
-        )?),
-        QueryMsg::CollectionCreationRequests {
-            ecosystem_id,
-            status,
-            start_after_creator,
-            limit,
-        } => to_json_binary(&query_collection_creation_requests(
-            deps,
-            ecosystem_id,
-            status,
-            start_after_creator,
-            limit,
-        )?),
-
-        // Collection queries
         QueryMsg::Collection { address } => to_json_binary(&query_collection(deps, address)?),
         QueryMsg::Collections { start_after, limit } => {
             to_json_binary(&query_collections(deps, start_after, limit)?)
@@ -91,6 +65,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
+        QueryMsg::UnaffiliatedCollections { start_after, limit } => {
+            to_json_binary(&query_unaffiliated_collections(deps, start_after, limit)?)
+        }
         QueryMsg::CollectionsByCreator {
             creator,
             start_after,
@@ -120,8 +97,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CanTradeCollection { address } => {
             to_json_binary(&query_can_trade_collection(deps, address)?)
         }
-
-        // Minter queries
         QueryMsg::IsMinterAuthorized {
             collection_address,
             minter_address,
@@ -140,7 +115,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
-
         QueryMsg::RecoveryConfig {} => to_json_binary(&query_recovery_config(deps)?),
         QueryMsg::RecoveryCase { case_id } => to_json_binary(&query_recovery_case(deps, case_id)?),
         QueryMsg::RecoveryCases {
@@ -155,13 +129,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let config = CONFIG.load(deps.storage)?;
-    Ok(ConfigResponse { config })
+    Ok(ConfigResponse {
+        config: CONFIG.load(deps.storage)?,
+    })
 }
 
 fn query_ecosystem(deps: Deps, id: String) -> StdResult<EcosystemResponse> {
-    let ecosystem = ECOSYSTEMS.may_load(deps.storage, id)?;
-    Ok(EcosystemResponse { ecosystem })
+    Ok(EcosystemResponse {
+        ecosystem: ECOSYSTEMS.may_load(deps.storage, id)?,
+    })
 }
 
 fn query_ecosystems(
@@ -205,10 +181,9 @@ fn query_ecosystems_by_admin(
 
 fn query_creator_moderation(deps: Deps, creator: String) -> StdResult<CreatorModerationResponse> {
     let creator_addr = deps.api.addr_validate(&creator)?;
-    let moderation = creator_moderation(deps.storage, &creator_addr)?;
     Ok(CreatorModerationResponse {
         creator,
-        moderation,
+        moderation: creator_moderation(deps.storage, &creator_addr)?,
     })
 }
 
@@ -216,10 +191,9 @@ fn query_ecosystem_moderation(
     deps: Deps,
     ecosystem_id: String,
 ) -> StdResult<EcosystemModerationResponse> {
-    let moderation = ecosystem_moderation(deps.storage, &ecosystem_id)?;
     Ok(EcosystemModerationResponse {
-        ecosystem_id,
-        moderation,
+        ecosystem_id: ecosystem_id.clone(),
+        moderation: ecosystem_moderation(deps.storage, &ecosystem_id)?,
     })
 }
 
@@ -228,10 +202,9 @@ fn query_collection_moderation(
     address: String,
 ) -> StdResult<CollectionModerationResponse> {
     let collection_addr = deps.api.addr_validate(&address)?;
-    let moderation = collection_moderation(deps.storage, &collection_addr)?;
     Ok(CollectionModerationResponse {
         address,
-        moderation,
+        moderation: collection_moderation(deps.storage, &collection_addr)?,
     })
 }
 
@@ -239,8 +212,9 @@ fn query_ecosystem_recovery_policy(
     deps: Deps,
     ecosystem_id: String,
 ) -> StdResult<RecoveryPolicyResponse> {
-    let policy = ecosystem_recovery_policy(deps.storage, &ecosystem_id)?;
-    Ok(RecoveryPolicyResponse { policy })
+    Ok(RecoveryPolicyResponse {
+        policy: ecosystem_recovery_policy(deps.storage, &ecosystem_id)?,
+    })
 }
 
 fn query_collection_recovery_policy(
@@ -248,14 +222,16 @@ fn query_collection_recovery_policy(
     address: String,
 ) -> StdResult<RecoveryPolicyResponse> {
     let collection_addr = deps.api.addr_validate(&address)?;
-    let policy = collection_recovery_policy(deps.storage, &collection_addr)?;
-    Ok(RecoveryPolicyResponse { policy })
+    Ok(RecoveryPolicyResponse {
+        policy: collection_recovery_policy(deps.storage, &collection_addr)?,
+    })
 }
 
 fn query_can_create_ecosystem(deps: Deps, creator: String) -> StdResult<ApprovalStatusResponse> {
     let creator_addr = deps.api.addr_validate(&creator)?;
-    let approved = can_create_ecosystem(deps.storage, &creator_addr)?;
-    Ok(ApprovalStatusResponse { approved })
+    Ok(ApprovalStatusResponse {
+        approved: can_create_ecosystem(deps.storage, &creator_addr)?,
+    })
 }
 
 fn query_is_cross_ecosystem_admin(
@@ -264,8 +240,9 @@ fn query_is_cross_ecosystem_admin(
 ) -> StdResult<ApprovalStatusResponse> {
     let addr = deps.api.addr_validate(&address)?;
     let config = CONFIG.load(deps.storage)?;
-    let approved = is_cross_ecosystem_admin(&config, &addr);
-    Ok(ApprovalStatusResponse { approved })
+    Ok(ApprovalStatusResponse {
+        approved: is_cross_ecosystem_admin(&config, &addr),
+    })
 }
 
 fn query_is_ecosystem_member(
@@ -274,8 +251,9 @@ fn query_is_ecosystem_member(
     member: String,
 ) -> StdResult<ApprovalStatusResponse> {
     let member_addr = deps.api.addr_validate(&member)?;
-    let approved = ECOSYSTEM_MEMBERS.has(deps.storage, (ecosystem_id, member_addr));
-    Ok(ApprovalStatusResponse { approved })
+    Ok(ApprovalStatusResponse {
+        approved: ECOSYSTEM_MEMBERS.has(deps.storage, (ecosystem_id, member_addr)),
+    })
 }
 
 fn query_can_create_collection_in_ecosystem(
@@ -289,68 +267,16 @@ fn query_can_create_collection_in_ecosystem(
         .may_load(deps.storage, ecosystem_id)?
         .ok_or_else(|| cosmwasm_std::StdError::generic_err("ecosystem not found"))?;
 
-    let approved =
-        can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &creator_addr);
-    Ok(ApprovalStatusResponse { approved })
-}
-
-fn query_collection_creation_request(
-    deps: Deps,
-    ecosystem_id: String,
-    creator: String,
-) -> StdResult<CollectionCreationRequestResponse> {
-    let creator_addr = deps.api.addr_validate(&creator)?;
-    let request =
-        COLLECTION_CREATION_REQUESTS.may_load(deps.storage, (ecosystem_id, creator_addr))?;
-    Ok(CollectionCreationRequestResponse { request })
-}
-
-fn query_collection_creation_requests(
-    deps: Deps,
-    ecosystem_id: String,
-    status: Option<CollectionCreationRequestStatus>,
-    start_after_creator: Option<String>,
-    limit: Option<u32>,
-) -> StdResult<CollectionCreationRequestsResponse> {
-    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start_creator = start_after_creator
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
-
-    let requests = COLLECTION_CREATION_REQUESTS
-        .range(deps.storage, None, None, Order::Ascending)
-        .filter_map(|item| {
-            item.ok()
-                .and_then(|((request_ecosystem_id, creator_addr), request)| {
-                    if request_ecosystem_id != ecosystem_id {
-                        return None;
-                    }
-
-                    if let Some(start) = &start_creator {
-                        if creator_addr <= *start {
-                            return None;
-                        }
-                    }
-
-                    if let Some(expected_status) = &status {
-                        if &request.status != expected_status {
-                            return None;
-                        }
-                    }
-
-                    Some(request)
-                })
-        })
-        .take(limit)
-        .collect::<Vec<_>>();
-
-    Ok(CollectionCreationRequestsResponse { requests })
+    Ok(ApprovalStatusResponse {
+        approved: can_create_collection_in_ecosystem(deps.storage, &config, &ecosystem, &creator_addr),
+    })
 }
 
 fn query_collection(deps: Deps, address: String) -> StdResult<CollectionResponse> {
     let addr = deps.api.addr_validate(&address)?;
-    let collection = collections().may_load(deps.storage, addr)?;
-    Ok(CollectionResponse { collection })
+    Ok(CollectionResponse {
+        collection: collections().may_load(deps.storage, addr)?,
+    })
 }
 
 fn query_collections(
@@ -359,9 +285,7 @@ fn query_collections(
     limit: Option<u32>,
 ) -> StdResult<CollectionsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
+    let start = start_after.map(|s| deps.api.addr_validate(&s)).transpose()?;
     let start_bound = start.map(Bound::exclusive);
 
     let collection_list: Vec<Collection> = collections()
@@ -381,16 +305,31 @@ fn query_collections_by_ecosystem(
     start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<CollectionsResponse> {
+    query_collections_by_ecosystem_key(deps, ecosystem_id, start_after, limit)
+}
+
+fn query_unaffiliated_collections(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionsResponse> {
+    query_collections_by_ecosystem_key(deps, String::new(), start_after, limit)
+}
+
+fn query_collections_by_ecosystem_key(
+    deps: Deps,
+    ecosystem_key: String,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
+    let start = start_after.map(|s| deps.api.addr_validate(&s)).transpose()?;
     let start_bound = start.map(Bound::exclusive);
 
     let collection_list: Vec<Collection> = collections()
         .idx
         .ecosystem
-        .prefix(ecosystem_id)
+        .prefix(ecosystem_key)
         .range(deps.storage, start_bound, None, Order::Ascending)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
@@ -409,9 +348,7 @@ fn query_collections_by_creator(
 ) -> StdResult<CollectionsResponse> {
     let creator_addr = deps.api.addr_validate(&creator)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
+    let start = start_after.map(|s| deps.api.addr_validate(&s)).transpose()?;
     let start_bound = start.map(Bound::exclusive);
 
     let collection_list: Vec<Collection> = collections()
@@ -435,9 +372,7 @@ fn query_collections_by_nft_type(
     limit: Option<u32>,
 ) -> StdResult<CollectionsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after
-        .map(|s| deps.api.addr_validate(&s))
-        .transpose()?;
+    let start = start_after.map(|s| deps.api.addr_validate(&s)).transpose()?;
     let start_bound = start.map(Bound::exclusive);
 
     let collection_list: Vec<Collection> = collections()
@@ -457,8 +392,9 @@ fn query_collections_by_nft_type(
 fn query_is_collection_verified(deps: Deps, address: String) -> StdResult<IsVerifiedResponse> {
     let addr = deps.api.addr_validate(&address)?;
     let collection = collections().may_load(deps.storage, addr)?;
-    let is_verified = collection.map(|c| c.verified).unwrap_or(false);
-    Ok(IsVerifiedResponse { is_verified })
+    Ok(IsVerifiedResponse {
+        is_verified: collection.map(|c| c.verified).unwrap_or(false),
+    })
 }
 
 fn query_can_mint_collection(deps: Deps, address: String) -> StdResult<ApprovalStatusResponse> {
@@ -466,8 +402,9 @@ fn query_can_mint_collection(deps: Deps, address: String) -> StdResult<ApprovalS
     let collection = collections()
         .may_load(deps.storage, addr)?
         .ok_or_else(|| cosmwasm_std::StdError::generic_err("collection not found"))?;
-    let approved = can_mint_collection(deps.storage, &collection)?;
-    Ok(ApprovalStatusResponse { approved })
+    Ok(ApprovalStatusResponse {
+        approved: can_mint_collection(deps.storage, &collection)?,
+    })
 }
 
 fn query_can_trade_collection(deps: Deps, address: String) -> StdResult<ApprovalStatusResponse> {
@@ -475,8 +412,9 @@ fn query_can_trade_collection(deps: Deps, address: String) -> StdResult<Approval
     let collection = collections()
         .may_load(deps.storage, addr)?
         .ok_or_else(|| cosmwasm_std::StdError::generic_err("collection not found"))?;
-    let approved = can_trade_collection(deps.storage, &collection)?;
-    Ok(ApprovalStatusResponse { approved })
+    Ok(ApprovalStatusResponse {
+        approved: can_trade_collection(deps.storage, &collection)?,
+    })
 }
 
 fn query_is_minter_authorized(
@@ -486,11 +424,9 @@ fn query_is_minter_authorized(
 ) -> StdResult<IsMinterAuthorizedResponse> {
     let collection_addr = deps.api.addr_validate(&collection_address)?;
     let minter_addr = deps.api.addr_validate(&minter_address)?;
-
-    let key = (collection_addr, minter_addr);
-    let is_authorized = AUTHORIZED_MINTERS.has(deps.storage, key);
-
-    Ok(IsMinterAuthorizedResponse { is_authorized })
+    Ok(IsMinterAuthorizedResponse {
+        is_authorized: AUTHORIZED_MINTERS.has(deps.storage, (collection_addr, minter_addr)),
+    })
 }
 
 fn query_authorized_minters(
@@ -517,13 +453,15 @@ fn query_authorized_minters(
 }
 
 fn query_recovery_config(deps: Deps) -> StdResult<RecoveryConfigResponse> {
-    let config = RECOVERY_CONFIG.load(deps.storage)?;
-    Ok(RecoveryConfigResponse { config })
+    Ok(RecoveryConfigResponse {
+        config: RECOVERY_CONFIG.load(deps.storage)?,
+    })
 }
 
 fn query_recovery_case(deps: Deps, case_id: u64) -> StdResult<RecoveryCaseResponse> {
-    let case = RECOVERY_CASES.may_load(deps.storage, case_id)?;
-    Ok(RecoveryCaseResponse { case })
+    Ok(RecoveryCaseResponse {
+        case: RECOVERY_CASES.may_load(deps.storage, case_id)?,
+    })
 }
 
 fn query_recovery_cases(
@@ -554,9 +492,8 @@ fn query_last_creator_activity(
     creator: String,
 ) -> StdResult<LastCreatorActivityResponse> {
     let creator_addr = deps.api.addr_validate(&creator)?;
-    let last_activity_at = LAST_CREATOR_ACTIVITY.may_load(deps.storage, creator_addr)?;
     Ok(LastCreatorActivityResponse {
         creator,
-        last_activity_at,
+        last_activity_at: LAST_CREATOR_ACTIVITY.may_load(deps.storage, creator_addr)?,
     })
 }

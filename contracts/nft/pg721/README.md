@@ -1,30 +1,47 @@
 # pg721
 
-Passage NFT collection contract
+`pg721` is the shared Passage collection contract for typed creator assets.
 
-## Overview
+## Supported Collection Types
 
-This contract is part of the Passage CosmWasm workspace.
+- `component`
+- `avatar`
+- `companion`
+- `world`
+- `plugin`
+- `achievement`
+- `world_template`
 
-## Build
+## Typed Metadata
 
-```bash
-cargo build --package pg721 --release
-```
+The contract enforces that token metadata matches the collection `nft_type`.
 
-## Generate Schema
+- `Component(ComponentExtension)`
+- `Avatar(AvatarExtension)`
+- `Companion(CompanionExtension)`
+- `World(WorldExtension)`
+- `Plugin(PluginExtension)`
+- `Achievement(AchievementExtension)`
+- `WorldTemplate(WorldTemplateExtension)`
 
-```bash
-cargo run --package pg721 --example schema
-```
+These extensions are intentionally compact and contract-facing. Runtime payloads, Unreal assets, rendering graphs, and similar execution details stay off-chain.
 
-## Test
+## Monetization Surface
 
-```bash
-cargo test --package pg721
-```
+- Collection-level `royalty_info` is queryable through `CollectionInfo`.
+- World tokens can carry `revenue_shares` in `WorldExtension`.
+- Sale paths such as `marketplace-v3` and `auction-english` keep routing generic and read royalty semantics from collection metadata.
+
+## Main Queries
+
+- `CollectionInfo`
+- `NftInfo`
+- `AllNftInfo`
+- `OwnerOf`
+- `Tokens`
+- `AllTokens`
 
 ## Notes
 
-- Source code: src/
-- Generated JSON schemas: schema/
+- The collection contract address is the canonical collection identity in `registry`.
+- `pg721` does not model runtime behavior. It models enforceable ownership, approvals, royalties, and typed creator-asset metadata.

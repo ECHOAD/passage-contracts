@@ -1,6 +1,9 @@
 use super::*;
 
-use crate::msg::{CollectionInfoMsg, ComponentExtension, NftType, NftTypeExtension};
+use crate::msg::{
+    AchievementExtension, CollectionInfoMsg, ComponentExtension, NftType, NftTypeExtension,
+    PluginExtension, WorldTemplateExtension,
+};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, from_json, Attribute, Decimal};
 use cw721::NftInfoResponse;
@@ -8,19 +11,27 @@ use cw721::NftInfoResponse;
 const NATIVE_DENOM: &str = "ujunox";
 
 fn setup_contract(deps: DepsMut, royalty_info: Option<RoyaltyInfoResponse>) {
+    setup_contract_with_type(deps, NftType::Component, royalty_info);
+}
+
+fn setup_contract_with_type(
+    deps: DepsMut,
+    nft_type: NftType,
+    royalty_info: Option<RoyaltyInfoResponse>,
+) {
     let collection = String::from("collection0");
     let image: String = "https://example.com/image.png".to_string();
     let msg = InstantiateMsg {
         name: collection,
         symbol: String::from("BOBO"),
         minter: String::from("minter"),
-        nft_type: NftType::Component,
+        nft_type,
         collection_info: CollectionInfoMsg {
             creator: String::from("creator"),
             description: String::from("Passage Monkeys"),
             image: image.clone(),
             external_link: Some("https://example.com/external.html".to_string()),
-            royalty_info: royalty_info,
+            royalty_info,
         },
     };
     let info = mock_info("creator", &coins(0, NATIVE_DENOM));
@@ -143,4 +154,124 @@ fn mint_accepts_matching_passage_metadata() {
     let metadata = nft_info.extension.expect("metadata");
 
     assert_eq!(metadata.nft_type, NftType::Component);
+}
+
+#[test]
+fn mint_accepts_plugin_metadata() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::Plugin, None);
+
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "plugin-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/plugin-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Plugin,
+                extension: Some(NftTypeExtension::Plugin(PluginExtension {
+                    plugin_id: "builder-tools".to_string(),
+                    plugin_type: "world_editor".to_string(),
+                    license: "commercial".to_string(),
+                    permissions_uri: Some("ipfs://cid/plugin-perms".to_string()),
+                })),
+            }),
+        }),
+    )
+    .unwrap();
+
+    let nft_info_bin = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NftInfo {
+            token_id: "plugin-1".to_string(),
+        },
+    )
+    .unwrap();
+    let nft_info: NftInfoResponse<Extension> = from_json(&nft_info_bin).unwrap();
+    let metadata = nft_info.extension.expect("metadata");
+
+    assert_eq!(metadata.nft_type, NftType::Plugin);
+}
+
+#[test]
+fn mint_accepts_achievement_metadata() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::Achievement, None);
+
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "achievement-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/achievement-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Achievement,
+                extension: Some(NftTypeExtension::Achievement(AchievementExtension {
+                    achievement_id: "season-one".to_string(),
+                    achievement_type: "quest_completion".to_string(),
+                    points: 250,
+                    soulbound: true,
+                })),
+            }),
+        }),
+    )
+    .unwrap();
+
+    let nft_info_bin = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NftInfo {
+            token_id: "achievement-1".to_string(),
+        },
+    )
+    .unwrap();
+    let nft_info: NftInfoResponse<Extension> = from_json(&nft_info_bin).unwrap();
+    let metadata = nft_info.extension.expect("metadata");
+
+    assert_eq!(metadata.nft_type, NftType::Achievement);
+}
+
+#[test]
+fn mint_accepts_world_template_metadata() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::WorldTemplate, None);
+
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "world-template-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/world-template-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::WorldTemplate,
+                extension: Some(NftTypeExtension::WorldTemplate(WorldTemplateExtension {
+                    template_id: "cyberpunk-district".to_string(),
+                    category: "cityscape".to_string(),
+                    branding_uri: Some("ipfs://cid/branding".to_string()),
+                    customization_uri: Some("ipfs://cid/customization".to_string()),
+                })),
+            }),
+        }),
+    )
+    .unwrap();
+
+    let nft_info_bin = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::NftInfo {
+            token_id: "world-template-1".to_string(),
+        },
+    )
+    .unwrap();
+    let nft_info: NftInfoResponse<Extension> = from_json(&nft_info_bin).unwrap();
+    let metadata = nft_info.extension.expect("metadata");
+
+    assert_eq!(metadata.nft_type, NftType::WorldTemplate);
 }
