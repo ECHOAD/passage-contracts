@@ -15,7 +15,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 - [x] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics without repurposing the existing admin-owner multisig.
 - [x] **Phase 4: PASG Validator Staking & Rewards** - Align PASG with native validator delegation, chain-level unbonding, validator fee participation, and token rewards.
 - [x] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
-- [ ] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
+- [x] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
 - [ ] **Phase 7: Audit Readiness & Launch Hardening** - Raise test coverage, fuzzing, docs, and migration discipline to audit grade.
 
 ## Phase Details
@@ -113,9 +113,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Define the multi-economy contract interfaces and settlement primitives
-- [ ] 06-02: Implement hybrid payment routing, escrow, and refund-safe execution
-- [ ] 06-03: Integrate world-economy settlement with existing registry and routing surfaces
+- [x] 06-01: Define the multi-economy contract interfaces and settlement primitives
+- [x] 06-02: Implement hybrid payment routing, escrow, and refund-safe execution
+- [x] 06-03: Integrate world-economy settlement with existing registry and routing surfaces
 
 ### Phase 7: Audit Readiness & Launch Hardening
 **Goal**: Bring the in-scope protocol to audit-ready quality with aligned docs, coverage, fuzzing, and migration confidence.
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
 | 4. PASG Validator Staking & Rewards | 3/3 | Complete | 2026-03-19 |
 | 5. Creator Asset Contracts & Monetization | 3/3 | Complete | 2026-03-19 |
-| 6. Multi-Economy Settlement | 0/3 | Not started | - |
+| 6. Multi-Economy Settlement | 3/3 | Complete | 2026-03-19 |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
 | 8. Documentacion completa bilingue de contratos en docs | 0/0 | Not started | - |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
@@ -173,6 +173,7 @@ Plans:
 - [x] 09-01-PLAN.md - Simplify marketplace config to global fee plus collection-scoped denom with mandatory registration
 - [x] 09-02-PLAN.md - Add owner validation plus request/approval flows for register and update
 - [x] 09-03-PLAN.md - Align queries, schema, and docs to the redesigned public surface
+
 
 
 

@@ -38,13 +38,13 @@
 ### Revenue Execution
 
 - [x] **REV-01**: Platform services can execute creator/platform/partner revenue splits for world, marketplace, and asset flows from on-chain rules.
-- [ ] **REV-02**: Revenue execution supports session-based billing, escrow, and refund-safe settlement where the product architecture requires it.
+- [x] **REV-02**: Revenue execution supports session-based billing, escrow, and refund-safe settlement where the product architecture requires it.
 - [x] **REV-03**: Fiat-assisted purchase flows into PASG-denominated accounting are protected by explicit oracle, replay, and freshness controls.
 
 ### Multi-Economy
 
-- [ ] **ECON-01**: World operators can define local token or points economies that settle against PASG through a standard contract interface.
-- [ ] **ECON-02**: Hybrid payment paths that combine PASG with world-specific units are queryable, enforceable, and do not bypass PASG utility.
+- [x] **ECON-01**: World operators can define local token or points economies that settle against PASG through a standard contract interface.
+- [x] **ECON-02**: Hybrid payment paths that combine PASG with world-specific units are queryable, enforceable, and do not bypass PASG utility.
 
 ### Quality & Audit
 
@@ -87,9 +87,9 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | NFT-02 | Phase 5 | Complete |
 | NFT-03 | Phase 5 | Complete |
 | REV-01 | Phase 5 | Complete |
-| ECON-01 | Phase 6 | Pending |
-| ECON-02 | Phase 6 | Pending |
-| REV-02 | Phase 6 | Pending |
+| ECON-01 | Phase 6 | Complete |
+| ECON-02 | Phase 6 | Complete |
+| REV-02 | Phase 6 | Complete |
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
 | QUAL-03 | Phase 7 | Pending |
@@ -101,7 +101,8 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 5 completion*
+*Last updated: 2026-03-19 after Phase 6 completion*
+
 
 
 
