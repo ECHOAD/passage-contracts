@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Get contract configuration",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get number of tokens still available for minting",
+      "type": "object",
+      "required": [
+        "mintable_num_tokens"
+      ],
+      "properties": {
+        "mintable_num_tokens": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get minting start time",
+      "type": "object",
+      "required": [
+        "start_time"
+      ],
+      "properties": {
+        "start_time": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get current mint price (considers whitelist pricing)",
+      "type": "object",
+      "required": [
+        "mint_price"
+      ],
+      "properties": {
+        "mint_price": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get mint count for a specific address",
+      "type": "object",
+      "required": [
+        "mint_count"
+      ],
+      "properties": {
+        "mint_count": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if address can mint",
+      "type": "object",
+      "required": [
+        "can_mint"
+      ],
+      "properties": {
+        "can_mint": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Get minting statistics",
+      "type": "object",
+      "required": [
+        "mint_stats"
+      ],
+      "properties": {
+        "mint_stats": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Check if minting is active",
+      "type": "object",
+      "required": [
+        "is_minting_active"
+      ],
+      "properties": {
+        "is_minting_active": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

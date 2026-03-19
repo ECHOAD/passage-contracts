@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MigrateMsg",
+  "description": "Migration message from minter v1 to minter-v2",
+  "type": "object",
+  "properties": {
+    "base_token_uri": {
+      "description": "Required only for `passage-minter-metadata-onchain` migrations because that legacy state does not store a base token URI.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "registry": {
+      "description": "Registry contract address for collection verification",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

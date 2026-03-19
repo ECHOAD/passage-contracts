@@ -547,64 +547,136 @@ Outer `multisig` proposal payload:
 }
 ```
 
-## 5. `split-router`
+## 5. `streaming-billing`
+
+`streaming-billing` is the canonical PASG utility query surface in this repo.
 
 ### Instantiate
 
 ```json
 {
   "admin": "passage1admin...",
-  "registry": "passage1registry..."
+  "split_router": "passage1splitrouter...",
+  "registry": "passage1registry...",
+  "backend_operator": "passage1backend...",
+  "denom": "upasg",
+  "points_per_denom": "100",
+  "fiat_oracle": "passage1fiatoracle...",
+  "stripe_webhook_validator": null
 }
 ```
 
-### Create distribution rule
+### Deposit PASG directly for points
+
+Attach the PASG funds in the transaction.
 
 ```json
 {
-  "set_distribution_rule": {
-    "collection": "passage1collection...",
-    "creator": "passage1creator...",
-    "creator_share": "0.85",
-    "collaborators": [
-      {
-        "address": "passage1artistmanager...",
-        "share": "0.10",
-        "name": "Manager"
-      },
-      {
-        "address": "passage1producer...",
-        "share": "0.05",
-        "name": "Producer"
-      }
-    ]
+  "deposit_crypto": {}
+}
+```
+
+### Report fiat purchase
+
+```json
+{
+  "report_fiat_purchase": {
+    "user": "passage1buyer...",
+    "fiat_amount_usd": "1500",
+    "pasg_amount": "1000000",
+    "points_awarded": "100",
+    "transaction_id": "pi_123456789",
+    "timestamp": "1773597600000000000"
   }
 }
 ```
 
-### Update rule
+### Configure world rate
 
 ```json
 {
-  "update_distribution_rule": {
-    "collection": "passage1collection...",
-    "creator": null,
-    "creator_share": "0.80",
-    "collaborators": [
+  "set_world_rate": {
+    "world_nft_id": "world-1",
+    "world_collection": "passage1collection...",
+    "points_per_hour": "250"
+  }
+}
+```
+
+### Distribute world revenue
+
+```json
+{
+  "distribute_world_revenue": {
+    "world_nft_id": "world-1"
+  }
+}
+```
+
+### Query: canonical PASG utility
+
+```json
+{
+  "pasg_utility": {}
+}
+```
+
+### Query: conversion rate
+
+```json
+{
+  "conversion_rate": {}
+}
+```
+
+### Query: pending revenue
+
+```json
+{
+  "pending_revenue": {
+    "world_nft_id": "world-1"
+  }
+}
+```
+
+## 6. `split-router`
+
+### Instantiate
+
+```json
+{
+  "admin": "passage1admin...",
+  "recipients": [
+    {
+      "address": "passage1creator...",
+      "share": "0.85",
+      "label": "Creator"
+    },
+    {
+      "address": "passage1collab...",
+      "share": "0.15",
+      "label": "Collaborator"
+    }
+  ],
+  "active": true
+}
+```
+
+### Update split recipients
+
+```json
+{
+  "update_split": {
+    "recipients": [
       {
-        "address": "passage1artistmanager...",
-        "share": "0.10",
-        "name": "Manager"
+        "address": "passage1creator...",
+        "share": "0.80",
+        "label": "Creator"
       },
       {
         "address": "passage1producer...",
-        "share": "0.05",
-        "name": "Producer"
-      },
-      {
-        "address": "passage1designer...",
-        "share": "0.05",
-        "name": "Designer"
+        "share": "0.20",
+        "label": "Producer"
       }
     ],
     "active": true
@@ -612,43 +684,53 @@ Outer `multisig` proposal payload:
 }
 ```
 
-### Route primary sale
+### Split attached funds
 
-This message is normally called by `minter-v2` with attached funds.
+Attach the native funds in the transaction.
 
 ```json
 {
-  "route_primary_sale": {
-    "collection": "passage1collection..."
+  "split": {}
+}
+```
+
+### Route world revenue
+
+Attach the native funds in the transaction. This is the compatibility execute shape used by `streaming-billing`.
+
+```json
+{
+  "route_world_revenue": {
+    "world_nft_id": "world-1",
+    "world_collection": "passage1collection..."
   }
 }
 ```
 
-### Route secondary royalty
-
-This message is normally called by `marketplace-v3` with the royalty funds attached.
+### Query: preview split
 
 ```json
 {
-  "route_secondary_royalty": {
-    "collection": "passage1collection..."
+  "preview_split": {
+    "funds": [
+      {
+        "denom": "upasg",
+        "amount": "1000000"
+      }
+    ]
   }
 }
 ```
 
-### Query: preview distribution
+### Query: routing metadata
 
 ```json
 {
-  "preview_distribution": {
-    "collection": "passage1collection...",
-    "amount": "1000000",
-    "event_type": "SecondaryRoyalty"
-  }
+  "routing_metadata": {}
 }
 ```
 
-## 6. `marketplace-v3`
+## 7. `marketplace-v3`
 
 ### Instantiate
 
@@ -661,8 +743,6 @@ This message is normally called by `marketplace-v3` with the royalty funds attac
   "max_trading_fee_bps": 1000,
   "fee_collector": "passage1treasury...",
   "registry": "passage1registry...",
-  "split_router": "passage1splitrouter...",
-  "use_split_router": true,
   "operators": ["passage1operator..."],
   "require_registration": true
 }
@@ -722,7 +802,7 @@ Attach the bid amount to the transaction.
       "denom": "upasg",
       "amount": "900000"
     },
-    "expires_at": 1735689600
+    "expires_at": 1773597600
   }
 }
 ```
@@ -747,12 +827,32 @@ Attach `units * price.amount` to the transaction.
 {
   "set_collection_bid": {
     "collection": "passage1collection...",
-    "units": 3,
+    "units": 2,
     "price": {
       "denom": "upasg",
       "amount": "800000"
     },
-    "expires_at": 1735689600
+    "expires_at": 1773597600
+  }
+}
+```
+
+### Query: collection denom
+
+```json
+{
+  "collection_denom": {
+    "collection": "passage1collection..."
+  }
+}
+```
+
+### Query: collection fee
+
+```json
+{
+  "collection_fee": {
+    "collection": "passage1collection..."
   }
 }
 ```
@@ -768,7 +868,9 @@ Attach `units * price.amount` to the transaction.
 }
 ```
 
-## 7. `auction-english`
+After `buy_now`, `accept_bid`, or `accept_collection_bid`, inspect the response attributes `pasg_utility_query`, `pasg_native_denom`, `pasg_settlement_denom`, `pasg_uses_native_utility`, and `pasg_fee_flow`.
+
+## 8. `auction-english`
 
 ### Instantiate
 
@@ -781,8 +883,6 @@ Attach `units * price.amount` to the transaction.
   "max_trading_fee_bps": 1000,
   "fee_collector": "passage1treasury...",
   "registry": "passage1registry...",
-  "split_router": "passage1splitrouter...",
-  "use_split_router": true,
   "min_bid_increment_percent": "0.05",
   "min_duration": 3600,
   "max_duration": 604800,
@@ -808,24 +908,9 @@ Attach `units * price.amount` to the transaction.
 }
 ```
 
-### Update reserve price
-
-```json
-{
-  "update_reserve_price": {
-    "collection": "passage1collection...",
-    "token_id": "1",
-    "reserve_price": {
-      "denom": "upasg",
-      "amount": "1200000"
-    }
-  }
-}
-```
-
 ### Place bid
 
-Attach the bid amount to the transaction.
+Attach the bid amount in the configured native denom.
 
 ```json
 {
@@ -847,7 +932,15 @@ Attach the bid amount to the transaction.
 }
 ```
 
-### Query: get auction
+### Query: config
+
+```json
+{
+  "config": {}
+}
+```
+
+### Query: auction
 
 ```json
 {
@@ -858,13 +951,15 @@ Attach the bid amount to the transaction.
 }
 ```
 
-## 8. `minter-v2`
+After `place_bid` or `settle_auction`, inspect the response attributes `pasg_utility_query`, `pasg_native_denom`, `pasg_settlement_denom`, `pasg_uses_native_utility`, and `pasg_fee_flow`.
+
+## 9. `minter-v2`
 
 ### Instantiate
 
 ```json
 {
-  "base_token_uri": "ipfs://bafy.../metadata",
+  "base_token_uri": "ipfs://bafy.../metadata/",
   "num_tokens": 1000,
   "cw721_code_id": 301,
   "cw721_instantiate_msg": {
@@ -889,17 +984,13 @@ Attach the bid amount to the transaction.
     "amount": "1000000"
   },
   "whitelist": null,
-  "registry": "passage1registry...",
-  "split_router": "passage1splitrouter...",
-  "use_split_router": true,
-  "metadata_mode": "off_chain",
-  "native_asset_template": []
+  "registry": "passage1registry..."
 }
 ```
 
 ### Mint
 
-Attach exactly the `unit_price`.
+Attach exactly the current price.
 
 ```json
 {
@@ -909,7 +1000,7 @@ Attach exactly the `unit_price`.
 
 ### Batch mint
 
-Attach `count * unit_price.amount`.
+Attach `count * current_price.amount`.
 
 ```json
 {
@@ -932,9 +1023,6 @@ Attach `count * unit_price.amount`.
     },
     "whitelist": null,
     "registry": "passage1registry...",
-    "split_router": "passage1splitrouter...",
-    "use_split_router": true,
-    "metadata_mode": "off_chain",
     "paused": false
   }
 }
@@ -948,6 +1036,14 @@ Attach `count * unit_price.amount`.
 }
 ```
 
+### Query: mint price
+
+```json
+{
+  "mint_price": {}
+}
+```
+
 ### Query: can mint
 
 ```json
@@ -958,7 +1054,9 @@ Attach `count * unit_price.amount`.
 }
 ```
 
-## 9. Suggested CLI shape
+After `mint`, `batch_mint`, `withdraw`, or `withdraw_to`, inspect the response attributes `pasg_utility_query`, `pasg_native_denom`, `pasg_settlement_denom`, `pasg_uses_native_utility`, and `pasg_fee_flow`.
+
+## 10. Suggested CLI shape
 
 Conceptual `wasmd` execute example:
 

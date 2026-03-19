@@ -71,6 +71,31 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "route_world_revenue"
+      ],
+      "properties": {
+        "route_world_revenue": {
+          "type": "object",
+          "required": [
+            "world_collection",
+            "world_nft_id"
+          ],
+          "properties": {
+            "world_collection": {
+              "type": "string"
+            },
+            "world_nft_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
