@@ -125,6 +125,8 @@ pub struct PasgUtilityMetadata {
 pub enum PasgUtilityQueryRoute {
     PasgUtility,
     ConversionRate,
+    WorldLocalEconomy,
+    PreviewWorldSettlement,
 }
 
 #[cw_serde]
@@ -202,6 +204,19 @@ pub enum QueryMsg {
     /// Get accumulated revenue pending distribution
     #[returns(PendingRevenueResponse)]
     PendingRevenue { world_nft_id: String },
+
+    /// Get the bounded local-economy configuration for a world.
+    #[returns(WorldLocalEconomyResponse)]
+    WorldLocalEconomy { world_nft_id: String },
+
+    /// Preview how a world-local points flow settles back into PASG-aware accounting.
+    #[returns(PreviewWorldSettlementResponse)]
+    PreviewWorldSettlement {
+        world_nft_id: String,
+        duration_seconds: Option<u64>,
+        points: Option<Uint128>,
+        user: Option<String>,
+    },
 
     /// Get conversion rate (points per PASG)
     #[returns(ConversionRateResponse)]
@@ -319,6 +334,57 @@ pub struct PendingRevenueResponse {
 }
 
 #[cw_serde]
+pub enum WorldLocalUnitKind {
+    Points,
+}
+
+#[cw_serde]
+pub enum CreatorRevenueModel {
+    CollectionSalesAndResales,
+}
+
+#[cw_serde]
+pub enum PlatformRevenueModel {
+    MarketplaceFeesAndConfiguredProtocolFlows,
+}
+
+#[cw_serde]
+pub enum RefundPolicyKind {
+    UnusedPointsWithdrawable,
+    SessionChargeCappedByBalance,
+    CommerceRefundsUseMarketplaceAndAuctionPatterns,
+}
+
+#[cw_serde]
+pub struct WorldLocalEconomyResponse {
+    pub world_nft_id: String,
+    pub world_collection: Addr,
+    pub owner: Addr,
+    pub local_unit_kind: WorldLocalUnitKind,
+    pub local_unit_label: String,
+    pub points_per_hour: Uint128,
+    pub pasg_per_hour: Uint128,
+    pub settles_through_pasg: bool,
+    pub canonical_pasg_denom: String,
+    pub creator_revenue_model: CreatorRevenueModel,
+    pub platform_revenue_model: PlatformRevenueModel,
+}
+
+#[cw_serde]
+pub struct PreviewWorldSettlementResponse {
+    pub world_nft_id: String,
+    pub local_unit_kind: WorldLocalUnitKind,
+    pub requested_duration_seconds: Option<u64>,
+    pub requested_points: Option<Uint128>,
+    pub estimated_points_charge: Uint128,
+    pub estimated_pasg_charge: Uint128,
+    pub available_points: Option<Uint128>,
+    pub maximum_chargeable_points: Option<Uint128>,
+    pub remaining_points_after_charge: Option<Uint128>,
+    pub refund_policy: Vec<RefundPolicyKind>,
+}
+
+#[cw_serde]
 pub struct ConversionRateResponse {
     pub points_per_pasg: Uint128,
     pub pasg_per_point: Decimal,
@@ -332,6 +398,7 @@ pub struct PasgUtilityResponse {
     pub pasg_per_point: Decimal,
     pub metadata: PasgUtilityMetadata,
     pub canonical_query: PasgUtilityQueryRoute,
+    pub supplemental_queries: Vec<PasgUtilityQueryRoute>,
     pub canonical_execute: Vec<PasgUtilityExecuteRoute>,
     pub compatibility_router: PasgCompatibilityRouterResponse,
     pub scope_boundary: PasgScopeBoundaryResponse,

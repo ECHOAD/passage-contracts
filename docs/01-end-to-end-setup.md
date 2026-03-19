@@ -152,6 +152,23 @@ Useful queries:
 - `DistributionRule { collection }`
 - `PreviewDistribution { collection, amount, event_type }`
 
+## 5.5 Optional local economy wiring through `streaming-billing`
+
+Use this only if a world needs bounded points-based usage accounting.
+
+Important boundaries:
+
+- local world points are optional and auxiliary
+- they still settle through canonical PASG-aware accounting
+- creator monetization does not move here by default; it remains anchored to initial sales and resales at collection level
+- `ecosystem` remains administrative context, not the local-economy policy engine
+
+Useful queries:
+
+- `PasgUtility`
+- `WorldLocalEconomy { world_nft_id }`
+- `PreviewWorldSettlement { world_nft_id, duration_seconds | points, user }`
+- `PendingRevenue { world_nft_id }`
 ## 6. Fixed-price sale path with `marketplace-v3`
 
 `marketplace-v3` is for secondary sales. It does not create or custody collections.
@@ -392,3 +409,4 @@ PASG staking follows chain-native staking through native validator delegation on
 - Validator selection belongs to wallet or service UX. Use chain-native validator metadata, commission, uptime, and policy guidance to choose one or more validators rather than assuming a single contract-owned validator.
 - Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a repo-local claim queue.
 - `contracts/staking/nft-vault`, `contracts/staking/stake-rewards`, and `contracts/staking/vault-factory` remain NFT staking primitives and factory tooling, not the default PASG staking path.
+

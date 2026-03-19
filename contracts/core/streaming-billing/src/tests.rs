@@ -9,11 +9,12 @@ use crate::{
     contract::{execute, instantiate, query},
     error::ContractError,
     msg::{
-        ConfigResponse, ConversionRateResponse, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
-        OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityShimKind, PasgSettlementKind,
-        PasgUtilityExecuteRoute, PasgUtilityQueryRoute, PasgUtilityResponse, QueryMsg,
+        ConfigResponse, ConversionRateResponse, CreatorRevenueModel, Cw721QueryMsg, ExecuteMsg,
+        InstantiateMsg, OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityShimKind,
+        PasgSettlementKind, PasgUtilityExecuteRoute, PasgUtilityQueryRoute, PasgUtilityResponse,
+        PlatformRevenueModel, PreviewWorldSettlementResponse, QueryMsg, RefundPolicyKind,
         RegistryCollection, RegistryCollectionResponse, RegistryQueryMsg, SessionStatus,
-        UserBalanceResponse,
+        UserBalanceResponse, WorldLocalEconomyResponse,
     },
     state::{
         Config, PendingRevenue, PlatformStats, StreamingSession, UserBalance, WorldConfig, CONFIG,
@@ -749,6 +750,14 @@ fn pasg_utility_query_is_native_first_source_of_truth() {
     assert!(utility.metadata.compatibility_shim.is_none());
     assert_eq!(utility.canonical_query, PasgUtilityQueryRoute::PasgUtility);
     assert_eq!(
+        utility.supplemental_queries,
+        vec![
+            PasgUtilityQueryRoute::ConversionRate,
+            PasgUtilityQueryRoute::WorldLocalEconomy,
+            PasgUtilityQueryRoute::PreviewWorldSettlement,
+        ]
+    );
+    assert_eq!(
         utility.canonical_execute,
         vec![
             PasgUtilityExecuteRoute::DepositCrypto,
@@ -774,6 +783,82 @@ fn pasg_utility_query_is_native_first_source_of_truth() {
     );
 }
 
+#[test]
+fn world_local_economy_query_is_pasg_aware_and_commerce_secondary() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+    seed_world_config(&mut deps, &env, WORLD_ID, WORLD_COLLECTION, "creator", 250);
+
+    let response: WorldLocalEconomyResponse = from_json(
+        query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::WorldLocalEconomy {
+                world_nft_id: WORLD_ID.to_string(),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(response.world_nft_id, WORLD_ID);
+    assert_eq!(response.world_collection, addr(WORLD_COLLECTION));
+    assert_eq!(response.local_unit_label, "streaming_points");
+    assert!(response.settles_through_pasg);
+    assert_eq!(response.canonical_pasg_denom, "upasg");
+    assert_eq!(
+        response.creator_revenue_model,
+        CreatorRevenueModel::CollectionSalesAndResales
+    );
+    assert_eq!(
+        response.platform_revenue_model,
+        PlatformRevenueModel::MarketplaceFeesAndConfiguredProtocolFlows
+    );
+}
+
+#[test]
+fn preview_world_settlement_supports_duration_and_refund_metadata() {
+    let mut deps = mock_dependencies();
+    let env = env_at(1_000);
+
+    instantiate_contract(&mut deps, Some(BACKEND), Some(FIAT_ORACLE));
+    seed_world_config(&mut deps, &env, WORLD_ID, WORLD_COLLECTION, "creator", 360);
+    seed_user_balance(&mut deps, &env, USER, 500);
+
+    let response: PreviewWorldSettlementResponse = from_json(
+        query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::PreviewWorldSettlement {
+                world_nft_id: WORLD_ID.to_string(),
+                duration_seconds: Some(3_600),
+                points: None,
+                user: Some(addr(USER).to_string()),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(response.estimated_points_charge, Uint128::new(360));
+    assert_eq!(response.estimated_pasg_charge, Uint128::new(3));
+    assert_eq!(response.available_points, Some(Uint128::new(500)));
+    assert_eq!(response.maximum_chargeable_points, Some(Uint128::new(360)));
+    assert_eq!(
+        response.remaining_points_after_charge,
+        Some(Uint128::new(140))
+    );
+    assert_eq!(
+        response.refund_policy,
+        vec![
+            RefundPolicyKind::UnusedPointsWithdrawable,
+            RefundPolicyKind::SessionChargeCappedByBalance,
+            RefundPolicyKind::CommerceRefundsUseMarketplaceAndAuctionPatterns,
+        ]
+    );
+}
 #[test]
 fn canonical_pasg_query_shape_is_stable() {
     let binary = to_json_binary(&QueryMsg::PasgUtility {}).unwrap();

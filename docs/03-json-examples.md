@@ -734,6 +734,29 @@ Attach the PASG funds in the transaction.
 }
 ```
 
+### Query: world local economy
+
+```json
+{
+  "world_local_economy": {
+    "world_nft_id": "world-1"
+  }
+}
+```
+
+### Query: preview world settlement
+
+```json
+{
+  "preview_world_settlement": {
+    "world_nft_id": "world-1",
+    "duration_seconds": 3600,
+    "points": null,
+    "user": "passage1buyer..."
+  }
+}
+```
+
 ### Query: pending revenue
 
 ```json
@@ -1358,3 +1381,4 @@ Other scoped admin catalog entries follow the same model:
 - `StreamingBillingUpdateConfig`
 - `MarketplaceV3UpdateConfig`
 - `AuctionEnglishUpdateConfig`
+

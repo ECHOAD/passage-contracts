@@ -1,6 +1,6 @@
 # Streaming Billing Contract
 
-`streaming-billing` is the Passage hybrid billing primitive for streaming points, session settlement, and world revenue accumulation. It is not a subscription engine and it is not a fully autonomous billing system.
+`streaming-billing` is the Passage hybrid billing primitive for streaming points, bounded local-economy settlement, and PASG-aware world accounting. It is not a subscription engine and it is not a fully autonomous billing system.
 
 ## Canonical PASG Utility Surface
 
@@ -16,8 +16,8 @@ This contract is the repo's canonical PASG utility surface.
 
 - Tracks user points balances funded by direct PASG deposits or fiat purchase reports.
 - Records purchase history for both crypto and fiat conversion flows.
-- Stores per-world billing configuration and accumulates pending revenue for distribution.
-- Charges points when an authorized service settles a session.
+- Stores per-world billing configuration and accumulates pending settlement balances for downstream distribution.
+- Charges points when an authorized service settles a session and exposes previewable PASG-aware local-economy math.
 - Converts earned points into PASG-denominated pending revenue for downstream routing.
 
 ## Hybrid Boundary
@@ -70,6 +70,14 @@ Session lifecycle is restricted to the admin or configured **backend operator**.
 - If a user does not have enough points for the reported duration, the contract charges the remaining balance only.
 
 This design keeps the lifecycle service-owned while still bounding overcharge risk on-chain.
+
+## Local Economy Boundary
+
+World-local points are optional and auxiliary.
+
+- They can represent bounded in-world usage accounting.
+- They still settle back into canonical `upasg` semantics.
+- They do not redefine creator monetization. Creator revenue remains anchored to collection sales, resales, and marketplace royalties.
 
 ## Revenue Distribution
 
@@ -127,6 +135,14 @@ Returns the source-of-truth PASG interface:
 - compatibility metadata: wrapper/shim stance and generic split-router forwarding path
 - scope boundary: on-chain settlement utility only, with platform billing and subscription policy staying off-chain
 
+### `WorldLocalEconomy`
+
+Returns the bounded local-economy configuration for a world, including the points model, PASG conversion, and the locked commerce-first revenue stance.
+
+### `PreviewWorldSettlement`
+
+Previews how a duration- or points-based world-local charge settles against PASG-aware accounting, including capped charge behavior and refund-policy metadata.
+
 ### `ConversionRate`
 
 Returns the current `points_per_pasg`, `pasg_per_point`, and configured PASG denom for callers that only need conversion math.
@@ -135,7 +151,7 @@ Returns the current `points_per_pasg`, `pasg_per_point`, and configured PASG den
 
 Consumers should treat this contract as the PASG policy source rather than inferring PASG behavior locally.
 
-- Query `PasgUtility` for the canonical denom, conversion semantics, compatibility stance, and scope boundary.
+- Query `PasgUtility` for the canonical denom, conversion semantics, compatibility stance, scope boundary, and the supplemental local-economy queries.
 - Use `ConversionRate` only for lightweight read paths that already trust the canonical PASG stance.
 - Route PASG utility executes through `DepositCrypto`, `ReportFiatPurchase`, `WithdrawPoints`, `DistributeWorldRevenue`, and `BatchDistributeRevenue`.
 - Keep `marketplace-v3`, `minter-v2`, `auction-english`, and `split-router` as consumers of native `upasg` settlement, not owners of PASG business policy.
@@ -146,3 +162,4 @@ Consumers should treat this contract as the PASG policy source rather than infer
 - `cargo check -p streaming-billing`
 
 Those commands are the minimum test gate for changes to this contract family.
+

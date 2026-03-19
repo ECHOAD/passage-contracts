@@ -8,8 +8,8 @@ It accepts attached funds, preserves the input denoms, and fans those funds out 
 
 - `split-router` can forward `upasg`, but it does not define PASG conversion rules, fee treatment policy, adapter behavior, or subscription logic.
 - The canonical PASG query surface lives in `streaming-billing` at `QueryMsg::PasgUtility {}`.
-- `RouteWorldRevenue` exists as a compatibility execute shape so `streaming-billing` can hand world revenue into the same generic split path.
-- Platform billing, premium-tier logic, and service-owned orchestration remain off-chain.
+- `RouteWorldRevenue` exists as a compatibility execute shape so `streaming-billing` can hand PASG-aware world settlement into the same generic split path.
+- Platform billing, premium-tier logic, service-owned orchestration, and local-economy policy remain upstream or off-chain.
 
 ## What The Contract Does
 
@@ -178,3 +178,4 @@ cargo build -p split-router
 cargo run --example schema
 cargo test -p split-router --lib
 ```
+

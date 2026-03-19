@@ -8,8 +8,9 @@ This workspace treats PASG as a native-denom utility surface, not as a separate 
 
 - `upasg` is the canonical settlement denom across this repository.
 - `contracts/core/streaming-billing/src/msg.rs` is the source-of-truth PASG utility interface.
-- Integrators should query `streaming-billing` with `QueryMsg::PasgUtility {}` for canonical denom, conversion semantics, compatibility metadata, and scope boundaries.
+- Integrators should query `streaming-billing` with `QueryMsg::PasgUtility {}` for canonical denom, conversion semantics, compatibility metadata, scope boundaries, and supplemental local-economy queries.
 - The canonical PASG utility execute surface is `DepositCrypto`, `ReportFiatPurchase`, `WithdrawPoints`, `DistributeWorldRevenue`, and `BatchDistributeRevenue`.
+- Optional world-local economies remain auxiliary; creator monetization stays anchored to collection sales, resales, and marketplace fees.
 - `split-router` remains denom-agnostic. It routes funds generically and does not define PASG policy.
 - Platform billing, subscription, Stripe orchestration, fiat conversion, and similar business logic stay off-chain.
 - If a wrapper or adapter is introduced later, it is compatibility-only and must forward to native `upasg` settlement.
@@ -73,3 +74,4 @@ When you need PASG semantics in this repo:
 4. Keep service-owned billing and subscription rules off-chain even when settlement is verifiable on-chain.
 5. Treat PASG staking as chain-native staking and native validator delegation, not a repo-local staking vault.
 6. Treat `contracts/staking/nft-vault` and `contracts/staking/stake-rewards` as NFT staking contracts unless a later scoped adapter is explicitly documented.
+

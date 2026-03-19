@@ -1,0 +1,341 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Update contract configuration (admin only)",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
+          "type": "object",
+          "properties": {
+            "admin": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "backend_operator": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fiat_oracle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paused": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "split_router": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stripe_webhook_validator": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "User deposits PASG directly to buy streaming points Payment comes in msg.funds",
+      "type": "object",
+      "required": [
+        "deposit_crypto"
+      ],
+      "properties": {
+        "deposit_crypto": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Off-chain service reports fiat purchase (Stripe payment completed) Only callable by fiat_oracle",
+      "type": "object",
+      "required": [
+        "report_fiat_purchase"
+      ],
+      "properties": {
+        "report_fiat_purchase": {
+          "type": "object",
+          "required": [
+            "fiat_amount_usd",
+            "pasg_amount",
+            "points_awarded",
+            "timestamp",
+            "transaction_id",
+            "user"
+          ],
+          "properties": {
+            "fiat_amount_usd": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "pasg_amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "points_awarded": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "timestamp": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "transaction_id": {
+              "type": "string"
+            },
+            "user": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "User withdraws unused points back to PASG (with small fee)",
+      "type": "object",
+      "required": [
+        "withdraw_points"
+      ],
+      "properties": {
+        "withdraw_points": {
+          "type": "object",
+          "required": [
+            "points"
+          ],
+          "properties": {
+            "points": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Start a streaming session (called by backend)",
+      "type": "object",
+      "required": [
+        "start_session"
+      ],
+      "properties": {
+        "start_session": {
+          "type": "object",
+          "required": [
+            "user",
+            "world_collection",
+            "world_nft_id"
+          ],
+          "properties": {
+            "user": {
+              "type": "string"
+            },
+            "world_collection": {
+              "type": "string"
+            },
+            "world_nft_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Stop session and charge user",
+      "type": "object",
+      "required": [
+        "stop_session"
+      ],
+      "properties": {
+        "stop_session": {
+          "type": "object",
+          "required": [
+            "duration_seconds",
+            "session_id"
+          ],
+          "properties": {
+            "duration_seconds": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "session_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Force stop session (admin only, for emergencies)",
+      "type": "object",
+      "required": [
+        "force_stop_session"
+      ],
+      "properties": {
+        "force_stop_session": {
+          "type": "object",
+          "required": [
+            "session_id"
+          ],
+          "properties": {
+            "session_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Set streaming rate for a world (called by world owner or admin)",
+      "type": "object",
+      "required": [
+        "set_world_rate"
+      ],
+      "properties": {
+        "set_world_rate": {
+          "type": "object",
+          "required": [
+            "points_per_hour",
+            "world_collection",
+            "world_nft_id"
+          ],
+          "properties": {
+            "points_per_hour": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "world_collection": {
+              "type": "string"
+            },
+            "world_nft_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update world streaming rate",
+      "type": "object",
+      "required": [
+        "update_world_rate"
+      ],
+      "properties": {
+        "update_world_rate": {
+          "type": "object",
+          "required": [
+            "points_per_hour",
+            "world_nft_id"
+          ],
+          "properties": {
+            "points_per_hour": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "world_nft_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Distribute accumulated revenue for a world (anyone can call)",
+      "type": "object",
+      "required": [
+        "distribute_world_revenue"
+      ],
+      "properties": {
+        "distribute_world_revenue": {
+          "type": "object",
+          "required": [
+            "world_nft_id"
+          ],
+          "properties": {
+            "world_nft_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Batch distribute for multiple worlds",
+      "type": "object",
+      "required": [
+        "batch_distribute_revenue"
+      ],
+      "properties": {
+        "batch_distribute_revenue": {
+          "type": "object",
+          "required": [
+            "world_nft_ids"
+          ],
+          "properties": {
+            "world_nft_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Timestamp": {
+      "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint64"
+        }
+      ]
+    },
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    },
+    "Uint64": {
+      "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+      "type": "string"
+    }
+  }
+}

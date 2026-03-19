@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, entry_point, to_json_binary, Addr, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdResult, Uint128, WasmMsg, WasmQuery,
+    coins, to_json_binary, Addr, BankMsg, Binary, Coin, Decimal, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Response, StdResult, Uint128, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -12,10 +12,11 @@ use crate::msg::{
     OwnerOfResponse, PasgBusinessBoundary, PasgCompatibilityRouterExecuteRoute,
     PasgCompatibilityRouterResponse, PasgCompatibilityShim, PasgCompatibilityShimKind,
     PasgScopeBoundaryResponse, PasgSettlementKind, PasgUtilityExecuteRoute, PasgUtilityMetadata,
-    PasgUtilityQueryRoute, PasgUtilityResponse, PendingRevenueResponse, PlatformStatsResponse,
-    PurchaseHistoryResponse, PurchaseRecord, PurchaseType, QueryMsg, RegistryCollectionResponse,
-    RegistryQueryMsg, SessionResponse, SessionStatus, UserBalanceResponse, UserSessionsResponse,
-    WorldConfigResponse, WorldStatsResponse,
+    PasgUtilityQueryRoute, PasgUtilityResponse, PendingRevenueResponse, PlatformRevenueModel,
+    PlatformStatsResponse, PreviewWorldSettlementResponse, PurchaseHistoryResponse, PurchaseRecord,
+    PurchaseType, QueryMsg, RefundPolicyKind, RegistryCollectionResponse, RegistryQueryMsg,
+    SessionResponse, SessionStatus, UserBalanceResponse, UserSessionsResponse, WorldConfigResponse,
+    WorldLocalEconomyResponse, WorldLocalUnitKind, WorldStatsResponse,
 };
 use crate::state::{
     Config, PendingRevenue, PlatformStats, Purchase, StreamingSession, UserBalance, WorldConfig,
@@ -31,6 +32,7 @@ const MAX_FIAT_REPORT_AGE_SECONDS: u64 = 900;
 const MAX_SESSION_DURATION_SECONDS: u64 = 86_400;
 const PASG_COMPATIBILITY_NOTE: &str =
     "Compatibility shims must forward to native upasg settlement and must not redefine PASG economics.";
+const LOCAL_WORLD_ECONOMY_UNIT_LABEL: &str = "streaming_points";
 
 #[cw_serde]
 struct SplitRouterRouteWorldRevenueExecuteMsg {
@@ -74,6 +76,22 @@ fn default_pasg_execute_routes() -> Vec<PasgUtilityExecuteRoute> {
     ]
 }
 
+fn default_pasg_query_routes() -> Vec<PasgUtilityQueryRoute> {
+    vec![
+        PasgUtilityQueryRoute::ConversionRate,
+        PasgUtilityQueryRoute::WorldLocalEconomy,
+        PasgUtilityQueryRoute::PreviewWorldSettlement,
+    ]
+}
+
+fn default_refund_policies() -> Vec<RefundPolicyKind> {
+    vec![
+        RefundPolicyKind::UnusedPointsWithdrawable,
+        RefundPolicyKind::SessionChargeCappedByBalance,
+        RefundPolicyKind::CommerceRefundsUseMarketplaceAndAuctionPatterns,
+    ]
+}
+
 fn require_native_pasg_payment(funds: &[Coin]) -> Result<Uint128, ContractError> {
     if let Some(payment) = funds.iter().find(|coin| coin.denom == CANONICAL_PASG_DENOM) {
         if let Some(unexpected) = funds
@@ -109,7 +127,7 @@ fn pasg_per_point(points_per_pasg: Uint128) -> Decimal {
 // INSTANTIATE
 // ========================================
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -175,7 +193,7 @@ pub fn instantiate(
 // EXECUTE
 // ========================================
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -973,7 +991,7 @@ fn execute_batch_distribute_revenue(
 // QUERY
 // ========================================
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
@@ -996,6 +1014,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PendingRevenue { world_nft_id } => {
             to_json_binary(&query_pending_revenue(deps, world_nft_id)?)
         }
+        QueryMsg::WorldLocalEconomy { world_nft_id } => {
+            to_json_binary(&query_world_local_economy(deps, world_nft_id)?)
+        }
+        QueryMsg::PreviewWorldSettlement {
+            world_nft_id,
+            duration_seconds,
+            points,
+            user,
+        } => to_json_binary(&query_preview_world_settlement(
+            deps,
+            world_nft_id,
+            duration_seconds,
+            points,
+            user,
+        )?),
         QueryMsg::ConversionRate {} => to_json_binary(&query_conversion_rate(deps)?),
         QueryMsg::PasgUtility {} => to_json_binary(&query_pasg_utility(deps)?),
         QueryMsg::PlatformStats {} => to_json_binary(&query_platform_stats(deps)?),
@@ -1181,6 +1214,104 @@ fn query_pending_revenue(deps: Deps, world_nft_id: String) -> StdResult<PendingR
     })
 }
 
+fn query_world_local_economy(
+    deps: Deps,
+    world_nft_id: String,
+) -> StdResult<WorldLocalEconomyResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let world_config = WORLD_CONFIGS.load(deps.storage, &world_nft_id)?;
+
+    let pasg_per_hour = world_config
+        .points_per_hour
+        .checked_div(config.points_per_pasg)
+        .unwrap_or(Uint128::zero());
+
+    Ok(WorldLocalEconomyResponse {
+        world_nft_id: world_config.world_nft_id,
+        world_collection: world_config.world_collection,
+        owner: world_config.owner,
+        local_unit_kind: WorldLocalUnitKind::Points,
+        local_unit_label: LOCAL_WORLD_ECONOMY_UNIT_LABEL.to_string(),
+        points_per_hour: world_config.points_per_hour,
+        pasg_per_hour,
+        settles_through_pasg: true,
+        canonical_pasg_denom: CANONICAL_PASG_DENOM.to_string(),
+        creator_revenue_model: crate::msg::CreatorRevenueModel::CollectionSalesAndResales,
+        platform_revenue_model: PlatformRevenueModel::MarketplaceFeesAndConfiguredProtocolFlows,
+    })
+}
+
+fn query_preview_world_settlement(
+    deps: Deps,
+    world_nft_id: String,
+    duration_seconds: Option<u64>,
+    points: Option<Uint128>,
+    user: Option<String>,
+) -> StdResult<PreviewWorldSettlementResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let world_config = WORLD_CONFIGS.load(deps.storage, &world_nft_id)?;
+
+    let estimated_points_charge = match (duration_seconds, points) {
+        (Some(_), Some(_)) => {
+            return Err(cosmwasm_std::StdError::generic_err(
+                "provide either duration_seconds or points, not both",
+            ))
+        }
+        (None, None) => {
+            return Err(cosmwasm_std::StdError::generic_err(
+                "provide duration_seconds or points",
+            ))
+        }
+        (Some(duration_seconds), None) => {
+            if duration_seconds > MAX_SESSION_DURATION_SECONDS {
+                return Err(cosmwasm_std::StdError::generic_err(format!(
+                    "duration exceeds max session duration of {} seconds",
+                    MAX_SESSION_DURATION_SECONDS
+                )));
+            }
+
+            world_config
+                .points_per_hour
+                .checked_mul(Uint128::from(duration_seconds))?
+                .checked_div(Uint128::from(3600u64))
+                .unwrap_or(Uint128::zero())
+        }
+        (None, Some(points)) => points,
+    };
+
+    let estimated_pasg_charge = estimated_points_charge
+        .checked_div(config.points_per_pasg)
+        .unwrap_or(Uint128::zero());
+
+    let available_points = user
+        .map(|user| deps.api.addr_validate(&user))
+        .transpose()?
+        .map(|user_addr| {
+            USER_BALANCES
+                .may_load(deps.storage, &user_addr)
+                .map(|balance| balance.map(|b| b.points_balance).unwrap_or_default())
+        })
+        .transpose()?;
+
+    let maximum_chargeable_points =
+        available_points.map(|balance| balance.min(estimated_points_charge));
+    let remaining_points_after_charge =
+        available_points.map(|balance| balance.saturating_sub(estimated_points_charge));
+
+    Ok(PreviewWorldSettlementResponse {
+        world_nft_id: world_config.world_nft_id,
+        local_unit_kind: WorldLocalUnitKind::Points,
+        requested_duration_seconds: duration_seconds,
+        requested_points: points,
+        estimated_points_charge,
+        estimated_pasg_charge,
+        available_points,
+        maximum_chargeable_points,
+        remaining_points_after_charge,
+        refund_policy: default_refund_policies(),
+    })
+}
+
 fn query_conversion_rate(deps: Deps) -> StdResult<ConversionRateResponse> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -1200,6 +1331,7 @@ fn query_pasg_utility(deps: Deps) -> StdResult<PasgUtilityResponse> {
         pasg_per_point: pasg_per_point(config.points_per_pasg),
         metadata: config.pasg_utility,
         canonical_query: PasgUtilityQueryRoute::PasgUtility,
+        supplemental_queries: default_pasg_query_routes(),
         canonical_execute: default_pasg_execute_routes(),
         compatibility_router: PasgCompatibilityRouterResponse {
             contract: config.split_router,

@@ -533,6 +533,44 @@ Operational notes:
 - Validator selection belongs to wallet and service UX. Choose one or more Passage validators using validator identity, commission, uptime, and any Passage governance or operator policy guidance.
 - Validator discovery, commission, uptime, delegations, undelegations, and rewards should be read from chain-native staking and distribution endpoints rather than from repo-local contract storage.
 
+## `streaming-billing`
+
+Role:
+
+- canonical PASG utility contract for this repo
+- bounded local-economy and points accounting surface
+- service-invoked session settlement and downstream PASG-aware world settlement forwarding
+
+Instantiate:
+
+- `InstantiateMsg { admin, split_router, registry, backend_operator, denom, points_per_denom, fiat_oracle, stripe_webhook_validator }`
+
+Most important execute messages:
+
+- `DepositCrypto`
+- `ReportFiatPurchase`
+- `WithdrawPoints`
+- `SetWorldRate`
+- `UpdateWorldRate`
+- `DistributeWorldRevenue`
+- `BatchDistributeRevenue`
+
+Most useful queries:
+
+- `PasgUtility`
+- `ConversionRate`
+- `WorldLocalEconomy`
+- `PreviewWorldSettlement`
+- `WorldConfig`
+- `PendingRevenue`
+- `PlatformStats`
+
+Notes:
+
+- local world economies are optional and currently use a points model
+- those local units still settle through PASG-aware accounting
+- creator monetization does not move here by default; it remains anchored to collection sales and resales
+- refund-safe settlement should reuse existing marketplace and auction patterns before introducing new escrow machinery
 ## `pasg-governance`
 
 Role:
@@ -577,3 +615,6 @@ Handoff rule:
 - PASG governance ratifies the scoped action.
 - PASG governance does not model validator discovery, custody stake, calculate PASG rewards, or alter undelegation state. Those remain chain-native concerns.
 - multisig remains the owner-admin executor and mirrors the typed action into its own `Propose` / `Vote` / `Execute` flow.
+
+
+
