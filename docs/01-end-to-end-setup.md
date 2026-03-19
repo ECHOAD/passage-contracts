@@ -154,34 +154,39 @@ Useful queries:
 Important fields:
 
 - `admin`
-- `denom`
 - `min_price`
 - `trading_fee_bps`
-- `max_trading_fee_bps`
 - `fee_collector`
 - `registry`
-- `split_router`
-- `use_split_router`
 - `operators`
-- `require_registration`
 
 Recommended usage:
 
-- `require_registration = true`
 - `registry = <registry>`
-- `split_router = <split-router>`
-- `use_split_router = true`
+
+Notes:
+
+- registration is mandatory in `marketplace-v3`
+- `trading_fee_bps` is marketplace-global
+- settlement `denom` is configured per collection, not at instantiate time
 
 ### 6.2 Register the collection in the marketplace
 
-Message:
+Owner-request path:
 
-- `RegisterCollection { collection, trading_fee_bps, denom }`
+- `SubmitCollectionRegistrationRequest { collection, denom, note }`
+- admin resolves it with `ResolveCollectionRegistrationRequest { collection, approved, denom, note }`
+
+Admin-direct path:
+
+- `RegisterCollection { collection, denom }`
 
 Notes:
 
 - This enables the collection inside the marketplace.
 - It does not replace registration in `registry`; these are two separate registrations.
+- owner submits a request, admin approves or rejects it
+- admin may register directly without the request mechanism
 
 Optional but recommended:
 
@@ -216,8 +221,8 @@ In the current model:
 
 - `marketplace-v3` charges `trading_fee_bps`
 - the seller receives `sale_price - trading_fee - royalty`
-- if `use_split_router = true`, the royalty is sent to `split-router`
-- if `use_split_router = false`, the royalty is paid directly to the `payment_address` from `pg721`
+- if the royalty recipient is a contract, the marketplace calls it with `Split {}`
+- otherwise the royalty is paid directly to the `payment_address` from `pg721`
 
 Useful queries:
 
@@ -225,6 +230,8 @@ Useful queries:
 - `PreviewSale { collection, price }`
 - `Ask { collection, token_id }`
 - `CollectionStats { collection }`
+- `CollectionRegistrationRequest { collection }`
+- `CollectionUpdateRequest { collection }`
 
 ## 7. Auction path with `auction-english`
 

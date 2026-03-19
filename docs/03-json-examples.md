@@ -737,25 +737,73 @@ Attach the native funds in the transaction. This is the compatibility execute sh
 ```json
 {
   "admin": "passage1admin...",
-  "denom": "upasg",
   "min_price": "100000",
   "trading_fee_bps": 250,
-  "max_trading_fee_bps": 1000,
   "fee_collector": "passage1treasury...",
   "registry": "passage1registry...",
-  "operators": ["passage1operator..."],
-  "require_registration": true
+  "operators": ["passage1operator..."]
 }
 ```
 
-### Register collection
+### Submit collection registration request
+
+```json
+{
+  "submit_collection_registration_request": {
+    "collection": "passage1collection...",
+    "denom": "upasg",
+    "note": "request access to trade in marketplace-v3"
+  }
+}
+```
+
+### Resolve collection registration request
+
+```json
+{
+  "resolve_collection_registration_request": {
+    "collection": "passage1collection...",
+    "approved": true,
+    "denom": null,
+    "note": "approved"
+  }
+}
+```
+
+### Admin direct register collection
 
 ```json
 {
   "register_collection": {
     "collection": "passage1collection...",
-    "trading_fee_bps": null,
-    "denom": null
+    "denom": "upasg"
+  }
+}
+```
+
+### Submit collection update request
+
+```json
+{
+  "submit_collection_update_request": {
+    "collection": "passage1collection...",
+    "active": true,
+    "denom": "uion",
+    "note": "switch denom"
+  }
+}
+```
+
+### Resolve collection update request
+
+```json
+{
+  "resolve_collection_update_request": {
+    "collection": "passage1collection...",
+    "approved": true,
+    "active": null,
+    "denom": null,
+    "note": "approved"
   }
 }
 ```

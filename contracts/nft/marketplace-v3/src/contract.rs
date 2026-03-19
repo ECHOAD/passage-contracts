@@ -11,14 +11,17 @@ pub(super) use crate::msg::{
     AskResponse, AsksResponse, BidResponse, BidsResponse, CanTradeResponse, CollectionBidResponse,
     CollectionBidsResponse, CollectionConfigResponse, CollectionConfigsResponse,
     CollectionDenomResponse, CollectionFeeResponse, CollectionInfoResponse,
-    CollectionStatsResponse, ConfigResponse, CountResponse, Cw721ExecuteMsg, Cw721QueryMsg,
-    ExecuteMsg, InstantiateMsg, MarketStatsResponse, MigrateMsg, OwnerOfResponse, Pg721QueryMsg,
-    QueryMsg, RegistryApprovalStatusResponse, RegistryQueryMsg, SalePreviewResponse,
-    SplitRouterExecuteMsg,
+    CollectionRegistrationRequestResponse, CollectionRegistrationRequestsResponse,
+    CollectionStatsResponse, CollectionUpdateRequestResponse, CollectionUpdateRequestsResponse,
+    ConfigResponse, CountResponse, Cw721ExecuteMsg, Cw721QueryMsg, ExecuteMsg, InstantiateMsg,
+    MarketStatsResponse, MigrateMsg, OwnerOfResponse, Pg721QueryMsg, QueryMsg,
+    RegistryApprovalStatusResponse, RegistryQueryMsg, SalePreviewResponse, SplitRouterExecuteMsg,
 };
 pub(super) use crate::state::{
-    asks, bids, collection_bids, Ask, Bid, CollectionBid, CollectionConfig, Config, MarketStats,
-    TokenId, COLLECTION_CONFIGS, COLLECTION_DENOMS, COLLECTION_STATS, CONFIG, MARKET_STATS,
+    asks, bids, collection_bids, Ask, Bid, CollectionBid, CollectionConfig,
+    CollectionRegistrationRequest, CollectionRequestStatus, CollectionUpdateRequest, Config,
+    MarketStats, TokenId, COLLECTION_CONFIGS, COLLECTION_REGISTRATION_REQUESTS, COLLECTION_STATS,
+    COLLECTION_UPDATE_REQUESTS, CONFIG, MARKET_STATS,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-marketplace-v3";

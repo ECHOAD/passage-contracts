@@ -83,15 +83,12 @@ fn legacy_sale_sends_royalty_payment() {
     let recipient = Addr::unchecked("seller_payout");
     let config = Config {
         admin: Addr::unchecked("admin"),
-        denom: "upasg".to_string(),
         min_price: Uint128::new(1),
         trading_fee_bps: 250,
-        max_trading_fee_bps: 1000,
         fee_collector: Addr::unchecked("treasury"),
         registry: None,
         operators: vec![],
         paused: false,
-        require_registration: false,
     };
     let royalty_recipient = deps.api.addr_make("royalty-wallet");
 
@@ -141,15 +138,12 @@ fn split_mode_routes_royalty_to_collection_splitter() {
     let recipient = Addr::unchecked("seller_payout");
     let config = Config {
         admin: Addr::unchecked("admin"),
-        denom: "upasg".to_string(),
         min_price: Uint128::new(1),
         trading_fee_bps: 250,
-        max_trading_fee_bps: 1000,
         fee_collector: Addr::unchecked("treasury"),
         registry: None,
         operators: vec![],
         paused: false,
-        require_registration: false,
     };
     let split_contract = deps.api.addr_make("royalty-split");
 

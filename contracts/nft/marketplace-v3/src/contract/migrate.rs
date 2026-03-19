@@ -57,7 +57,20 @@ pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> Result<Response, Con
     )?;
 
     for (collection, denom) in collection_denom_overrides {
-        COLLECTION_DENOMS.save(deps.storage, collection, &denom)?;
+        COLLECTION_CONFIGS.update(
+            deps.storage,
+            collection.clone(),
+            |maybe_config| -> StdResult<_> {
+                let mut config = maybe_config.ok_or_else(|| {
+                    cosmwasm_std::StdError::generic_err(format!(
+                        "collection missing during migration override: {}",
+                        collection
+                    ))
+                })?;
+                config.denom = denom.clone();
+                Ok(config)
+            },
+        )?;
     }
 
     // Update contract version

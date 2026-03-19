@@ -3,7 +3,6 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "denom",
     "fee_collector",
     "min_price",
     "trading_fee_bps"
@@ -16,22 +15,9 @@
         "null"
       ]
     },
-    "denom": {
-      "description": "Token denom for payments",
-      "type": "string"
-    },
     "fee_collector": {
       "description": "Fee collector address (legacy mode)",
       "type": "string"
-    },
-    "max_trading_fee_bps": {
-      "description": "Maximum allowed trading fee in basis points (e.g., 1000 = 10%)",
-      "type": [
-        "integer",
-        "null"
-      ],
-      "format": "uint64",
-      "minimum": 0.0
     },
     "min_price": {
       "description": "Minimum listing price",
@@ -58,15 +44,8 @@
         "null"
       ]
     },
-    "require_registration": {
-      "description": "Whether to require collection registration (default: true)",
-      "type": [
-        "boolean",
-        "null"
-      ]
-    },
     "trading_fee_bps": {
-      "description": "Default trading fee in basis points (e.g., 250 = 2.5%)",
+      "description": "Marketplace-wide trading fee in basis points (e.g., 250 = 2.5%)",
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

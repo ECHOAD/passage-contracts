@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::{
     asks, bids, collection_bids, Ask as AskV3, Bid as BidV3, CollectionBid as CollectionBidV3,
-    CollectionConfig, CollectionStats, Config, MarketStats, COLLECTION_CONFIGS, COLLECTION_DENOMS,
-    COLLECTION_STATS, CONFIG, MARKET_STATS,
+    CollectionConfig, CollectionStats, Config, MarketStats, COLLECTION_CONFIGS, COLLECTION_STATS,
+    CONFIG, MARKET_STATS,
 };
 
 // ============================================================================
@@ -143,9 +143,6 @@ pub fn collection_bids_v2<'a>(
 // Migration Logic
 // ============================================================================
 
-/// Default maximum trading fee: 10%
-const DEFAULT_MAX_TRADING_FEE_BPS: u64 = 1000;
-
 /// Migrate state from marketplace-v2 to marketplace-v3
 pub fn migrate_state(
     storage: &mut dyn Storage,
@@ -175,15 +172,12 @@ pub fn migrate_state(
 
     let config_v3 = Config {
         admin: config_v2.collector_address.clone(), // Use collector as admin initially
-        denom: config_v2.denom.clone(),
         min_price: config_v2.min_price,
         trading_fee_bps,
-        max_trading_fee_bps: DEFAULT_MAX_TRADING_FEE_BPS,
         fee_collector: config_v2.collector_address,
         registry,
         operators: config_v2.operators,
         paused: false,
-        require_registration: true, // Enable registration for migrated contracts
     };
 
     CONFIG.save(storage, &config_v3)?;
@@ -193,17 +187,13 @@ pub fn migrate_state(
         let coll_config = CollectionConfig {
             collection: coll.clone(),
             active: true,
-            trading_fee_bps: None,                // Use default
-            denom: Some(config_v2.denom.clone()), // Preserve original denom
+            denom: config_v2.denom.clone(),
             registered_by: config_v3.admin.clone(),
             registered_at: current_time,
             updated_at: current_time,
         };
         COLLECTION_CONFIGS.save(storage, coll.clone(), &coll_config)?;
     }
-
-    // Keep migrated collection denom explicit (legacy compatibility)
-    COLLECTION_DENOMS.save(storage, collection.clone(), &config_v3.denom)?;
 
     // 2. Migrate asks
     let asks_list: Vec<(AskKeyV2, AskV2)> = asks_v2()

@@ -2,33 +2,21 @@ use super::*;
 
 // ========== Helpers ==========
 
-/// Resolve the effective denom for a collection
-/// Priority: CollectionConfig.denom > Config.denom
+/// Resolve the configured denom for a registered collection.
 pub(super) fn resolve_collection_denom(
     storage: &dyn cosmwasm_std::Storage,
-    config: &Config,
     collection: &Addr,
-) -> StdResult<String> {
-    // First check new CollectionConfig
-    if let Some(coll_config) = COLLECTION_CONFIGS.may_load(storage, collection.clone())? {
-        return Ok(coll_config.get_denom(&config.denom));
-    }
-    // Fallback to legacy COLLECTION_DENOMS for migration compatibility
-    Ok(COLLECTION_DENOMS
+) -> Result<String, ContractError> {
+    let coll_config = COLLECTION_CONFIGS
         .may_load(storage, collection.clone())?
-        .unwrap_or_else(|| config.denom.clone()))
+        .ok_or_else(|| ContractError::CollectionNotRegistered {
+            collection: collection.to_string(),
+        })?;
+
+    Ok(coll_config.get_denom())
 }
 
-/// Resolve the effective trading fee for a collection
-/// Priority: CollectionConfig.trading_fee_bps > Config.trading_fee_bps
-pub(super) fn resolve_collection_trading_fee(
-    storage: &dyn cosmwasm_std::Storage,
-    config: &Config,
-    collection: &Addr,
-) -> StdResult<u64> {
-    if let Some(coll_config) = COLLECTION_CONFIGS.may_load(storage, collection.clone())? {
-        return Ok(coll_config.get_trading_fee_bps(config.trading_fee_bps));
-    }
+pub(super) fn resolve_collection_trading_fee(config: &Config) -> StdResult<u64> {
     Ok(config.trading_fee_bps)
 }
 
@@ -46,7 +34,7 @@ pub(super) fn validate_collection(
                 collection: collection.to_string(),
             });
         }
-    } else if config.require_registration {
+    } else {
         return Err(ContractError::CollectionNotRegistered {
             collection: collection.to_string(),
         });
@@ -72,6 +60,20 @@ pub(super) fn validate_collection(
         }
     }
 
+    Ok(())
+}
+
+pub(super) fn verify_collection_creator(
+    deps: &DepsMut,
+    collection: &Addr,
+    expected_creator: &Addr,
+) -> Result<(), ContractError> {
+    let creator = query_collection_creator(deps, collection)?;
+    if creator != *expected_creator {
+        return Err(ContractError::NotCollectionOwner {
+            collection: collection.to_string(),
+        });
+    }
     Ok(())
 }
 
@@ -145,6 +147,29 @@ pub(super) fn query_royalty_amount(
 pub(super) struct RoyaltyPayout {
     pub recipient: Addr,
     pub amount: Uint128,
+}
+
+pub(super) fn query_collection_creator(
+    deps: &DepsMut,
+    collection: &Addr,
+) -> Result<Addr, ContractError> {
+    let query_msg = Pg721QueryMsg::CollectionInfo {};
+
+    let res: CollectionInfoResponse = deps
+        .querier
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: collection.to_string(),
+            msg: to_json_binary(&query_msg)?,
+        }))
+        .map_err(|_| ContractError::CollectionInfoQueryFailed {
+            collection: collection.to_string(),
+        })?;
+
+    deps.api
+        .addr_validate(&res.creator)
+        .map_err(|_| ContractError::CollectionInfoQueryFailed {
+            collection: collection.to_string(),
+        })
 }
 
 fn build_royalty_payout_msg(
@@ -225,7 +250,7 @@ pub(super) fn execute_sale(
     let mut messages: Vec<CosmosMsg> = vec![];
 
     // Get effective trading fee for this collection
-    let trading_fee_bps = resolve_collection_trading_fee(deps.storage, config, collection)?;
+    let trading_fee_bps = resolve_collection_trading_fee(config)?;
 
     // Calculate fees
     let trading_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);

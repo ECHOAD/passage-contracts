@@ -1,10 +1,16 @@
 use super::*;
-use crate::msg::{AsksResponse, BidsResponse, CountResponse, QueryMsg};
-use crate::state::{asks, bids, Ask, Bid};
+use crate::msg::{
+    AsksResponse, BidsResponse, CollectionFeeResponse, CollectionRegistrationRequestsResponse,
+    CountResponse, QueryMsg,
+};
+use crate::state::{
+    asks, bids, Ask, Bid, CollectionConfig, CollectionRegistrationRequest, CollectionRequestStatus,
+    Config, COLLECTION_CONFIGS, COLLECTION_REGISTRATION_REQUESTS, CONFIG,
+};
 use cosmwasm_std::{
     from_json,
     testing::{mock_dependencies, mock_env},
-    Addr, Coin, Storage,
+    Addr, Coin, Storage, Uint128,
 };
 
 fn save_ask(
@@ -272,4 +278,117 @@ fn bids_by_token_respects_start_after() {
 
     assert_eq!(response.bids.len(), 1);
     assert_eq!(response.bids[0].bidder, ordered_bidders[2]);
+}
+
+#[test]
+fn collection_fee_is_marketplace_global() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
+
+    CONFIG
+        .save(
+            deps.as_mut().storage,
+            &Config {
+                admin: Addr::unchecked("admin"),
+                min_price: Uint128::new(1),
+                trading_fee_bps: 333,
+                fee_collector: Addr::unchecked("treasury"),
+                registry: None,
+                operators: vec![],
+                paused: false,
+            },
+        )
+        .unwrap();
+
+    COLLECTION_CONFIGS
+        .save(
+            deps.as_mut().storage,
+            Addr::unchecked("collection"),
+            &CollectionConfig {
+                collection: Addr::unchecked("collection"),
+                active: true,
+                denom: "uion".to_string(),
+                registered_by: Addr::unchecked("admin"),
+                registered_at: 1,
+                updated_at: 1,
+            },
+        )
+        .unwrap();
+
+    let response: CollectionFeeResponse = from_json(
+        query(
+            deps.as_ref(),
+            env,
+            QueryMsg::CollectionFee {
+                collection: "collection".to_string(),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(response.trading_fee_bps, 333);
+    assert!(!response.is_override);
+}
+
+#[test]
+fn collection_registration_requests_filter_by_status() {
+    let mut deps = mock_dependencies();
+    let env = mock_env();
+
+    COLLECTION_REGISTRATION_REQUESTS
+        .save(
+            deps.as_mut().storage,
+            Addr::unchecked("collection-a"),
+            &CollectionRegistrationRequest {
+                collection: Addr::unchecked("collection-a"),
+                requester: Addr::unchecked("creator-a"),
+                denom: "upasg".to_string(),
+                note: None,
+                status: CollectionRequestStatus::Pending,
+                reviewed_by: None,
+                review_note: None,
+                created_at: 1,
+                updated_at: 1,
+            },
+        )
+        .unwrap();
+
+    COLLECTION_REGISTRATION_REQUESTS
+        .save(
+            deps.as_mut().storage,
+            Addr::unchecked("collection-b"),
+            &CollectionRegistrationRequest {
+                collection: Addr::unchecked("collection-b"),
+                requester: Addr::unchecked("creator-b"),
+                denom: "uion".to_string(),
+                note: None,
+                status: CollectionRequestStatus::Approved,
+                reviewed_by: Some(Addr::unchecked("admin")),
+                review_note: None,
+                created_at: 2,
+                updated_at: 3,
+            },
+        )
+        .unwrap();
+
+    let response: CollectionRegistrationRequestsResponse = from_json(
+        query(
+            deps.as_ref(),
+            env,
+            QueryMsg::CollectionRegistrationRequests {
+                status: Some(CollectionRequestStatus::Pending),
+                start_after: None,
+                limit: Some(10),
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(response.requests.len(), 1);
+    assert_eq!(
+        response.requests[0].collection,
+        Addr::unchecked("collection-a")
+    );
 }

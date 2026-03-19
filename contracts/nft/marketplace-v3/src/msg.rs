@@ -1,5 +1,7 @@
 use crate::state::{
-    Ask, Bid, CollectionBid, CollectionConfig, CollectionStats, Config, MarketStats, TokenId,
+    Ask, Bid, CollectionBid, CollectionConfig, CollectionRegistrationRequest,
+    CollectionRequestStatus, CollectionStats, CollectionUpdateRequest, Config, MarketStats,
+    TokenId,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
@@ -32,22 +34,16 @@ pub struct CollectionDenomInput {
 pub struct InstantiateMsg {
     /// Admin address
     pub admin: Option<String>,
-    /// Token denom for payments
-    pub denom: String,
     /// Minimum listing price
     pub min_price: Uint128,
-    /// Default trading fee in basis points (e.g., 250 = 2.5%)
+    /// Marketplace-wide trading fee in basis points (e.g., 250 = 2.5%)
     pub trading_fee_bps: u64,
-    /// Maximum allowed trading fee in basis points (e.g., 1000 = 10%)
-    pub max_trading_fee_bps: Option<u64>,
     /// Fee collector address (legacy mode)
     pub fee_collector: String,
     /// Registry contract address (for collection verification)
     pub registry: Option<String>,
     /// Operator addresses
     pub operators: Option<Vec<String>>,
-    /// Whether to require collection registration (default: true)
-    pub require_registration: Option<bool>,
 }
 
 #[cw_serde]
@@ -56,36 +52,56 @@ pub enum ExecuteMsg {
     /// Update contract configuration
     UpdateConfig {
         admin: Option<String>,
-        denom: Option<String>,
         min_price: Option<Uint128>,
         trading_fee_bps: Option<u64>,
-        max_trading_fee_bps: Option<u64>,
         fee_collector: Option<String>,
         registry: Option<String>,
         operators: Option<Vec<String>>,
         paused: Option<bool>,
-        require_registration: Option<bool>,
     },
 
     // ========== Collection Registration ==========
     /// Register a new collection on the marketplace
-    /// Can be called by admin, operators, or registry (if configured)
     RegisterCollection {
         collection: String,
-        /// Custom trading fee for this collection (None = use default)
-        trading_fee_bps: Option<u64>,
-        /// Custom denom for this collection (None = use default)
-        denom: Option<String>,
+        /// Settlement denom for this collection
+        denom: String,
     },
     /// Update a registered collection's configuration
     UpdateCollectionConfig {
         collection: String,
         /// Enable/disable the collection
         active: Option<bool>,
-        /// Custom trading fee (None to clear override and use default)
-        trading_fee_bps: Option<u64>,
-        /// Custom denom (None to clear override and use default)
+        /// Settlement denom for this collection
         denom: Option<String>,
+    },
+    /// Submit a registration request for a collection. Only the collection creator can request it.
+    SubmitCollectionRegistrationRequest {
+        collection: String,
+        denom: String,
+        note: Option<String>,
+    },
+    /// Approve or reject a pending collection registration request.
+    ResolveCollectionRegistrationRequest {
+        collection: String,
+        approved: bool,
+        denom: Option<String>,
+        note: Option<String>,
+    },
+    /// Submit an update request for a registered collection. Only the collection creator can request it.
+    SubmitCollectionUpdateRequest {
+        collection: String,
+        active: Option<bool>,
+        denom: Option<String>,
+        note: Option<String>,
+    },
+    /// Approve or reject a pending collection update request.
+    ResolveCollectionUpdateRequest {
+        collection: String,
+        approved: bool,
+        active: Option<bool>,
+        denom: Option<String>,
+        note: Option<String>,
     },
     /// Deactivate a collection (soft removal, keeps data)
     DeactivateCollection {
@@ -195,6 +211,26 @@ pub enum QueryMsg {
     /// Get effective trading fee for a specific collection
     #[returns(CollectionFeeResponse)]
     CollectionFee { collection: String },
+    /// Get the latest registration request for a collection
+    #[returns(CollectionRegistrationRequestResponse)]
+    CollectionRegistrationRequest { collection: String },
+    /// List collection registration requests
+    #[returns(CollectionRegistrationRequestsResponse)]
+    CollectionRegistrationRequests {
+        status: Option<CollectionRequestStatus>,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    /// Get the latest update request for a collection
+    #[returns(CollectionUpdateRequestResponse)]
+    CollectionUpdateRequest { collection: String },
+    /// List collection update requests
+    #[returns(CollectionUpdateRequestsResponse)]
+    CollectionUpdateRequests {
+        status: Option<CollectionRequestStatus>,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 
     // ========== Ask Queries ==========
     /// Get a specific ask
@@ -291,30 +327,24 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct ConfigResponse {
     pub admin: String,
-    pub denom: String,
     pub min_price: Uint128,
     pub trading_fee_bps: u64,
-    pub max_trading_fee_bps: u64,
     pub fee_collector: String,
     pub registry: Option<String>,
     pub operators: Vec<String>,
     pub paused: bool,
-    pub require_registration: bool,
 }
 
 impl From<Config> for ConfigResponse {
     fn from(c: Config) -> Self {
         ConfigResponse {
             admin: c.admin.to_string(),
-            denom: c.denom,
             min_price: c.min_price,
             trading_fee_bps: c.trading_fee_bps,
-            max_trading_fee_bps: c.max_trading_fee_bps,
             fee_collector: c.fee_collector.to_string(),
             registry: c.registry.map(|a| a.to_string()),
             operators: c.operators.iter().map(|a| a.to_string()).collect(),
             paused: c.paused,
-            require_registration: c.require_registration,
         }
     }
 }
@@ -339,7 +369,7 @@ pub struct CanTradeResponse {
 pub struct CollectionDenomResponse {
     pub collection: String,
     pub denom: String,
-    /// True when this denom is a collection-specific override.
+    /// Always true because the settlement denom is defined per collection.
     pub is_override: bool,
 }
 
@@ -347,8 +377,28 @@ pub struct CollectionDenomResponse {
 pub struct CollectionFeeResponse {
     pub collection: String,
     pub trading_fee_bps: u64,
-    /// True when this fee is a collection-specific override.
+    /// Always false because the fee is marketplace-global.
     pub is_override: bool,
+}
+
+#[cw_serde]
+pub struct CollectionRegistrationRequestResponse {
+    pub request: Option<CollectionRegistrationRequest>,
+}
+
+#[cw_serde]
+pub struct CollectionRegistrationRequestsResponse {
+    pub requests: Vec<CollectionRegistrationRequest>,
+}
+
+#[cw_serde]
+pub struct CollectionUpdateRequestResponse {
+    pub request: Option<CollectionUpdateRequest>,
+}
+
+#[cw_serde]
+pub struct CollectionUpdateRequestsResponse {
+    pub requests: Vec<CollectionUpdateRequest>,
 }
 
 #[cw_serde]

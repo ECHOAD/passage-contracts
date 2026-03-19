@@ -279,19 +279,26 @@ Queries:
 Role:
 
 - fixed-price sales, token bids, and collection bids
-- marketplace-level pricing and activation config, while moderation comes from `registry`
+- marketplace-level fee config with collection-scoped denoms and activation, while moderation comes from `registry`
 
 Instantiate:
 
-- `InstantiateMsg { admin, denom, min_price, trading_fee_bps, max_trading_fee_bps, fee_collector, registry, split_router, use_split_router, operators, require_registration }`
+- `InstantiateMsg { admin, min_price, trading_fee_bps, fee_collector, registry, operators }`
 
 Admin execute:
 
 - `UpdateConfig`
 - `RegisterCollection`
 - `UpdateCollectionConfig`
+- `ResolveCollectionRegistrationRequest`
+- `ResolveCollectionUpdateRequest`
 - `DeactivateCollection`
 - `ReactivateCollection`
+
+Owner request execute:
+
+- `SubmitCollectionRegistrationRequest`
+- `SubmitCollectionUpdateRequest`
 
 Trading execute:
 
@@ -314,7 +321,11 @@ When to use them:
 - `BuyNow`: buy a fixed-price listing
 - `SetBid` / `AcceptBid`: token-specific offer flow
 - `SetCollectionBid` / `AcceptCollectionBid`: collection-wide offer flow
-- `RegisterCollection`: enable a collection for trading
+- `SubmitCollectionRegistrationRequest`: owner submits a request to join the marketplace
+- `ResolveCollectionRegistrationRequest`: admin approves or rejects the request
+- `RegisterCollection`: admin may register directly without a request
+- `SubmitCollectionUpdateRequest`: owner proposes denom or activation changes
+- `ResolveCollectionUpdateRequest`: admin approves or rejects the requested update
 - `DeactivateCollection` / `ReactivateCollection`: local marketplace operational switch; this is not the moderation source of truth
 
 Queries:
@@ -325,6 +336,10 @@ Queries:
 - `CanTrade`
 - `CollectionDenom`
 - `CollectionFee`
+- `CollectionRegistrationRequest`
+- `CollectionRegistrationRequests`
+- `CollectionUpdateRequest`
+- `CollectionUpdateRequests`
 - `Ask`
 - `AsksByCollection`
 - `AsksBySeller`

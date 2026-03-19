@@ -2,57 +2,112 @@
 
 `marketplace-v3` is the repo's multi-collection secondary-market contract.
 
-It validates collection trading permissions, enforces collection-specific denom and fee configuration, transfers NFTs, and settles native-coin proceeds to the fee collector, seller, and royalty recipient. It is a PASG consumer, not a PASG policy source.
+It validates registry trade permissions, requires explicit collection registration before trading, settles native-coin sales, and treats PASG as an external utility surface rather than a marketplace-owned policy system.
+
+## Model
+
+- Registration is mandatory. Unregistered collections cannot list, bid, or settle through the marketplace.
+- `trading_fee_bps` is marketplace-global.
+- `denom` is collection-scoped and is defined when a collection is registered or updated.
+- Collection creators submit registration and update requests.
+- Marketplace admin may approve or reject those requests, or may register and update collections directly without using the request queue.
 
 ## PASG Stance
 
 - Native `upasg` is the canonical PASG settlement path in this repository.
-- `marketplace-v3` may be configured with another denom for a collection, but that is local marketplace configuration rather than a second canonical PASG model.
+- A collection may settle in another denom, but that is local collection configuration, not a second PASG model.
 - Integrators that need the canonical PASG interface should query `streaming-billing` with `QueryMsg::PasgUtility {}`.
-- PASG fee treatment is observable here through collection config queries and execute-response attributes, not through marketplace-owned PASG logic.
+- Settlement responses expose `pasg_utility_query`, `pasg_native_denom`, `pasg_settlement_denom`, `pasg_uses_native_utility`, and `pasg_fee_flow`.
 
 ## Instantiate Message
 
 ```json
 {
   "admin": "passage1admin...",
-  "denom": "upasg",
   "min_price": "100000",
   "trading_fee_bps": 250,
-  "max_trading_fee_bps": 1000,
   "fee_collector": "passage1treasury...",
   "registry": "passage1registry...",
-  "operators": ["passage1operator..."],
-  "require_registration": true
+  "operators": ["passage1operator..."]
 }
 ```
 
-## Execute Surface
+## Registration Flows
 
-### `RegisterCollection`
+Owner request path:
+
+```json
+{
+  "submit_collection_registration_request": {
+    "collection": "passage1collection...",
+    "denom": "upasg",
+    "note": "request access to trade in marketplace-v3"
+  }
+}
+```
+
+```json
+{
+  "resolve_collection_registration_request": {
+    "collection": "passage1collection...",
+    "approved": true,
+    "denom": null,
+    "note": "approved"
+  }
+}
+```
+
+Admin direct path:
 
 ```json
 {
   "register_collection": {
     "collection": "passage1collection...",
-    "trading_fee_bps": null,
-    "denom": null
+    "denom": "upasg"
   }
 }
 ```
 
-### `UpdateCollectionConfig`
+## Update Flows
+
+Owner request path:
+
+```json
+{
+  "submit_collection_update_request": {
+    "collection": "passage1collection...",
+    "active": true,
+    "denom": "uion",
+    "note": "switch settlement denom"
+  }
+}
+```
+
+```json
+{
+  "resolve_collection_update_request": {
+    "collection": "passage1collection...",
+    "approved": true,
+    "active": null,
+    "denom": null,
+    "note": "approved"
+  }
+}
+```
+
+Admin direct path:
 
 ```json
 {
   "update_collection_config": {
     "collection": "passage1collection...",
     "active": true,
-    "trading_fee_bps": 300,
     "denom": "upasg"
   }
 }
 ```
+
+## Trading Surface
 
 ### `SetAsk`
 
@@ -87,137 +142,60 @@ Attach the exact ask price to the transaction.
 
 `set_bid` requires attached funds equal to `price`.
 
-```json
-{
-  "set_bid": {
-    "collection": "passage1collection...",
-    "token_id": "1",
-    "price": {
-      "denom": "upasg",
-      "amount": "900000"
-    },
-    "expires_at": 1773597600
-  }
-}
-```
-
-```json
-{
-  "accept_bid": {
-    "collection": "passage1collection...",
-    "token_id": "1",
-    "bidder": "passage1bidder..."
-  }
-}
-```
-
 ### `SetCollectionBid` / `AcceptCollectionBid`
 
-Attach `units * price.amount` for `set_collection_bid`.
-
-```json
-{
-  "set_collection_bid": {
-    "collection": "passage1collection...",
-    "units": 2,
-    "price": {
-      "denom": "upasg",
-      "amount": "800000"
-    },
-    "expires_at": 1773597600
-  }
-}
-```
-
-```json
-{
-  "accept_collection_bid": {
-    "collection": "passage1collection...",
-    "token_id": "42",
-    "bidder": "passage1bidder..."
-  }
-}
-```
+`set_collection_bid` requires attached funds equal to `units * price.amount`.
 
 ## Query Surface
 
 ### `Config`
 
-Returns the default marketplace denom, fee settings, and registration policy.
+Returns admin, `min_price`, marketplace-global `trading_fee_bps`, fee collector, registry, operators, and pause state.
 
-```json
-{
-  "config": {}
-}
-```
+### `CollectionConfig`
+
+Returns the registered collection config, including its required settlement denom.
+
+### `CollectionRegistrationRequest`
+
+Returns the latest registration request for a collection.
+
+### `CollectionRegistrationRequests`
+
+Lists registration requests and can filter by `pending`, `approved`, or `rejected`.
+
+### `CollectionUpdateRequest`
+
+Returns the latest pending or resolved update request for a collection.
+
+### `CollectionUpdateRequests`
+
+Lists collection update requests and can filter by status.
 
 ### `CollectionDenom`
 
-Returns the effective payment denom for a collection and whether it is an override.
-
-```json
-{
-  "collection_denom": {
-    "collection": "passage1collection..."
-  }
-}
-```
+Returns the collection-scoped settlement denom.
 
 ### `CollectionFee`
 
-Returns the effective trading fee for a collection and whether it is an override.
-
-```json
-{
-  "collection_fee": {
-    "collection": "passage1collection..."
-  }
-}
-```
+Returns the marketplace-global fee. `is_override` is always `false`.
 
 ### `CanTrade`
 
-```json
-{
-  "can_trade": {
-    "collection": "passage1collection..."
-  }
-}
-```
+Returns whether the collection is both registered locally and allowed by registry moderation.
 
 ### `PreviewSale`
 
 Shows `trading_fee`, `royalty`, and `seller_proceeds` for a proposed sale price.
 
-```json
-{
-  "preview_sale": {
-    "collection": "passage1collection...",
-    "price": "1000000"
-  }
-}
-```
-
-## PASG Verification Path
-
-1. Query `streaming-billing` with `PasgUtility {}` for the canonical PASG model.
-2. Query `CollectionDenom {}` and confirm whether the collection actually settles in `upasg`.
-3. Query `CollectionFee {}` or `PreviewSale {}` to inspect the marketplace fee treatment before settlement.
-4. After `BuyNow`, `AcceptBid`, or `AcceptCollectionBid`, inspect the execute response attributes:
-   - `pasg_utility_query`
-   - `pasg_native_denom`
-   - `pasg_settlement_denom`
-   - `pasg_uses_native_utility`
-   - `pasg_fee_flow`
-
 ## Royalty Routing Note
 
-Royalty payouts are sent directly to the royalty recipient unless that recipient is itself a contract. In that case, `marketplace-v3` executes the recipient contract with `Split {}` and the royalty funds attached. That keeps marketplace settlement generic while allowing split-wallet royalty contracts.
+Royalty payouts are sent directly to the royalty recipient unless that recipient is itself a contract. In that case, `marketplace-v3` executes the recipient contract with `Split {}` and the royalty funds attached.
 
 ## Build, Schema, And Tests
 
 ```bash
 cargo build -p marketplace-v3
-cargo run --example schema
+cargo run --example schema -p marketplace-v3
 cargo test -p marketplace-v3 --lib
 ```

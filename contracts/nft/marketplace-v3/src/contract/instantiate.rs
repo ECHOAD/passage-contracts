@@ -2,9 +2,6 @@ use super::*;
 
 // ========== Instantiate ==========
 
-/// Default maximum trading fee: 10%
-const DEFAULT_MAX_TRADING_FEE_BPS: u64 = 1000;
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -34,29 +31,14 @@ pub fn instantiate(
         .map(|o| deps.api.addr_validate(o))
         .collect::<StdResult<Vec<Addr>>>()?;
 
-    let max_trading_fee_bps = msg
-        .max_trading_fee_bps
-        .unwrap_or(DEFAULT_MAX_TRADING_FEE_BPS);
-
-    // Validate trading fee doesn't exceed max
-    if msg.trading_fee_bps > max_trading_fee_bps {
-        return Err(ContractError::TradingFeeExceedsMax {
-            fee_bps: msg.trading_fee_bps,
-            max_bps: max_trading_fee_bps,
-        });
-    }
-
     let config = Config {
         admin,
-        denom: msg.denom,
         min_price: msg.min_price,
         trading_fee_bps: msg.trading_fee_bps,
-        max_trading_fee_bps,
         fee_collector,
         registry,
         operators,
         paused: false,
-        require_registration: msg.require_registration.unwrap_or(true),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -65,8 +47,5 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "marketplace-v3")
-        .add_attribute(
-            "require_registration",
-            config.require_registration.to_string(),
-        ))
+        .add_attribute("trading_fee_bps", config.trading_fee_bps.to_string()))
 }

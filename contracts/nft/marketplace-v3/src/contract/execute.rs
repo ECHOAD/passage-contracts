@@ -21,49 +21,64 @@ pub fn execute(
         // Admin
         ExecuteMsg::UpdateConfig {
             admin,
-            denom,
             min_price,
             trading_fee_bps,
-            max_trading_fee_bps,
             fee_collector,
             registry,
             operators,
             paused,
-            require_registration,
         } => execute_update_config(
             deps,
             info,
             admin,
-            denom,
             min_price,
             trading_fee_bps,
-            max_trading_fee_bps,
             fee_collector,
             registry,
             operators,
             paused,
-            require_registration,
         ),
 
         // Collection Registration
-        ExecuteMsg::RegisterCollection {
-            collection,
-            trading_fee_bps,
-            denom,
-        } => execute_register_collection(deps, env, info, collection, trading_fee_bps, denom),
+        ExecuteMsg::RegisterCollection { collection, denom } => {
+            execute_register_collection(deps, env, info, collection, denom)
+        }
         ExecuteMsg::UpdateCollectionConfig {
             collection,
             active,
-            trading_fee_bps,
             denom,
-        } => execute_update_collection_config(
-            deps,
-            env,
-            info,
+        } => execute_update_collection_config(deps, env, info, collection, active, denom),
+        ExecuteMsg::SubmitCollectionRegistrationRequest {
+            collection,
+            denom,
+            note,
+        } => {
+            execute_submit_collection_registration_request(deps, env, info, collection, denom, note)
+        }
+        ExecuteMsg::ResolveCollectionRegistrationRequest {
+            collection,
+            approved,
+            denom,
+            note,
+        } => execute_resolve_collection_registration_request(
+            deps, env, info, collection, approved, denom, note,
+        ),
+        ExecuteMsg::SubmitCollectionUpdateRequest {
             collection,
             active,
-            trading_fee_bps,
             denom,
+            note,
+        } => execute_submit_collection_update_request(
+            deps, env, info, collection, active, denom, note,
+        ),
+        ExecuteMsg::ResolveCollectionUpdateRequest {
+            collection,
+            approved,
+            active,
+            denom,
+            note,
+        } => execute_resolve_collection_update_request(
+            deps, env, info, collection, approved, active, denom, note,
         ),
         ExecuteMsg::DeactivateCollection { collection, reason } => {
             execute_deactivate_collection(deps, env, info, collection, reason)
@@ -168,15 +183,12 @@ fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
     admin: Option<String>,
-    denom: Option<String>,
     min_price: Option<Uint128>,
     trading_fee_bps: Option<u64>,
-    max_trading_fee_bps: Option<u64>,
     fee_collector: Option<String>,
     registry: Option<String>,
     operators: Option<Vec<String>>,
     paused: Option<bool>,
-    require_registration: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -187,17 +199,11 @@ fn execute_update_config(
     if let Some(new_admin) = admin {
         config.admin = deps.api.addr_validate(&new_admin)?;
     }
-    if let Some(new_denom) = denom {
-        config.denom = new_denom;
-    }
     if let Some(new_min) = min_price {
         config.min_price = new_min;
     }
     if let Some(new_fee) = trading_fee_bps {
         config.trading_fee_bps = new_fee;
-    }
-    if let Some(new_max_fee) = max_trading_fee_bps {
-        config.max_trading_fee_bps = new_max_fee;
     }
     if let Some(new_collector) = fee_collector {
         config.fee_collector = deps.api.addr_validate(&new_collector)?;
@@ -214,9 +220,6 @@ fn execute_update_config(
     if let Some(is_paused) = paused {
         config.paused = is_paused;
     }
-    if let Some(require_reg) = require_registration {
-        config.require_registration = require_reg;
-    }
 
     CONFIG.save(deps.storage, &config)?;
 
@@ -230,18 +233,12 @@ fn execute_register_collection(
     env: Env,
     info: MessageInfo,
     collection: String,
-    trading_fee_bps: Option<u64>,
-    denom: Option<String>,
+    denom: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Authorization: admin, operators, or registry can register
-    let is_authorized = config.admin == info.sender
-        || config.operators.contains(&info.sender)
-        || config.registry.as_ref() == Some(&info.sender);
-
-    if !is_authorized {
+    if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -252,20 +249,9 @@ fn execute_register_collection(
         });
     }
 
-    // Validate trading fee if provided
-    if let Some(fee) = trading_fee_bps {
-        if fee > config.max_trading_fee_bps {
-            return Err(ContractError::TradingFeeExceedsMax {
-                fee_bps: fee,
-                max_bps: config.max_trading_fee_bps,
-            });
-        }
-    }
-
     let collection_config = CollectionConfig {
         collection: collection_addr.clone(),
         active: true,
-        trading_fee_bps,
         denom,
         registered_by: info.sender.clone(),
         registered_at: env.block.time.seconds(),
@@ -273,6 +259,7 @@ fn execute_register_collection(
     };
 
     COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
+    COLLECTION_REGISTRATION_REQUESTS.remove(deps.storage, collection_addr.clone());
 
     Ok(Response::new()
         .add_attribute("action", "register_collection")
@@ -286,14 +273,12 @@ fn execute_update_collection_config(
     info: MessageInfo,
     collection: String,
     active: Option<bool>,
-    trading_fee_bps: Option<u64>,
     denom: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Authorization: admin or operators
-    if config.admin != info.sender && !config.operators.contains(&info.sender) {
+    if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -307,27 +292,231 @@ fn execute_update_collection_config(
         collection_config.active = is_active;
     }
 
-    if let Some(fee) = trading_fee_bps {
-        if fee > config.max_trading_fee_bps {
-            return Err(ContractError::TradingFeeExceedsMax {
-                fee_bps: fee,
-                max_bps: config.max_trading_fee_bps,
-            });
-        }
-        collection_config.trading_fee_bps = Some(fee);
-    }
-
     if let Some(new_denom) = denom {
-        collection_config.denom = Some(new_denom);
+        collection_config.denom = new_denom;
     }
 
     collection_config.updated_at = env.block.time.seconds();
 
     COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
+    COLLECTION_UPDATE_REQUESTS.remove(deps.storage, collection_addr.clone());
 
     Ok(Response::new()
         .add_attribute("action", "update_collection_config")
         .add_attribute("collection", collection_addr))
+}
+
+fn execute_submit_collection_registration_request(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    collection: String,
+    denom: String,
+    note: Option<String>,
+) -> Result<Response, ContractError> {
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    verify_collection_creator(&deps, &collection_addr, &info.sender)?;
+
+    if COLLECTION_CONFIGS.has(deps.storage, collection_addr.clone()) {
+        return Err(ContractError::CollectionAlreadyRegistered { collection });
+    }
+
+    if let Some(existing) =
+        COLLECTION_REGISTRATION_REQUESTS.may_load(deps.storage, collection_addr.clone())?
+    {
+        if existing.status == CollectionRequestStatus::Pending {
+            return Err(ContractError::CollectionRegistrationRequestAlreadyPending {
+                collection: collection_addr.to_string(),
+            });
+        }
+    }
+
+    let request = CollectionRegistrationRequest {
+        collection: collection_addr.clone(),
+        requester: info.sender.clone(),
+        denom,
+        note,
+        status: CollectionRequestStatus::Pending,
+        reviewed_by: None,
+        review_note: None,
+        created_at: env.block.time.seconds(),
+        updated_at: env.block.time.seconds(),
+    };
+
+    COLLECTION_REGISTRATION_REQUESTS.save(deps.storage, collection_addr.clone(), &request)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "submit_collection_registration_request")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("requester", info.sender))
+}
+
+fn execute_resolve_collection_registration_request(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    collection: String,
+    approved: bool,
+    denom: Option<String>,
+    note: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    let mut request = COLLECTION_REGISTRATION_REQUESTS
+        .may_load(deps.storage, collection_addr.clone())?
+        .ok_or_else(|| ContractError::CollectionRegistrationRequestNotFound {
+            collection: collection.clone(),
+        })?;
+
+    if request.status != CollectionRequestStatus::Pending {
+        return Err(ContractError::CollectionRegistrationRequestAlreadyResolved { collection });
+    }
+
+    request.status = if approved {
+        CollectionRequestStatus::Approved
+    } else {
+        CollectionRequestStatus::Rejected
+    };
+    request.reviewed_by = Some(info.sender.clone());
+    request.review_note = note;
+    request.updated_at = env.block.time.seconds();
+
+    if approved {
+        let collection_config = CollectionConfig {
+            collection: collection_addr.clone(),
+            active: true,
+            denom: denom.unwrap_or_else(|| request.denom.clone()),
+            registered_by: info.sender.clone(),
+            registered_at: env.block.time.seconds(),
+            updated_at: env.block.time.seconds(),
+        };
+        COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
+    }
+
+    COLLECTION_REGISTRATION_REQUESTS.save(deps.storage, collection_addr.clone(), &request)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "resolve_collection_registration_request")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("approved", approved.to_string()))
+}
+
+fn execute_submit_collection_update_request(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    collection: String,
+    active: Option<bool>,
+    denom: Option<String>,
+    note: Option<String>,
+) -> Result<Response, ContractError> {
+    if active.is_none() && denom.is_none() {
+        return Err(ContractError::EmptyCollectionUpdateRequest {});
+    }
+
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    verify_collection_creator(&deps, &collection_addr, &info.sender)?;
+
+    COLLECTION_CONFIGS
+        .may_load(deps.storage, collection_addr.clone())?
+        .ok_or_else(|| ContractError::CollectionNotRegistered {
+            collection: collection.clone(),
+        })?;
+
+    if let Some(existing) =
+        COLLECTION_UPDATE_REQUESTS.may_load(deps.storage, collection_addr.clone())?
+    {
+        if existing.status == CollectionRequestStatus::Pending {
+            return Err(ContractError::CollectionUpdateRequestAlreadyPending {
+                collection: collection_addr.to_string(),
+            });
+        }
+    }
+
+    let request = CollectionUpdateRequest {
+        collection: collection_addr.clone(),
+        requester: info.sender.clone(),
+        active,
+        denom,
+        note,
+        status: CollectionRequestStatus::Pending,
+        reviewed_by: None,
+        review_note: None,
+        created_at: env.block.time.seconds(),
+        updated_at: env.block.time.seconds(),
+    };
+
+    COLLECTION_UPDATE_REQUESTS.save(deps.storage, collection_addr.clone(), &request)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "submit_collection_update_request")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("requester", info.sender))
+}
+
+fn execute_resolve_collection_update_request(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    collection: String,
+    approved: bool,
+    active: Option<bool>,
+    denom: Option<String>,
+    note: Option<String>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if config.admin != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    let mut request = COLLECTION_UPDATE_REQUESTS
+        .may_load(deps.storage, collection_addr.clone())?
+        .ok_or_else(|| ContractError::CollectionUpdateRequestNotFound {
+            collection: collection.clone(),
+        })?;
+
+    if request.status != CollectionRequestStatus::Pending {
+        return Err(ContractError::CollectionUpdateRequestAlreadyResolved { collection });
+    }
+
+    request.status = if approved {
+        CollectionRequestStatus::Approved
+    } else {
+        CollectionRequestStatus::Rejected
+    };
+    request.reviewed_by = Some(info.sender.clone());
+    request.review_note = note;
+    request.updated_at = env.block.time.seconds();
+
+    if approved {
+        let mut collection_config = COLLECTION_CONFIGS
+            .load(deps.storage, collection_addr.clone())
+            .map_err(|_| ContractError::CollectionNotRegistered {
+                collection: collection.clone(),
+            })?;
+
+        if let Some(next_active) = active.or(request.active) {
+            collection_config.active = next_active;
+        }
+        if let Some(next_denom) = denom.or_else(|| request.denom.clone()) {
+            collection_config.denom = next_denom;
+        }
+        collection_config.updated_at = env.block.time.seconds();
+
+        COLLECTION_CONFIGS.save(deps.storage, collection_addr.clone(), &collection_config)?;
+    }
+
+    COLLECTION_UPDATE_REQUESTS.save(deps.storage, collection_addr.clone(), &request)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "resolve_collection_update_request")
+        .add_attribute("collection", collection_addr)
+        .add_attribute("approved", approved.to_string()))
 }
 
 fn execute_deactivate_collection(
@@ -340,8 +529,7 @@ fn execute_deactivate_collection(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Authorization: admin or operators
-    if config.admin != info.sender && !config.operators.contains(&info.sender) {
+    if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -370,8 +558,7 @@ fn execute_reactivate_collection(
     let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
 
-    // Authorization: admin or operators
-    if config.admin != info.sender && !config.operators.contains(&info.sender) {
+    if config.admin != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -406,7 +593,7 @@ fn execute_set_ask(
     validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
-    let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
+    let expected_denom = resolve_collection_denom(deps.storage, &collection_addr)?;
     if price.denom != expected_denom {
         return Err(ContractError::InvalidPaymentDenom {
             expected: expected_denom,
@@ -478,7 +665,7 @@ fn execute_update_ask(
     }
 
     // Validate price
-    let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
+    let expected_denom = resolve_collection_denom(deps.storage, &collection_addr)?;
     if price.denom != expected_denom {
         return Err(ContractError::InvalidPaymentDenom {
             expected: expected_denom,
@@ -621,7 +808,7 @@ fn execute_set_bid(
     validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
-    let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
+    let expected_denom = resolve_collection_denom(deps.storage, &collection_addr)?;
     if price.denom != expected_denom {
         return Err(ContractError::InvalidPaymentDenom {
             expected: expected_denom,
@@ -798,7 +985,7 @@ fn execute_set_collection_bid(
     validate_collection(deps.storage, &config, &collection_addr, &deps.as_ref())?;
 
     // Validate price
-    let expected_denom = resolve_collection_denom(deps.storage, &config, &collection_addr)?;
+    let expected_denom = resolve_collection_denom(deps.storage, &collection_addr)?;
     if price.denom != expected_denom {
         return Err(ContractError::InvalidPaymentDenom {
             expected: expected_denom,

@@ -8,24 +8,18 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// Admin address
     pub admin: Addr,
-    /// Token denom for payments (e.g., "upasg")
-    pub denom: String,
     /// Minimum price for listings
     pub min_price: Uint128,
-    /// Default trading fee in basis points (e.g., 250 = 2.5%)
+    /// Marketplace-wide trading fee in basis points (e.g., 250 = 2.5%)
     pub trading_fee_bps: u64,
-    /// Maximum allowed trading fee in basis points (e.g., 1000 = 10%)
-    pub max_trading_fee_bps: u64,
     /// Fee collector address (legacy mode)
     pub fee_collector: Addr,
     /// Registry contract address (required for collection verification)
     pub registry: Option<Addr>,
-    /// Operators who can update ask states and manage collections
+    /// Operators who can update ask states
     pub operators: Vec<Addr>,
     /// Whether the contract is paused
     pub paused: bool,
-    /// Whether to require collection registration (if false, any collection can trade)
-    pub require_registration: bool,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -39,10 +33,8 @@ pub struct CollectionConfig {
     pub collection: Addr,
     /// Whether the collection is active on the marketplace
     pub active: bool,
-    /// Custom trading fee in basis points (None = use default)
-    pub trading_fee_bps: Option<u64>,
-    /// Custom denom for this collection (None = use default)
-    pub denom: Option<String>,
+    /// Settlement denom for this collection
+    pub denom: String,
     /// Who registered this collection
     pub registered_by: Addr,
     /// When the collection was registered
@@ -52,16 +44,9 @@ pub struct CollectionConfig {
 }
 
 impl CollectionConfig {
-    /// Get the effective trading fee for this collection
-    pub fn get_trading_fee_bps(&self, default_fee: u64) -> u64 {
-        self.trading_fee_bps.unwrap_or(default_fee)
-    }
-
-    /// Get the effective denom for this collection
-    pub fn get_denom(&self, default_denom: &str) -> String {
-        self.denom
-            .clone()
-            .unwrap_or_else(|| default_denom.to_string())
+    /// Get the configured denom for this collection
+    pub fn get_denom(&self) -> String {
+        self.denom.clone()
     }
 
     /// Check if collection can be traded
@@ -73,8 +58,44 @@ impl CollectionConfig {
 /// Key: collection address
 pub const COLLECTION_CONFIGS: Map<Addr, CollectionConfig> = Map::new("coll_configs");
 
-/// Legacy: Optional denom overrides per collection. Migrated to CollectionConfig.
-pub const COLLECTION_DENOMS: Map<Addr, String> = Map::new("coll_denom");
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum CollectionRequestStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct CollectionRegistrationRequest {
+    pub collection: Addr,
+    pub requester: Addr,
+    pub denom: String,
+    pub note: Option<String>,
+    pub status: CollectionRequestStatus,
+    pub reviewed_by: Option<Addr>,
+    pub review_note: Option<String>,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct CollectionUpdateRequest {
+    pub collection: Addr,
+    pub requester: Addr,
+    pub active: Option<bool>,
+    pub denom: Option<String>,
+    pub note: Option<String>,
+    pub status: CollectionRequestStatus,
+    pub reviewed_by: Option<Addr>,
+    pub review_note: Option<String>,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+pub const COLLECTION_REGISTRATION_REQUESTS: Map<Addr, CollectionRegistrationRequest> =
+    Map::new("coll_reg_requests");
+pub const COLLECTION_UPDATE_REQUESTS: Map<Addr, CollectionUpdateRequest> =
+    Map::new("coll_update_requests");
 
 pub type TokenId = String;
 

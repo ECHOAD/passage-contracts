@@ -28,6 +28,32 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::CollectionFee { collection } => {
             to_json_binary(&query_collection_fee(deps, collection)?)
         }
+        QueryMsg::CollectionRegistrationRequest { collection } => {
+            to_json_binary(&query_collection_registration_request(deps, collection)?)
+        }
+        QueryMsg::CollectionRegistrationRequests {
+            status,
+            start_after,
+            limit,
+        } => to_json_binary(&query_collection_registration_requests(
+            deps,
+            status,
+            start_after,
+            limit,
+        )?),
+        QueryMsg::CollectionUpdateRequest { collection } => {
+            to_json_binary(&query_collection_update_request(deps, collection)?)
+        }
+        QueryMsg::CollectionUpdateRequests {
+            status,
+            start_after,
+            limit,
+        } => to_json_binary(&query_collection_update_requests(
+            deps,
+            status,
+            start_after,
+            limit,
+        )?),
         QueryMsg::Ask {
             collection,
             token_id,
@@ -184,39 +210,95 @@ fn query_can_trade(deps: Deps, collection: String) -> StdResult<CanTradeResponse
 
 fn query_collection_fee(deps: Deps, collection: String) -> StdResult<CollectionFeeResponse> {
     let config = CONFIG.load(deps.storage)?;
-    let collection_addr = deps.api.addr_validate(&collection)?;
-
-    let coll_config = COLLECTION_CONFIGS.may_load(deps.storage, collection_addr)?;
-
-    let (trading_fee_bps, is_override) = match coll_config {
-        Some(cfg) => match cfg.trading_fee_bps {
-            Some(fee) => (fee, true),
-            None => (config.trading_fee_bps, false),
-        },
-        None => (config.trading_fee_bps, false),
-    };
 
     Ok(CollectionFeeResponse {
         collection,
-        trading_fee_bps,
-        is_override,
+        trading_fee_bps: config.trading_fee_bps,
+        is_override: false,
     })
 }
 
 fn query_collection_denom(deps: Deps, collection: String) -> StdResult<CollectionDenomResponse> {
-    let config = CONFIG.load(deps.storage)?;
     let collection_addr = deps.api.addr_validate(&collection)?;
-    let override_denom = COLLECTION_DENOMS.may_load(deps.storage, collection_addr)?;
-    let (denom, is_override) = match override_denom {
-        Some(override_denom) => (override_denom, true),
-        None => (config.denom, false),
-    };
+    let coll_config = COLLECTION_CONFIGS
+        .may_load(deps.storage, collection_addr)?
+        .ok_or_else(|| cosmwasm_std::StdError::generic_err("Collection not registered"))?;
 
     Ok(CollectionDenomResponse {
         collection,
-        denom,
-        is_override,
+        denom: coll_config.denom,
+        is_override: true,
     })
+}
+
+fn query_collection_registration_request(
+    deps: Deps,
+    collection: String,
+) -> StdResult<CollectionRegistrationRequestResponse> {
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    let request = COLLECTION_REGISTRATION_REQUESTS.may_load(deps.storage, collection_addr)?;
+    Ok(CollectionRegistrationRequestResponse { request })
+}
+
+fn query_collection_registration_requests(
+    deps: Deps,
+    status: Option<CollectionRequestStatus>,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionRegistrationRequestsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|value| deps.api.addr_validate(&value))
+        .transpose()?
+        .map(Bound::exclusive);
+
+    let requests = COLLECTION_REGISTRATION_REQUESTS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, request)| match &status {
+                Some(status) if request.status != *status => None,
+                _ => Some(request),
+            })
+        })
+        .take(limit)
+        .collect();
+
+    Ok(CollectionRegistrationRequestsResponse { requests })
+}
+
+fn query_collection_update_request(
+    deps: Deps,
+    collection: String,
+) -> StdResult<CollectionUpdateRequestResponse> {
+    let collection_addr = deps.api.addr_validate(&collection)?;
+    let request = COLLECTION_UPDATE_REQUESTS.may_load(deps.storage, collection_addr)?;
+    Ok(CollectionUpdateRequestResponse { request })
+}
+
+fn query_collection_update_requests(
+    deps: Deps,
+    status: Option<CollectionRequestStatus>,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<CollectionUpdateRequestsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|value| deps.api.addr_validate(&value))
+        .transpose()?
+        .map(Bound::exclusive);
+
+    let requests = COLLECTION_UPDATE_REQUESTS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| {
+            item.ok().and_then(|(_, request)| match &status {
+                Some(status) if request.status != *status => None,
+                _ => Some(request),
+            })
+        })
+        .take(limit)
+        .collect();
+
+    Ok(CollectionUpdateRequestsResponse { requests })
 }
 
 fn query_ask(deps: Deps, collection: String, token_id: TokenId) -> StdResult<AskResponse> {
@@ -496,7 +578,7 @@ fn query_preview_sale(
     let collection_addr = deps.api.addr_validate(&collection)?;
 
     // Get effective trading fee for this collection
-    let trading_fee_bps = resolve_collection_trading_fee(deps.storage, &config, &collection_addr)?;
+    let trading_fee_bps = resolve_collection_trading_fee(&config)?;
 
     let trading_fee = price.multiply_ratio(trading_fee_bps as u128, 10_000u128);
 

@@ -25,8 +25,32 @@ pub enum ContractError {
     #[error("Trading is disabled for collection: {collection}")]
     CollectionTradingDisabled { collection: String },
 
-    #[error("Trading fee exceeds maximum: {fee_bps} > {max_bps}")]
-    TradingFeeExceedsMax { fee_bps: u64, max_bps: u64 },
+    #[error("Collection metadata query failed: {collection}")]
+    CollectionInfoQueryFailed { collection: String },
+
+    #[error("Sender is not the collection owner: {collection}")]
+    NotCollectionOwner { collection: String },
+
+    #[error("Collection registration request already pending: {collection}")]
+    CollectionRegistrationRequestAlreadyPending { collection: String },
+
+    #[error("Collection registration request not found: {collection}")]
+    CollectionRegistrationRequestNotFound { collection: String },
+
+    #[error("Collection registration request already resolved: {collection}")]
+    CollectionRegistrationRequestAlreadyResolved { collection: String },
+
+    #[error("Collection update request already pending: {collection}")]
+    CollectionUpdateRequestAlreadyPending { collection: String },
+
+    #[error("Collection update request not found: {collection}")]
+    CollectionUpdateRequestNotFound { collection: String },
+
+    #[error("Collection update request already resolved: {collection}")]
+    CollectionUpdateRequestAlreadyResolved { collection: String },
+
+    #[error("Collection update request must include at least one change")]
+    EmptyCollectionUpdateRequest {},
 
     // Legacy error for backward compatibility
     #[error("Collection not supported: {collection}")]

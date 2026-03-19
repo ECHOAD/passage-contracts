@@ -18,25 +18,11 @@
                 "null"
               ]
             },
-            "denom": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "fee_collector": {
               "type": [
                 "string",
                 "null"
               ]
-            },
-            "max_trading_fee_bps": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
             },
             "min_price": {
               "anyOf": [
@@ -69,12 +55,6 @@
                 "null"
               ]
             },
-            "require_registration": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
             "trading_fee_bps": {
               "type": [
                 "integer",
@@ -90,7 +70,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Register a new collection on the marketplace Can be called by admin, operators, or registry (if configured)",
+      "description": "Register a new collection on the marketplace",
       "type": "object",
       "required": [
         "register_collection"
@@ -99,27 +79,16 @@
         "register_collection": {
           "type": "object",
           "required": [
-            "collection"
+            "collection",
+            "denom"
           ],
           "properties": {
             "collection": {
               "type": "string"
             },
             "denom": {
-              "description": "Custom denom for this collection (None = use default)",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "trading_fee_bps": {
-              "description": "Custom trading fee for this collection (None = use default)",
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
+              "description": "Settlement denom for this collection",
+              "type": "string"
             }
           },
           "additionalProperties": false
@@ -151,20 +120,165 @@
               "type": "string"
             },
             "denom": {
-              "description": "Custom denom (None to clear override and use default)",
+              "description": "Settlement denom for this collection",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Submit a registration request for a collection. Only the collection creator can request it.",
+      "type": "object",
+      "required": [
+        "submit_collection_registration_request"
+      ],
+      "properties": {
+        "submit_collection_registration_request": {
+          "type": "object",
+          "required": [
+            "collection",
+            "denom"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "denom": {
+              "type": "string"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Approve or reject a pending collection registration request.",
+      "type": "object",
+      "required": [
+        "resolve_collection_registration_request"
+      ],
+      "properties": {
+        "resolve_collection_registration_request": {
+          "type": "object",
+          "required": [
+            "approved",
+            "collection"
+          ],
+          "properties": {
+            "approved": {
+              "type": "boolean"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "denom": {
               "type": [
                 "string",
                 "null"
               ]
             },
-            "trading_fee_bps": {
-              "description": "Custom trading fee (None to clear override and use default)",
+            "note": {
               "type": [
-                "integer",
+                "string",
                 "null"
-              ],
-              "format": "uint64",
-              "minimum": 0.0
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Submit an update request for a registered collection. Only the collection creator can request it.",
+      "type": "object",
+      "required": [
+        "submit_collection_update_request"
+      ],
+      "properties": {
+        "submit_collection_update_request": {
+          "type": "object",
+          "required": [
+            "collection"
+          ],
+          "properties": {
+            "active": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "collection": {
+              "type": "string"
+            },
+            "denom": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Approve or reject a pending collection update request.",
+      "type": "object",
+      "required": [
+        "resolve_collection_update_request"
+      ],
+      "properties": {
+        "resolve_collection_update_request": {
+          "type": "object",
+          "required": [
+            "approved",
+            "collection"
+          ],
+          "properties": {
+            "active": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "approved": {
+              "type": "boolean"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "denom": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
