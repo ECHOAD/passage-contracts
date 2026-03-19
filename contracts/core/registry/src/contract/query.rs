@@ -11,6 +11,19 @@ use super::*;
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
+        QueryMsg::StakingValidator { operator_address } => {
+            to_json_binary(&query_staking_validator(deps, operator_address)?)
+        }
+        QueryMsg::StakingValidators {
+            active_only,
+            start_after,
+            limit,
+        } => to_json_binary(&query_staking_validators(
+            deps,
+            active_only,
+            start_after,
+            limit,
+        )?),
 
         // Ecosystem queries
         QueryMsg::Ecosystem { id } => to_json_binary(&query_ecosystem(deps, id)?),
@@ -157,6 +170,40 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config = CONFIG.load(deps.storage)?;
     Ok(ConfigResponse { config })
+}
+
+fn query_staking_validator(
+    deps: Deps,
+    operator_address: String,
+) -> StdResult<StakingValidatorResponse> {
+    let validator = STAKING_VALIDATORS.may_load(deps.storage, operator_address)?;
+    Ok(StakingValidatorResponse { validator })
+}
+
+fn query_staking_validators(
+    deps: Deps,
+    active_only: Option<bool>,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<StakingValidatorsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.as_ref().map(|s| Bound::exclusive(s.as_str()));
+
+    let validators = STAKING_VALIDATORS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter_map(|item| match item {
+            Ok((_, validator))
+                if active_only.is_none() || active_only == Some(validator.active) =>
+            {
+                Some(Ok(validator))
+            }
+            Ok(_) => None,
+            Err(err) => Some(Err(err)),
+        })
+        .take(limit)
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(StakingValidatorsResponse { validators })
 }
 
 fn query_ecosystem(deps: Deps, id: String) -> StdResult<EcosystemResponse> {

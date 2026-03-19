@@ -13,16 +13,17 @@ pub(super) use crate::msg::{
     EcosystemResponse, EcosystemsResponse, ExecuteMsg, InstantiateMsg, IsMinterAuthorizedResponse,
     IsVerifiedResponse, LastCreatorActivityResponse, QueryMsg, RecoveryCaseResponse,
     RecoveryCasesResponse, RecoveryConfigResponse, RecoveryPolicyResponse, RecoveryTargetInput,
+    StakingValidatorResponse, StakingValidatorsResponse,
 };
 pub(super) use crate::state::{
     collections, AuthorizedMinter, Collection, CollectionCreationPolicy, CollectionCreationRequest,
     CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
     EcosystemModeration, EcosystemType, NftType, RecoveryCase, RecoveryCaseKind,
-    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy, RecoveryTarget, AUTHORIZED_MINTERS,
-    COLLECTION_CREATION_REQUESTS, COLLECTION_MODERATION, COLLECTION_RECOVERY_POLICIES, CONFIG,
-    CREATOR_MODERATION, ECOSYSTEMS, ECOSYSTEM_COUNT, ECOSYSTEM_MEMBERS, ECOSYSTEM_MODERATION,
-    ECOSYSTEM_RECOVERY_POLICIES, LAST_CREATOR_ACTIVITY, RECOVERY_CASES, RECOVERY_CASE_COUNT,
-    RECOVERY_CONFIG,
+    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy, RecoveryTarget, StakingValidator,
+    AUTHORIZED_MINTERS, COLLECTION_CREATION_REQUESTS, COLLECTION_MODERATION,
+    COLLECTION_RECOVERY_POLICIES, CONFIG, CREATOR_MODERATION, ECOSYSTEMS, ECOSYSTEM_COUNT,
+    ECOSYSTEM_MEMBERS, ECOSYSTEM_MODERATION, ECOSYSTEM_RECOVERY_POLICIES, LAST_CREATOR_ACTIVITY,
+    RECOVERY_CASES, RECOVERY_CASE_COUNT, RECOVERY_CONFIG, STAKING_VALIDATORS,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-registry";

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 04-01 native validator staking model; Phase 4 wave 2 is next
-last_updated: "2026-03-19T20:05:00Z"
-last_activity: 2026-03-19 - Completed 04-01 by locking PASG staking to native validator delegation docs and boundaries
+stopped_at: Completed 04-02 minimal staking adapter and docs; Phase 4 wave 3 is next
+last_updated: "2026-03-19T20:30:00Z"
+last_activity: 2026-03-19 - Completed 04-02 with metadata-only staking adapter and governance handoff
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 23
-  completed_plans: 13
-  percent: 57
+  completed_plans: 14
+  percent: 61
 ---
 
 # Project State
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 4 of 9 (PASG Validator Staking & Rewards)
-Plan: 1 of 3 in current phase
-Status: Wave 2 ready
-Last activity: 2026-03-19 - Completed 04-01 and locked the native validator staking model
+Plan: 2 of 3 in current phase
+Status: Wave 3 ready
+Last activity: 2026-03-19 - Completed 04-02 with metadata-only staking adapter and governance handoff
 
-Progress: [######----] 57%
+Progress: [#######---] 61%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 52 min
 - Total execution time: 10.4 hours
 
@@ -49,8 +49,8 @@ Progress: [######----] 57%
 | 9. Marketplace-v3 Registration Redesign | 3 | 70 min | 23 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03, 09-01, 09-02, 09-03, 04-01
-- Trend: Stable with docs-first execution for the corrected staking scope
+- Last 5 plans: 09-01, 09-02, 09-03, 04-01, 04-02
+- Trend: Stable with docs plus minimal adapter work for the corrected staking scope
 
 ## Accumulated Context
 
@@ -78,6 +78,7 @@ Recent decisions affecting current work:
 - [Debug 2026-03-19]: Phase 4 PASG staking means chain-native delegation to Passage validators; existing `contracts/staking/*` remain NFT staking primitives, not the default PASG staking target
 - [Phase 4]: 04-01 locked README and contract docs to the native validator delegation model and chain-owned unbonding boundary
 - [Phase 04]: contracts/staking/* remain NFT staking primitives unless a later scoped adapter is explicitly justified
+- [Phase 4]: 04-02 added optional validator metadata in registry and governance handoff support without introducing a duplicate staking ledger
 
 ### Roadmap Evolution
 
@@ -95,8 +96,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19 20:05 UTC
-Stopped at: Completed 04-01 native validator staking model; Phase 4 wave 2 is next
-Resume file: .planning/phases/04-pasg-staking-rewards/04-02-PLAN.md
+Last session: 2026-03-19 20:30 UTC
+Stopped at: Completed 04-02 minimal staking adapter and docs; Phase 4 wave 3 is next
+Resume file: .planning/phases/04-pasg-staking-rewards/04-03-PLAN.md
+
+
+
 
 

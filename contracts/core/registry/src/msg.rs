@@ -2,7 +2,7 @@ use crate::state::{
     Collection, CollectionCreationPolicy, CollectionCreationRequest,
     CollectionCreationRequestStatus, CollectionModeration, Config, CreatorModeration, Ecosystem,
     EcosystemModeration, EcosystemType, NftType, RecoveryCase, RecoveryCaseKind,
-    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy,
+    RecoveryCaseStatus, RecoveryConfig, RecoveryPolicy, StakingValidator,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
@@ -66,6 +66,15 @@ pub enum ExecuteMsg {
         delegate: Option<String>,
         designated_successor: Option<String>,
     },
+    /// Upsert optional Passage validator metadata for chain-native staking UX
+    UpsertStakingValidator {
+        operator_address: String,
+        moniker: String,
+        website: Option<String>,
+        active: bool,
+    },
+    /// Remove optional Passage validator metadata from the registry
+    RemoveStakingValidator { operator_address: String },
 
     // ========== Ecosystem Operations ==========
     /// Register a new ecosystem from an authorized ecosystem factory
@@ -202,6 +211,16 @@ pub enum QueryMsg {
     /// Get contract configuration
     #[returns(ConfigResponse)]
     Config {},
+    /// Get optional Passage validator metadata by operator address
+    #[returns(StakingValidatorResponse)]
+    StakingValidator { operator_address: String },
+    /// List optional Passage validator metadata entries
+    #[returns(StakingValidatorsResponse)]
+    StakingValidators {
+        active_only: Option<bool>,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 
     // ========== Ecosystem Queries ==========
     /// Get ecosystem by ID
@@ -348,6 +367,16 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct ConfigResponse {
     pub config: Config,
+}
+
+#[cw_serde]
+pub struct StakingValidatorResponse {
+    pub validator: Option<StakingValidator>,
+}
+
+#[cw_serde]
+pub struct StakingValidatorsResponse {
+    pub validators: Vec<StakingValidator>,
 }
 
 #[cw_serde]
