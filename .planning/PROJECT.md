@@ -1,4 +1,4 @@
-﻿# Passage On-Chain Protocol Layer
+# Passage On-Chain Protocol Layer
 
 ## What This Is
 
@@ -23,7 +23,7 @@ PASG must provide real on-chain utility for payments, governance, staking, and c
 ### Active
 
 - [ ] Deliver a PASG utility surface that supports payment utility, fee treatment, and token-level protocol integrations promised by product and whitepaper materials.
-- [ ] Replace admin-only governance with PASG-scoped on-chain governance for proposals, voting, delegation, quorum, execution, and SIG-compatible parameter control.
+- [ ] Replace admin-only governance with PASG-scoped on-chain governance for proposals, voting, delegation, quorum, execution, and SIG-compatible parameter control while preserving `multisig` as the admin-owner control plane.
 - [ ] Implement PASG staking with 21-day unbonding, scheduled emissions, and the later transition to fee-backed rewards.
 - [ ] Complete and harden creator NFT/world/plugin/template monetization flows so royalties, splits, licensing, and asset ownership behave as documented.
 - [ ] Define a multi-economy framework so worlds can run their own token or point systems while still settling against PASG.

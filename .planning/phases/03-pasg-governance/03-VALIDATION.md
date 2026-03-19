@@ -1,65 +1,28 @@
 # Phase 3: PASG Governance - Validation Strategy
 
 **Defined:** 2026-03-18
-**Scope:** task-level verification for the three Phase 3 plans
-**Status:** draft
-**nyquist_compliant:** false
+**Updated:** 2026-03-18 after intent-mismatch debug
+**Scope:** validation guardrails for the corrected Phase 3 architecture
+**Status:** replan-required
 
-## Test Infrastructure
+## Validation Guardrails
 
-| Property | Value |
-|----------|-------|
-| **Framework** | Rust `cargo test` + `cw-multi-test 2.1.1` |
-| **Config file** | `.cargo/config.toml` |
-| **Quick run command** | `cargo test -p multisig --lib --tests` |
-| **Full suite command** | `cargo unit-test` |
-| **Estimated runtime** | ~60-180 seconds |
+The next Phase 3 plan must satisfy these guardrails before implementation work resumes:
 
-## Wave Graph
+- No task may replace `contracts/core/multisig` member-threshold admin semantics with PASG-holder voting semantics.
+- PASG governance voting and proposal logic must live in a separate layer from the base admin-owner multisig.
+- Public docs must keep one consistent story about `multisig` as the admin-owner surface for `registry` and similar protocol contracts.
+- Governance scope must stay limited to PASG and protocol parameters, not general off-chain platform systems.
 
-- Plan 01 tasks -> wave 1
-- Plan 02 tasks -> wave 2
-- Plan 03 tasks -> wave 3
+## Wave 0 Checks For Replan
 
-## Sampling Rate
+- The replanned artifact set identifies a separate governance contract or module family.
+- The replanned integration path explains how passed governance decisions reach the admin execution plane.
+- The replanned docs do not instruct contributors to rewrite `contracts/core/multisig` into deposited-balance governance.
 
-- After every task commit: run the narrowest affected governance command first.
-- After every plan wave: run `cargo test -p multisig --lib --tests`.
-- Before phase sign-off: run `cargo unit-test` and `cargo check --workspace`.
-- Max feedback latency: 180 seconds.
+## Automated Verification To Keep
 
-## Per-Task Verification Map
+- `cargo test -p multisig --lib --tests`
+- `cargo check -p multisig`
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | GOV-01, GOV-03 | integration | `cargo test -p multisig --lib --tests` | partial | pending |
-| 03-01-02 | 01 | 1 | GOV-01, GOV-03 | docs/query | `cargo check -p multisig` | W0 | pending |
-| 03-02-01 | 02 | 2 | GOV-02 | integration | `cargo test -p multisig --lib --tests` | W0 | pending |
-| 03-02-02 | 02 | 2 | GOV-02 | integration + negative | `cargo test -p multisig --lib --tests` | W0 | pending |
-| 03-03-01 | 03 | 3 | GOV-03 | integration + auth | `cargo test -p multisig --lib --tests` | W0 | pending |
-| 03-03-02 | 03 | 3 | GOV-01, GOV-03 | docs | `rg -n "PASG|governance|delegat|quorum|proposal|scope|upasg" docs/04-multisig-governance.md contracts/core/multisig/README.md README.md CLAUDE.md` | partial | pending |
-| 03-03-03 | 03 | 3 | GOV-01, GOV-02, GOV-03 | smoke | `cargo unit-test`; `cargo check --workspace` | partial | pending |
-
-## Wave 0 Requirements
-
-- `contracts/core/multisig/src/tests/governance.rs` must add PASG deposit, proposal snapshot, delegation, quorum, approval, and rejected-action coverage.
-- `contracts/core/multisig/src/msg.rs` and `contracts/core/multisig/src/state.rs` must expose queryable governance config, voting-power state, delegation state, and proposal snapshot surfaces.
-- `contracts/core/multisig/src/contract.rs` must reject out-of-scope executable actions before they can be used as passed PASG governance.
-- Governance docs must distinguish legacy admin multisig usage from PASG-holder governance semantics.
-
-## Manual-Only Verifications
-
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Confirm the final governance scope stays limited to PASG and protocol actions and does not drift into off-chain platform operations | GOV-03 | The code can reject many message families, but a reviewer still needs to judge the product and architecture boundary of the documented scope | Review `docs/04-multisig-governance.md`, `contracts/core/multisig/README.md`, `README.md`, and `CLAUDE.md`; confirm no text claims governance over subscriptions, streaming operations, analytics, search, or other off-chain systems |
-
-## Validation Sign-Off
-
-- All tasks have an automated verify or Wave 0 dependency.
-- Sampling continuity: no 3 consecutive tasks without automated verify.
-- Wave 0 covers all missing references.
-- No watch-mode flags.
-- Feedback latency stays under 180 seconds.
-- `nyquist_compliant: true` is set before closure.
-
-**Approval:** pending
+These commands remain relevant as regression protection for the restored admin multisig, but the detailed Phase 3 task map must be regenerated after replanning.

@@ -48,7 +48,7 @@ This repository contains 24 CosmWasm smart contracts for the Passage Protocol NF
 - `ecosystem-factory`: Governed flow for creating ecosystems
 - `collection-factory`: Deploys pg721 collections within ecosystems
 - `revenue-router` (aka split-router): Routes primary/secondary sale revenue with automatic fee distribution
-- `multisig`: PASG-holder governance contract with deposited voting power, delegation, quorum, and scoped protocol execution
+- `multisig`: Proposal-based administrative control with signer rotation
 
 **NFT** (`contracts/nft/`):
 - `pg721`, `pg721-metadata-onchain`, `pg721-updatable`, `pg721-legacy`: NFT collection variants
@@ -70,12 +70,12 @@ This repository contains 24 CosmWasm smart contracts for the Passage Protocol NF
 
 **Path 1** (ecosystem management):
 ```
-registry -> ecosystem-factory -> collection-factory -> pg721
+registry → ecosystem-factory → collection-factory → pg721
 ```
 
 **Path 2** (primary drops):
 ```
-minter-v2 -> (deploys pg721) -> register in registry -> authorize minter
+minter-v2 → (deploys pg721) → register in registry → authorize minter
 ```
 
 ### Revenue Flow
@@ -123,20 +123,12 @@ From the Blockchain Smart Contract Engineer skill profile:
 - No contract in this repo should absorb platform billing, subscription, or other off-chain business rules.
 - If a PASG wrapper or adapter appears later, it is compatibility-only and must forward to native `upasg` semantics.
 
-## PASG Governance Stance
-
-- `contracts/core/multisig` is the PASG-holder governance surface for protocol changes.
-- Governance power comes from deposited native `upasg`, not from a fixed signer set.
-- Delegation, quorum, approval thresholds, and proposal execution readiness must be queryable from contract state.
-- Governance execution is limited to protocol-facing actions and allowlisted contract targets.
-- Governance must not become a transport for subscriptions, streaming operations, analytics, search, or other off-chain platform systems.
-
 ## Documentation
 
 See `docs/` for comprehensive guides:
 1. `01-end-to-end-setup.md` - Complete production setup
 2. `02-method-reference.md` - Message signatures
 3. `03-json-examples.md` - Ready-to-use payloads
-4. `04-multisig-governance.md` - PASG governance patterns
+4. `04-multisig-governance.md` - Admin patterns
 
 Individual contracts have README.md files with access control matrices and migration notes.

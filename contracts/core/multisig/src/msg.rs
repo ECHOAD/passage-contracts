@@ -1,31 +1,20 @@
-use crate::state::{Ballot, Config, Delegation, Proposal, ProposalAction, ProposalStatus, Vote};
+use crate::state::{Ballot, Config, Member, Proposal, ProposalStatus, Vote};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Uint128};
+use cosmwasm_std::{CosmosMsg, Empty};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub pasg_denom: String,
-    pub proposal_threshold: Uint128,
-    pub quorum_bps: u64,
-    pub approval_bps: u64,
+    pub members: Vec<String>,
+    pub threshold: u64,
     pub max_voting_period_secs: u64,
-    pub allowed_execute_contracts: Vec<String>,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    DepositVotingPower {},
-    WithdrawVotingPower {
-        amount: Uint128,
-    },
-    DelegateVotingPower {
-        delegate: String,
-    },
-    UndelegateVotingPower {},
     Propose {
         title: String,
         description: Option<String>,
-        actions: Vec<ProposalAction>,
+        msgs: Vec<CosmosMsg<Empty>>,
     },
     Vote {
         proposal_id: u64,
@@ -37,6 +26,11 @@ pub enum ExecuteMsg {
     Close {
         proposal_id: u64,
     },
+    UpdateMembers {
+        members: Vec<String>,
+        threshold: u64,
+        max_voting_period_secs: Option<u64>,
+    },
 }
 
 #[cw_serde]
@@ -44,10 +38,13 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
     Config {},
-    #[returns(VotingPowerResponse)]
-    VotingPower { address: String },
-    #[returns(DelegationResponse)]
-    Delegation { address: String },
+    #[returns(MemberResponse)]
+    Member { address: String },
+    #[returns(MembersResponse)]
+    Members {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
     #[returns(ProposalResponse)]
     Proposal { proposal_id: u64 },
     #[returns(ProposalsResponse)]
@@ -65,11 +62,6 @@ pub enum QueryMsg {
     },
     #[returns(CanExecuteResponse)]
     CanExecute { proposal_id: u64 },
-    #[returns(ExecutionTargetsResponse)]
-    ExecutionTargets {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
 }
 
 #[cw_serde]
@@ -78,17 +70,13 @@ pub struct ConfigResponse {
 }
 
 #[cw_serde]
-pub struct VotingPowerResponse {
-    pub address: String,
-    pub deposited: Uint128,
-    pub delegated_to: Option<String>,
-    pub incoming_delegated_power: Uint128,
-    pub effective_voting_power: Uint128,
+pub struct MemberResponse {
+    pub member: Option<Member>,
 }
 
 #[cw_serde]
-pub struct DelegationResponse {
-    pub delegation: Option<Delegation>,
+pub struct MembersResponse {
+    pub members: Vec<Member>,
 }
 
 #[cw_serde]
@@ -122,14 +110,4 @@ pub struct VotesResponse {
 pub struct CanExecuteResponse {
     pub proposal_id: u64,
     pub executable: bool,
-}
-
-#[cw_serde]
-pub struct ExecutionTargetsResponse {
-    pub targets: Vec<String>,
-}
-
-#[cw_serde]
-pub struct ScopeExampleResponse {
-    pub proposal_action: Binary,
 }

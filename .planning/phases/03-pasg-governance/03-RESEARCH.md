@@ -1,115 +1,46 @@
 # Phase 3: PASG Governance - Research
 
-**Researched:** 2026-03-18  
-**Domain:** PASG-scoped governance, native-denom voting power, delegation, quorum, and executable protocol changes  
-**Confidence:** MEDIUM-HIGH
+**Researched:** 2026-03-18
+**Updated:** 2026-03-18 after intent-mismatch debug
+**Domain:** PASG governance architecture
+**Confidence:** HIGH
 
 ## Summary
 
-Local repo evidence shows `contracts/core/multisig` is currently a fixed-member admin multisig, not a PASG-holder governance system. It supports member-gated proposal creation, one-vote-per-member approvals, self-call signer rotation, and unrestricted `CosmosMsg` execution once the threshold is reached. That means all three governance requirements remain open:
+The repository already had an established governance/admin primitive before Phase 3 execution: `contracts/core/multisig` was a fixed-member administrative multisig used as the stable owner/admin surface for `registry` and other protocol contracts. The Phase 3 mismatch came from treating that existing contract as the target for PASG-holder governance, which collapsed two different roles into one contract.
 
-- GOV-01 is unmet because PASG holders cannot participate unless they are preconfigured members.
-- GOV-02 is unmet because voting is not token-weighted, has no delegation, and uses a simple member threshold rather than quorum plus approval semantics.
-- GOV-03 is only partially approximated by process discipline; the current contract can execute arbitrary messages and is not scoped to PASG and protocol parameters.
+The corrected research conclusion is:
 
-The safest planning path is to evolve the current `multisig` contract family into a PASG governance module instead of inventing an unrelated governance crate. The roadmap already names `multisig` as the canonical reference, and its proposal storage, pagination, and self-governance patterns are a strong base. The missing pieces are native `upasg` voting-power accounting, per-proposal voting snapshots, delegation state, quorum and approval rules, and an execution allowlist that limits governance to protocol-facing actions.
+- `multisig` must remain the admin-owner control plane.
+- PASG governance must be introduced as a separate voting/proposal layer.
+- Phase 3 must be replanned before implementation resumes.
 
-The most defensible inference from the current repo is that governance voting power should be backed by PASG controlled by the governance contract itself rather than by querying free wallet balances at vote time. Native bank balances are easy to query in the present but difficult to snapshot historically across proposal lifecycles; contract-controlled voting balances avoid that ambiguity and make delegation tractable. This remains compatible with Phase 4, where staking can later become the source or multiplier of governance power through explicit migration or adapter work.
+## What We Know
 
-<phase_requirements>
-## Phase Requirements
+- Pre-Phase-3 `multisig` used `{ members, threshold, max_voting_period_secs }` and self-call `UpdateMembers` semantics.
+- `docs/01-end-to-end-setup.md`, `docs/02-method-reference.md`, and the pre-Phase-3 `docs/04-multisig-governance.md` all describe `multisig` as the admin address for `registry` and other critical protocol contracts.
+- `.planning/PROJECT.md` already recorded that admin governance and operational safety primitives existed through `multisig` before PASG governance work started.
 
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| GOV-01 | PASG holder can create protocol proposals, vote on them, and execute passed actions on-chain. | `contracts/core/multisig/src/msg.rs` and `contract.rs` already model proposal lifecycle, execution, and pagination, but only for hard-coded members. Extending this surface is lower risk than replacing it. |
-| GOV-02 | Governance enforces token-weighted voting, delegation, quorum, and majority rules on-chain. | `contracts/core/multisig/src/state.rs` stores only member ballots and fixed thresholds. New state is required for voting balances, delegation edges, proposal snapshots, quorum, and approval math. |
-| GOV-03 | Governance is limited to PASG and protocol parameters and cannot directly control general off-chain platform operations. | `docs/04-multisig-governance.md`, `CLAUDE.md`, and `../context/product/architecture/ONCHAIN_OFFCHAIN_BOUNDARIES.md` all reinforce that governance belongs to protocol policy, not general platform business operations. Current arbitrary-message execution needs explicit scoping. |
-</phase_requirements>
+## Corrected Direction
 
-## Architecture Patterns
+Phase 3 should add PASG governance without overwriting the admin multisig primitive. That means the next plan must define a separate governance layer and an explicit relationship between that layer and the existing admin execution plane.
 
-### Pattern 1: Reuse `multisig` proposal lifecycle, replace member authority with PASG voting power
-The current contract already has proposal IDs, ballots, status transitions, execution, pagination, and self-governance mechanics. The phase should preserve this foundation and swap fixed-member semantics for PASG-holder semantics instead of designing a second governance engine.
+The exact decomposition remains open. Acceptable directions may include a dedicated PASG governance contract family or DAO-style voting/proposal modules, but the base `multisig` contract should not be repurposed into deposited-balance governance.
 
-### Pattern 2: Use contract-controlled PASG balances for deterministic voting power snapshots
-Native wallet balances are easy to inspect in the moment but poor as a historical voting-power source across a proposal window. The governance contract should likely accept PASG deposits or bonded voting balances, snapshot proposal voting power at creation, and record per-voter consumed or delegated power. This is an inference from current repo constraints.
+## Open Questions For Replan
 
-### Pattern 3: Governance scope must be enforced by contract, not docs
-The current `msgs: Vec<CosmosMsg<Empty>>` execution model is operationally flexible but too broad for PASG-only governance. Phase 3 needs a typed proposal-action surface or a strict allowlist validator for executable messages, so only protocol parameter or contract-governed actions can pass.
+1. What contract or module family will own PASG proposal and voting semantics?
+2. How does a passed governance decision authorize execution through the admin-owner plane?
+3. What emergency or operator path, if any, remains with the base multisig once PASG governance exists?
+4. Which protocol contracts stay directly owned by `multisig`, and which, if any, should be owned by a new governance executor?
 
-### Pattern 4: Keep staking integration deferred but leave a migration seam
-Phase 4 is responsible for staking and rewards, but Phase 3 still needs real governance power now. Governance should use its own voting-balance primitive now, but its config and docs should explicitly leave a future adapter or migration path from deposited governance balances to staking-derived power.
+## Primary Sources
 
-### Anti-Patterns to Avoid
-- Reusing free wallet balance at vote time without proposal snapshots.
-- Preserving unrestricted arbitrary `CosmosMsg` execution under the name of PASG governance.
-- Embedding platform subscriptions, streaming operations, or general business workflows into proposal execution or governance scope.
-- Depending on Phase 4 staking code that does not exist yet as a prerequisite for Phase 3 voting.
-- Leaving delegation as an off-chain convention.
-
-## Likely Contract Insertion Points
-
-### Primary
-- `contracts/core/multisig/src/msg.rs`
-- `contracts/core/multisig/src/contract.rs`
-- `contracts/core/multisig/src/state.rs`
-- `contracts/core/multisig/src/error.rs`
-- `contracts/core/multisig/src/tests/governance.rs`
-- `contracts/core/multisig/README.md`
-
-### Secondary
-- `docs/04-multisig-governance.md`
-- `README.md`
-- `CLAUDE.md`
-
-## Validation Architecture
-
-### Test Framework
-| Property | Value |
-|----------|-------|
-| Framework | Rust `cargo test` + `cw-multi-test 2.1.1` |
-| Quick run command | `cargo test -p multisig --lib --tests` |
-| Secondary quick run | `cargo check -p multisig` |
-| Full suite command | `cargo unit-test` |
-
-### Phase Requirements -> Test Map
-| Req ID | Behavior | Test Type | Automated Command | File Exists? |
-|--------|----------|-----------|-------------------|--------------|
-| GOV-01 | PASG holders can create, vote, and execute passed governance actions | integration | `cargo test -p multisig --lib --tests` | Partial lifecycle coverage exists, PASG-holder path missing |
-| GOV-02 | voting power, delegation, quorum, and approval rules are enforced on-chain | integration + negative cases | `cargo test -p multisig --lib --tests` | Missing |
-| GOV-03 | execution is limited to PASG and protocol parameter actions | integration + auth and validation | `cargo test -p multisig --lib --tests`; `cargo unit-test` | Missing |
-
-### Wave 0 Gaps
-- [ ] `contracts/core/multisig/src/tests/governance.rs` only covers member-threshold lifecycle and self-call protection; no PASG deposit, delegation, quorum, or scoped-execution cases exist.
-- [ ] No query surface currently exposes proposal snapshots, delegated voting power, or execution-scope metadata.
-- [ ] No tests prove that non-governable messages are rejected before proposal creation or execution.
-
-## Open Questions
-
-1. Should PASG voting power come from direct governance deposits, escrowed shares, or a balance adapter?
-Recommendation: use governance-controlled `upasg` deposits for Phase 3, then leave a migration seam for staking in Phase 4.
-
-2. Should execution scoping be typed proposal actions or validated generic messages?
-Recommendation: prefer typed proposal actions if the change set is manageable; otherwise validate a bounded set of `WasmMsg::Execute` targets and payload families with explicit allowlist rules.
-
-3. Should proposer eligibility require a minimum deposited voting power or only any positive PASG balance?
-Recommendation: add an explicit proposal threshold in config to deter spam and make it queryable.
-
-## Sources
-
-### Primary
-- `.planning/ROADMAP.md`
-- `.planning/REQUIREMENTS.md`
-- `.planning/STATE.md`
-- `CLAUDE.md`
-- `.agents/skills/blockchain-smart-contract-engineer/SKILL.md`
-- `contracts/core/multisig/src/msg.rs`
-- `contracts/core/multisig/src/contract.rs`
-- `contracts/core/multisig/src/state.rs`
-- `contracts/core/multisig/src/tests/governance.rs`
-- `contracts/core/multisig/README.md`
-- `docs/04-multisig-governance.md`
-- `..\context\product\architecture\ONCHAIN_OFFCHAIN_BOUNDARIES.md`
-
-**Research date:** 2026-03-18  
-**Valid until:** 2026-04-17
+- `.planning/debug/phase-3-multisig-intent-mismatch.md`
+- `.planning/PROJECT.md`
+- `contracts/core/multisig/src/msg.rs` at `4f259ac^`
+- `contracts/core/multisig/README.md` at `4f259ac^`
+- `docs/01-end-to-end-setup.md`
+- `docs/02-method-reference.md`
+- `docs/04-multisig-governance.md` at `4f259ac^`
+- `../context/product/architecture/ONCHAIN_OFFCHAIN_BOUNDARIES.md`
