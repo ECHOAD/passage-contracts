@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed Phase 9 marketplace-v3 registration redesign; Phase 4 remains the next mainline phase to plan
-last_updated: "2026-03-19T19:10:00Z"
-last_activity: 2026-03-19 - Completed Phase 9 marketplace-v3 registration redesign and kept Phase 4 as mainline focus
+stopped_at: Corrected Phase 4 staking intent to native validator delegation; Phase 4 remains the next mainline phase to plan
+last_updated: "2026-03-19T19:28:38Z"
+last_activity: 2026-03-19 - Corrected Phase 4 staking intent to native validator delegation before planning
 progress:
   total_phases: 9
   completed_phases: 4
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-17)
+See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** PASG must provide real on-chain utility for payments, governance, staking, and creator monetization while keeping platform UX and infrastructure concerns off-chain.
-**Current focus:** Phase 4 - PASG Staking & Rewards
+**Current focus:** Phase 4 - PASG Validator Staking & Rewards
 
 ## Current Position
 
-Phase: 4 of 9 (PASG Staking & Rewards)
+Phase: 4 of 9 (PASG Validator Staking & Rewards)
 Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-03-19 - Completed Phase 9 marketplace-v3 registration redesign and kept Phase 4 as mainline focus
+Last activity: 2026-03-19 - Corrected Phase 4 staking intent to native validator delegation before planning
 
 Progress: [#####-----] 52%
 
@@ -75,6 +75,7 @@ Recent decisions affecting current work:
 - [Debug 2026-03-18]: `multisig` must remain the admin-owner control plane; PASG governance must be designed as a separate voting/proposal layer instead of replacing that contract
 - [Phase 3]: PASG governance now lives in `contracts/core/pasg-governance`, while `multisig` remains the owner-admin executor with typed handoff through `ratified_admin_action`
 - [Phase 9]: `marketplace-v3` now enforces mandatory collection registration, a marketplace-global fee, collection-scoped denoms, and owner-request/admin-approval flows
+- [Debug 2026-03-19]: Phase 4 PASG staking means chain-native delegation to Passage validators; existing `contracts/staking/*` remain NFT staking primitives, not the default PASG staking target
 
 ### Roadmap Evolution
 
@@ -92,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19 19:10 UTC
-Stopped at: Completed Phase 9 marketplace-v3 registration redesign
+Last session: 2026-03-19 19:33 UTC
+Stopped at: Corrected Phase 4 staking intent to native validator delegation before planning
 Resume file: .planning/ROADMAP.md

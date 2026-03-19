@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap starts from a brownfield CosmWasm workspace that already contains meaningful NFT, marketplace, routing, billing, admin-control, and staking primitives. The journey is to harden those existing contracts, formalize PASG utility as the protocol center of gravity, add missing governance and staking mechanics, complete creator monetization and multi-economy settlement, and finish with audit-grade confidence.
+This roadmap starts from a brownfield CosmWasm workspace that already contains meaningful NFT, marketplace, routing, billing, admin-control, and NFT staking primitives. The journey is to harden those existing contracts, formalize PASG utility as the protocol center of gravity, add missing governance and staking mechanics, complete creator monetization and multi-economy settlement, and finish with audit-grade confidence.
 
 ## Phases
 
@@ -13,7 +13,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 - [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
 - [x] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
 - [x] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics without repurposing the existing admin-owner multisig.
-- [ ] **Phase 4: PASG Staking & Rewards** - Add staking, unbonding, and emission logic aligned to the token program.
+- [ ] **Phase 4: PASG Validator Staking & Rewards** - Align PASG with native validator delegation, chain-level unbonding, validator fee participation, and token rewards.
 - [ ] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
 - [ ] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
 - [ ] **Phase 7: Audit Readiness & Launch Hardening** - Raise test coverage, fuzzing, docs, and migration discipline to audit grade.
@@ -69,21 +69,21 @@ Plans:
 - [x] 03-02-PLAN.md - Add deposited voting power, delegation, quorum, and lock enforcement
 - [x] 03-03-PLAN.md - Add scoped multisig handoff, corrected docs, and governance guardrails
 
-### Phase 4: PASG Staking & Rewards
-**Goal**: Add PASG staking, 21-day unbonding, emission logic, and the path toward fee-backed rewards.
+### Phase 4: PASG Validator Staking & Rewards
+**Goal**: Align PASG staking with native Passage validator delegation, chain-level unbonding, validator fee participation, and PASG rewards without inventing a duplicate CosmWasm staking vault by default.
 **Depends on**: Phase 3
 **Requirements**: [STAK-01, STAK-02, STAK-03]
-**Canonical refs**: [`contracts/staking/nft-vault/src/contract.rs`, `contracts/staking/stake-rewards/src/contract.rs`, `contracts/staking/vault-factory/src/contract.rs`, `.planning/codebase/ARCHITECTURE.md`]
+**Canonical refs**: [`../context/whitepaper-tokenomics.html`, `.planning/phases/04-pasg-staking-rewards/04-INTENT-CORRECTION.md`, `.planning/phases/04-pasg-staking-rewards/04-RESEARCH.md`, `.planning/codebase/ARCHITECTURE.md`]
 **Success Criteria** (what must be TRUE):
-  1. PASG holders can stake, begin unbonding, and complete exit after the configured cooldown.
-  2. Reward accounting follows the emission schedule and supports the future fee-backed reward transition.
-  3. Staking balances and reward state can be queried and verified without off-chain reconciliation.
+  1. PASG holders can delegate to one or more Passage validators, initiate undelegation, and complete exit after the chain-level unbonding window.
+  2. Staking rewards reflect validator fee participation and PASG token rewards from the chain/token program rather than a default contract-local emission vault.
+  3. Delegations, validator assignments, undelegation state, and reward surfaces can be queried and verified through chain-native or explicitly documented adapter surfaces without inventing a duplicate staking ledger.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Implement staking core with lock, unbond, and claim flows
-- [ ] 04-02: Implement reward emission and accounting logic
-- [ ] 04-03: Add migration and transition mechanics for post-emission reward sourcing
+- [ ] 04-01: Define the native validator delegation model, validator selection rules, and required chain interfaces
+- [ ] 04-02: Align reward, fee-participation, and query surfaces with the chain staking flow
+- [ ] 04-03: Document migration, dependencies, and any minimal adapter or contract work required by the native model
 
 ### Phase 5: Creator Asset Contracts & Monetization
 **Goal**: Complete the asset-contract model around creators, collections, worlds, plugins, and monetization-bearing NFT types.
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
 | 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
 | 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
-| 4. PASG Staking & Rewards | 0/3 | Not started | - |
+| 4. PASG Validator Staking & Rewards | 0/3 | Not started | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |

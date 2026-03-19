@@ -25,9 +25,9 @@
 
 ### Staking
 
-- [ ] **STAK-01**: PASG holder can stake and unstake with a 21-day unbonding period.
-- [ ] **STAK-02**: Staking rewards follow the configured emission schedule and can transition to fee-backed rewards.
-- [ ] **STAK-03**: Staking balances, rewards, and reward-state transitions are queryable and testable without manual bookkeeping.
+- [ ] **STAK-01**: PASG holder can delegate and undelegate stake to one or more Passage validators through the chain-native staking flow, with the expected 21-day unbonding period.
+- [ ] **STAK-02**: Delegated PASG participates in validator fee sharing and PASG token rewards defined by the chain/token program, without assuming a separate default CosmWasm emission vault.
+- [ ] **STAK-03**: Delegation balances, validator assignments, undelegation state, and reward-state transitions are queryable and testable through chain-native or documented adapter surfaces without manual bookkeeping.
 
 ### NFT Assets & Creator Monetization
 
@@ -101,7 +101,7 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 3 completion*
+*Last updated: 2026-03-19 after Phase 4 intent correction*
 
 
 
