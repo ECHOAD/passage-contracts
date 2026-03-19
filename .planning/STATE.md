@@ -71,6 +71,10 @@ Recent decisions affecting current work:
 - [Phase 2]: contract docs and JSON examples now require query-first PASG verification instead of contract-local assumptions
 - [Phase 2]: minter-v2 schema outputs are checked in and split-router schema now exposes inspectable routing metadata
 
+### Roadmap Evolution
+
+- Phase 8 added: Documentacion completa bilingue de contratos en docs
+
 ### Pending Todos
 
 None yet.
@@ -84,3 +88,4 @@ None yet.
 Last session: 2026-03-19 00:43 UTC
 Stopped at: Completed Phase 2 PASG Utility Surface
 Resume file: .planning/ROADMAP.md
+
