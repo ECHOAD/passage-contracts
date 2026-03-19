@@ -173,3 +173,8 @@ incremental = false
 [profile.release.package.vault-factory]
 codegen-units = 1
 incremental = false
+
+[profile.release.package.pasg-governance]
+codegen-units = 1
+incremental = false
+
