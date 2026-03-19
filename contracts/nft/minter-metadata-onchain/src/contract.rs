@@ -103,6 +103,7 @@ pub fn instantiate(
                         name: cw721_instantiate_msg.name,
                         symbol: cw721_instantiate_msg.symbol,
                         minter: env.contract.address.to_string(),
+                        nft_type: cw721_instantiate_msg.nft_type,
                         collection_info: cw721_instantiate_msg.collection_info,
                     })?,
                     funds: info.funds,

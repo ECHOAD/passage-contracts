@@ -16,6 +16,7 @@ pub(super) use crate::msg::{
 pub(super) use crate::state::{
     Config, EcosystemCreationRequest, EcosystemCreationRequestStatus, PendingEcosystemCreation,
     CONFIG, NEXT_REQUEST_ID, PENDING_ECOSYSTEM_CREATIONS, PENDING_REQUEST_BY_ID, REQUESTS,
+    REQUESTS_BY_CREATOR,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-ecosystem-factory";

@@ -5,9 +5,9 @@ use cw721::{Cw721QueryMsg, NftInfoResponse, OwnerOfResponse};
 use cw721_base::ExecuteMsg as Cw721ExecuteMsg;
 use cw_multi_test::{App, AppBuilder, BankSudo, Contract, ContractWrapper, Executor, SudoMsg};
 use pg721_metadata_onchain::msg::{
-    InstantiateMsg as Pg721InstantiateMsg, Metadata, RoyaltyInfoResponse,
+    CollectionInfoMsg, InstantiateMsg as Pg721InstantiateMsg, Metadata, NftType,
+    RoyaltyInfoResponse,
 };
-use pg721_metadata_onchain::state::CollectionInfo;
 use whitelist::msg::InstantiateMsg as WhitelistInstantiateMsg;
 use whitelist::msg::{AddMembersMsg, ExecuteMsg as WhitelistExecuteMsg};
 
@@ -121,7 +121,8 @@ fn setup_minter_contract(
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: creator.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: creator.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
@@ -179,6 +180,9 @@ fn upsert_metadata(
                 background_color: None,
                 animation_url: None,
                 youtube_url: None,
+                nft_type: None,
+                native_assets: None,
+                extension: None,
             },
         })
     }
@@ -265,7 +269,8 @@ fn initialization() {
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: info.sender.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: info.sender.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
@@ -293,7 +298,8 @@ fn initialization() {
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: info.sender.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: info.sender.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
@@ -1209,7 +1215,8 @@ fn test_start_time_before_genesis() {
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: creator.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: creator.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
@@ -1259,7 +1266,8 @@ fn test_update_start_time() {
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: creator.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: creator.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
@@ -1340,7 +1348,8 @@ fn test_invalid_start_time() {
             name: String::from("TEST"),
             symbol: String::from("TEST"),
             minter: creator.to_string(),
-            collection_info: CollectionInfo {
+            nft_type: NftType::Avatar,
+            collection_info: CollectionInfoMsg {
                 creator: creator.to_string(),
                 description: String::from("Passage Monkeys"),
                 image: "https://example.com/image.png".to_string(),
