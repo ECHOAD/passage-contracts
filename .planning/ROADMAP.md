@@ -159,3 +159,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 Plans:
 - [ ] TBD (run /gsd:plan-phase 8 to break down)
 
+
+### Phase 9: marketplace-v3 registration, ownership validation, and admin approval redesign
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 8
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 9 to break down)
