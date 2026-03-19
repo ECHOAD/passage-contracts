@@ -1,158 +1,125 @@
 # Multisig Governance
 
-This guide explains the recommended Passage admin pattern: use `multisig` as the admin address for `registry` and other critical contracts.
+This guide documents the Phase 3 PASG governance model for Passage.
 
-## Why `multisig`
+`multisig` is no longer just a fixed-signer administrative shell. It is now the PASG-holder governance primitive for protocol-scoped decisions: deposited native `upasg` creates voting power, holders can delegate directly, and proposals pass only when on-chain quorum and approval rules are met.
 
-Recommended reasons:
+## Scope Boundary
 
-- one signer compromise does not automatically compromise the full admin surface
-- admin actions become auditable proposals instead of direct wallet actions
-- signer rotation can happen without changing the multisig address
+Governance is limited to PASG and protocol-facing configuration.
 
-## Recommended ownership model
+It can govern:
+- its own governance parameters
+- the allowlist of contracts governance may execute against
+- zero-fund execute messages to allowlisted protocol contracts
 
-For `registry`:
+It does not govern:
+- subscriptions, premium tiers, Stripe orchestration, or fiat ops
+- streaming infrastructure or backend operator workflows
+- analytics, search, recommendation systems, or other off-chain platform operations
+- arbitrary bank sends or unrestricted contract calls
 
-- `registry InstantiateMsg.admin = <multisig_addr>`
-- CosmWasm instance admin for `registry` = `<multisig_addr>`
-- `operators` remain separate and should be less trusted than the multisig
+This boundary is enforced in contract logic, not left as an operational convention.
 
-## Deployment order
+## Instantiate Model
 
-1. Store and instantiate `multisig`.
-2. Store and instantiate `registry`.
-3. In `registry` instantiate:
-   - set `admin = <multisig_addr>`
-4. In the CosmWasm instantiate transaction:
-   - set instance admin to `<multisig_addr>`
-5. Deploy `ecosystem-factory`.
-6. Use a multisig proposal to wire `registry.UpdateConfig { ecosystem_factory }`.
-
-## How proposals work
-
-1. A signer sends `multisig.Propose`.
-2. The proposal contains one or more `CosmosMsg` messages.
-3. Other signers vote with `Approve` or `Reject`.
-4. Once the threshold is reached, anyone can call `multisig.Execute`.
-
-Important detail:
-
-- if the proposal wraps a `WasmMsg::Execute`, the inner contract message is stored as base64-encoded binary
-
-## Example: update `registry` config through `multisig`
-
-Inner `registry` message:
+Example instantiate payload:
 
 ```json
 {
-  "update_config": {
-    "admin": null,
-    "operators": ["passage1ops1...", "passage1ops2..."],
-    "ecosystem_factory": "passage1factory...",
-    "paused": null
+  "pasg_denom": "upasg",
+  "proposal_threshold": "1000000",
+  "quorum_bps": 5000,
+  "approval_bps": 6000,
+  "max_voting_period_secs": 86400,
+  "allowed_execute_contracts": [
+    "passage1registry...",
+    "passage1streaming..."
+  ]
+}
+```
+
+Meaning:
+- `pasg_denom`: native PASG denomination used for governance deposits
+- `proposal_threshold`: minimum voting power required to open a proposal
+- `quorum_bps`: minimum participation required from the proposal snapshot
+- `approval_bps`: minimum approval ratio among counted votes
+- `allowed_execute_contracts`: protocol contract targets governance may call
+
+## Governance Power Lifecycle
+
+1. A holder deposits `upasg` via `DepositVotingPower`.
+2. The contract tracks deposited balance as governance power.
+3. A holder may delegate directly to another holder with `DelegateVotingPower`.
+4. While a proposal is open, deposits, withdrawals, and delegation changes are locked so the vote window stays deterministic.
+5. After proposals resolve, holders can rebalance or withdraw with `WithdrawVotingPower`.
+
+## Proposal Lifecycle
+
+1. A holder with at least `proposal_threshold` creates `Propose { title, description, actions }`.
+2. The contract snapshots `total_power_snapshot`, `quorum_bps`, and `approval_bps` into the proposal.
+3. Holders vote `Approve` or `Reject` with weighted power.
+4. `CanExecute` becomes true only when quorum and approval are both satisfied.
+5. Anyone can call `Execute { proposal_id }` for a passed proposal.
+6. Expired proposals that did not pass can be closed with `Close { proposal_id }`.
+
+## Supported Proposal Actions
+
+### Update governance config
+
+```json
+{
+  "update_governance_config": {
+    "proposal_threshold": "1500000",
+    "quorum_bps": 5500,
+    "approval_bps": 6500,
+    "max_voting_period_secs": 172800
   }
 }
 ```
 
-Outer `multisig` proposal:
+### Update execution targets
 
 ```json
 {
-  "propose": {
-    "title": "Wire ecosystem factory",
-    "description": "Authorize the deployed ecosystem factory in registry",
-    "msgs": [
-      {
-        "wasm": {
-          "execute": {
-            "contract_addr": "passage1registry...",
-            "msg": "<base64 of the inner registry message>",
-            "funds": []
-          }
-        }
-      }
-    ]
+  "update_execution_targets": {
+    "add": ["passage1registry..."],
+    "remove": ["passage1oldtarget..."]
   }
 }
 ```
 
-Then:
+### Execute against an allowlisted protocol contract
 
 ```json
 {
-  "vote": {
-    "proposal_id": 1,
-    "vote": "approve"
+  "wasm_execute": {
+    "contract_addr": "passage1registry...",
+    "msg": "<base64 encoded execute message>"
   }
 }
 ```
 
-And finally:
+## Queries Operators Should Use
 
-```json
-{
-  "execute": {
-    "proposal_id": 1
-  }
-}
-```
+- `Config {}`: current governance parameters
+- `VotingPower { address }`: deposited power, incoming delegated power, effective power, delegate target
+- `Delegation { address }`: outgoing delegation for an address
+- `Proposal { proposal_id }`: stored proposal plus computed status
+- `CanExecute { proposal_id }`: whether a proposal is executable right now
+- `ExecutionTargets {}`: allowlisted protocol targets
 
-## Example: rotate a compromised signer
+## Recommended Ownership Model
 
-Because `UpdateMembers` is self-call only, signer rotation is done by proposing a `WasmMsg::Execute` that targets the multisig itself.
+For contracts such as `registry` and similar protocol primitives:
+- set contract-level admin to the `multisig` address
+- set CosmWasm instance admin to the `multisig` address when governance should control migration or config
+- keep lower-trust operator roles separate from governance
 
-Inner `multisig` message:
-
-```json
-{
-  "update_members": {
-    "members": [
-      "passage1signer1...",
-      "passage1signer2...",
-      "passage1signer4..."
-    ],
-    "threshold": 2,
-    "max_voting_period_secs": 86400
-  }
-}
-```
-
-Outer proposal:
-
-```json
-{
-  "propose": {
-    "title": "Replace compromised signer",
-    "description": "Remove signer3 and add signer4",
-    "msgs": [
-      {
-        "wasm": {
-          "execute": {
-            "contract_addr": "passage1multisig...",
-            "msg": "<base64 of the inner multisig message>",
-            "funds": []
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-## Operational guidance
+## Operational Defaults
 
 Recommended defaults for Passage:
-
-- use a contract multisig, not a native multisig account
-- use `2 of 3` for a small operating team or `3 of 5` for a more institutional setup
-- use hardware wallets for all signers
-- avoid giving `operators` the same authority as the multisig
-
-What the multisig should own:
-
-- `registry`
-- `ecosystem-factory`
-- `marketplace-v3`
-- `auction-english`
-- any future contract with upgrade or config authority
+- use native `upasg` deposits for governance power
+- treat delegation as a convenience for participation, not a replacement for quorum
+- allowlist only contracts whose config belongs to PASG or protocol governance
+- never use governance as a transport for off-chain business operations
