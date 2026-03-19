@@ -1,360 +1,180 @@
 # Passage Split Router Contract
 
-The Split Router is the **financial brain** of the Passage ecosystem. It handles automatic, configurable revenue distribution for all economic activity including minting (primary sales), marketplace transactions (secondary sales), and auctions.
+`split-router` is the repo's generic native-fund splitter.
 
-## Overview
+It accepts attached funds, preserves the input denoms, and fans those funds out across a configured recipient list. It is not the canonical PASG policy surface.
 
-The Split Router replaces the fragmented revenue handling in the existing contracts:
-- **Minter**: Previously accumulated funds for manual admin withdrawal
-- **Marketplace**: Previously hardcoded direct fee/royalty distribution
+## PASG Boundary
 
-With the Split Router, all revenue flows through a single, configurable contract that:
-- Applies platform fees automatically
-- Distributes to creators and collaborators
-- Tracks all financial events for auditing
-- Supports split wallets for complex multi-party distributions
+- `split-router` can forward `upasg`, but it does not define PASG conversion rules, fee treatment policy, adapter behavior, or subscription logic.
+- The canonical PASG query surface lives in `streaming-billing` at `QueryMsg::PasgUtility {}`.
+- `RouteWorldRevenue` exists as a compatibility execute shape so `streaming-billing` can hand world revenue into the same generic split path.
+- Platform billing, premium-tier logic, and service-owned orchestration remain off-chain.
 
-## PASG Integration Boundary
+## What The Contract Does
 
-`split-router` is a generic routing primitive, not the canonical PASG policy surface.
+- Stores one active split configuration with weighted recipients.
+- Splits any attached native funds across that configuration.
+- Records recent split events for auditing and preview validation.
+- Exposes queryable routing metadata so integrators can confirm the contract preserves input denoms.
 
-- It accepts and distributes whatever native funds producers attach, including `upasg`.
-- It does not define PASG conversion rules, wrapper behavior, fee treatment policy, or subscription semantics.
-- Integrators that need canonical PASG utility semantics should query `streaming-billing` via `QueryMsg::PasgUtility {}` and then forward native funds into the router.
-- Platform billing and subscription policy remain off-chain even when routed funds are PASG-denominated.
-
-## Features
-
-### Distribution Rules
-- Configure per-collection distribution rules
-- Set custom platform fee overrides
-- Define creator and collaborator shares
-- Link to royalty pools for secondary sales
-
-### Revenue Routing
-- Route primary sale revenue (minting)
-- Route secondary sale revenue (marketplace)
-- Route auction sale revenue
-- Automatic platform fee deduction
-- Automatic collaborator payment
-
-### Split Wallets
-- Create multi-recipient split wallets (evolved from royalty-group)
-- Weight-based distribution
-- Admin-controlled recipient management
-
-### Analytics & Auditing
-- Track all revenue events
-- Per-collection statistics
-- Total volume tracking
-- Platform fee tracking
-
-## Architecture
-
-```
-[Minter v2] ──────┐
-                  │
-[Marketplace v3] ─┼──► [Revenue Router] ──► [Platform Treasury]
-                  │           │
-[Auction]  ───────┘           ├──► [Creator]
-                              ├──► [Collaborators]
-                              └──► [Split Wallets]
-```
-
-## Messages
-
-### Instantiate
+## Instantiate Message
 
 ```json
 {
-  "admin": "passage1...",
-  "platform_fee_collector": "passage1treasury...",
-  "default_platform_fee": "0.025",
-  "registry": "passage1registry..."
+  "admin": "passage1admin...",
+  "recipients": [
+    {
+      "address": "passage1creator...",
+      "share": "0.85",
+      "label": "Creator"
+    },
+    {
+      "address": "passage1collab...",
+      "share": "0.15",
+      "label": "Collaborator"
+    }
+  ],
+  "active": true
 }
 ```
 
-### Execute Messages
+If `admin` is omitted, the instantiating sender becomes admin.
 
-#### Admin Operations
-```rust
-UpdateConfig {
-    admin: Option<String>,
-    platform_fee_collector: Option<String>,
-    default_platform_fee: Option<Decimal>,
-    registry: Option<String>,
-    paused: Option<bool>,
+## Execute Surface
+
+### `UpdateConfig`
+
+Admin-only update for `admin` and `paused`.
+
+```json
+{
+  "update_config": {
+    "admin": null,
+    "paused": false
+  }
 }
 ```
 
-#### Distribution Rules
-```rust
-// Set distribution rule for a collection
-SetDistributionRule {
-    collection: String,
-    creator: String,
-    creator_share: Decimal,        // e.g., "0.95" for 95%
-    platform_fee: Option<Decimal>, // Override default
-    collaborators: Option<Vec<CollaboratorInput>>,
-    royalty_pool: Option<String>,
-}
+### `UpdateSplit`
 
-// Update existing rule
-UpdateDistributionRule {
-    collection: String,
-    creator: Option<String>,
-    creator_share: Option<Decimal>,
-    platform_fee: Option<Decimal>,
-    collaborators: Option<Vec<CollaboratorInput>>,
-    royalty_pool: Option<String>,
-    active: Option<bool>,
-}
+Admin-only update for the recipient set or active flag.
 
-// Remove rule
-RemoveDistributionRule { collection: String }
-
-// Optional ecosystem treasury metadata (no ecosystem fee at this stage)
-SetEcosystemConfig {
-    ecosystem_id: String,
-    treasury: Option<String>,
+```json
+{
+  "update_split": {
+    "recipients": [
+      {
+        "address": "passage1creator...",
+        "share": "0.80",
+        "label": "Creator"
+      },
+      {
+        "address": "passage1producer...",
+        "share": "0.20",
+        "label": "Producer"
+      }
+    ],
+    "active": true
+  }
 }
 ```
 
-#### Revenue Routing
-```rust
-// Called by Minter v2 on each mint
-RoutePrimarySale { collection: String }
+### `Split`
 
-// Called by Marketplace v3 on each sale
-RouteSecondarySale {
-    collection: String,
-    seller: String,
-    royalty_amount: Uint128,
-}
+Generic split entrypoint. Attach funds in the transaction rather than inside the JSON message.
 
-// Called by Auction contract
-RouteAuctionSale {
-    collection: String,
-    seller: String,
-    royalty_amount: Uint128,
+```json
+{
+  "split": {}
 }
 ```
 
-#### Split Wallets
-```rust
-CreateSplitWallet {
-    id: String,
-    recipients: Vec<SplitRecipientInput>,
-}
+### `RouteWorldRevenue`
 
-UpdateSplitWallet {
-    id: String,
-    recipients: Vec<SplitRecipientInput>,
-}
+Compatibility alias for `streaming-billing` world revenue forwarding. It reuses the same native-fund split path and preserves input denoms.
 
-DistributeSplitWallet { id: String }
-
-RemoveSplitWallet { id: String }
-```
-
-### Query Messages
-
-```rust
-// Configuration
-Config {}
-
-// Distribution rules
-DistributionRule { collection: String }
-DistributionRules { start_after, limit }
-
-// Ecosystem config
-EcosystemConfig { ecosystem_id: String }
-
-// Preview distribution without executing
-PreviewDistribution {
-    collection: String,
-    amount: Uint128,
-    event_type: RevenueEventType,
-}
-
-// Statistics
-CollectionStats { collection: String }
-RevenueEvents { collection, start_after, limit }
-
-// Split wallets
-SplitWallet { id: String }
-SplitWallets { start_after, limit }
-```
-
-## Distribution Flow
-
-### Primary Sale (Minting)
-```
-Total Payment
-    │
-    ├── Platform Fee (2.5% default) ──► Platform Treasury
-    │
-    └── Remaining (97.5%)
-            │
-            ├── Collaborator 1 (10% of remaining) ──► Collaborator
-            ├── Collaborator 2 (5% of remaining)  ──► Collaborator
-            │
-            └── Creator (remaining) ──► Creator Wallet
-```
-
-### Secondary Sale (Marketplace)
-```
-Sale Price
-    │
-    ├── Platform Fee (2.5%) ──► Platform Treasury
-    │
-    ├── Seller Amount (after fees & royalty) ──► Seller
-    │
-    └── Royalty Amount
-            │
-            ├── Collaborator shares ──► Collaborators
-            └── Creator share ──► Creator
-```
-
-## State Structure
-
-```rust
-// Configuration
-Config {
-    admin: Addr,
-    platform_fee_collector: Addr,
-    default_platform_fee: Decimal,
-    registry: Option<Addr>,
-    paused: bool,
-}
-
-// Distribution Rule (per collection)
-DistributionRule {
-    collection: Addr,
-    platform_fee: Option<Decimal>,
-    creator: Addr,
-    creator_share: Decimal,
-    collaborators: Vec<Collaborator>,
-    royalty_pool: Option<Addr>,
-    active: bool,
-    created_at: u64,
-    updated_at: u64,
-}
-
-// Collaborator
-Collaborator {
-    address: Addr,
-    share: Decimal,
-    name: Option<String>,
-}
-
-// Revenue Event (for auditing)
-RevenueEvent {
-    id: u64,
-    collection: Addr,
-    event_type: RevenueEventType,
-    total_amount: Uint128,
-    denom: String,
-    platform_fee: Uint128,
-    creator_amount: Uint128,
-    collaborator_amounts: Vec<(Addr, Uint128)>,
-    timestamp: u64,
-    tx_sender: Addr,
-}
-
-// Collection Statistics
-CollectionStats {
-    total_primary_volume: Uint128,
-    total_secondary_volume: Uint128,
-    total_platform_fees: Uint128,
-    total_creator_earnings: Uint128,
-    total_royalties: Uint128,
-    event_count: u64,
+```json
+{
+  "route_world_revenue": {
+    "world_nft_id": "world-1",
+    "world_collection": "passage1collection..."
+  }
 }
 ```
 
-## Integration Guide
+## Query Surface
 
-### For Minter v2
+### `Config`
 
-```rust
-// On mint, call Revenue Router with payment
-let route_msg = SplitRouterExecuteMsg::RoutePrimarySale {
-    collection: collection_address.to_string(),
-};
-
-let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
-    contract_addr: split_router_address.to_string(),
-    msg: to_json_binary(&route_msg)?,
-    funds: vec![payment_coin],
-});
+```json
+{
+  "config": {}
+}
 ```
 
-### For Marketplace v3
+### `SplitConfig`
 
-```rust
-// On sale, call Revenue Router with payment
-let route_msg = SplitRouterExecuteMsg::RouteSecondarySale {
-    collection: collection_address.to_string(),
-    seller: seller_address.to_string(),
-    royalty_amount: calculated_royalty,
-};
-
-let route_submsg = CosmosMsg::Wasm(WasmMsg::Execute {
-    contract_addr: split_router_address.to_string(),
-    msg: to_json_binary(&route_msg)?,
-    funds: vec![sale_amount_coin],
-});
+```json
+{
+  "split_config": {}
+}
 ```
 
-## Migration and Upgrade Notes
+### `SplitEvents`
 
-`split-router` does not currently expose a `migrate` entrypoint. Upgrade strategy is deploy-and-cutover:
-See also: [`MIGRATION.md`](./MIGRATION.md).
+```json
+{
+  "split_events": {
+    "start_after": null,
+    "limit": 20
+  }
+}
+```
 
-1. Deploy a new router instance.
-2. Recreate distribution rules (`SetDistributionRule`) in the new instance.
-3. Recreate split wallets if used.
-4. Update all producers to point to the new router:
-   - `marketplace-v3` via `UpdateConfig { split_router, use_split_router }`
-   - `minter-v2` via `UpdateConfig { split_router, use_split_router }`
-   - set optional ecosystem treasury via `SetEcosystemConfig`
-5. Verify with low-value primary and secondary test flows.
+### `PreviewSplit`
 
-Operational note:
-- Funds already sent to the previous router remain there. Distribute/settle them before decommissioning old routing paths.
+Preview the exact recipient amounts for attached funds before executing.
 
-## Access Control
+```json
+{
+  "preview_split": {
+    "funds": [
+      { "denom": "upasg", "amount": "1000000" },
+      { "denom": "uatom", "amount": "5000" }
+    ]
+  }
+}
+```
 
-| Action | Who Can Execute |
-|--------|-----------------|
-| Update Config | Contract Admin |
-| Set Distribution Rule | Contract Admin |
-| Update Distribution Rule | Contract Admin or Collection Creator (via Registry) |
-| Route Revenue | Any contract (Minter, Marketplace, Auction) |
-| Create Split Wallet | Anyone |
-| Modify Split Wallet | Split Wallet Admin |
-| Distribute Split Wallet | Anyone (with funds) |
+### `RoutingMetadata`
 
-## Events
+Queryable routing metadata for PASG-aware integrators.
 
-All routing operations emit events for indexer consumption:
-- `action`: The operation type
-- `collection`: Collection address
-- `event_type`: PrimarySale, SecondarySale, Auction, Royalty
-- `total_amount`: Total payment received
-- `platform_fee`: Platform fee deducted
-- `creator_amount`: Amount sent to creator
-- `event_id`: Unique event identifier
+```json
+{
+  "routing_metadata": {}
+}
+```
 
-## Constraints
+`RoutingMetadataResponse` confirms:
 
-- Maximum platform fee: 10%
-- Creator share must be > 0 and <= 100%
-- Total collaborator shares must be <= 100%
-- Split wallet total weight must be > 0
-- Maximum stored events: 1000 (older events pruned)
+- attached funds are forwarded
+- input denoms are preserved
+- `PreviewSplit` is the preview query
+- `Split` and `RouteWorldRevenue` are the execute routes
 
-## License
+## Verification Path For PASG-Aware Integrators
 
-Apache-2.0
+1. Query `streaming-billing` with `PasgUtility {}` to learn the canonical PASG model.
+2. Query `split-router` with `RoutingMetadata {}` to confirm denom-preserving forwarding.
+3. Use `PreviewSplit { funds }` to inspect the exact recipient amounts before sending `upasg`.
+4. Execute `Split {}` or `RouteWorldRevenue {}` with attached native funds.
+
+## Build And Test
+
+```bash
+cargo build -p split-router
+cargo run --example schema
+cargo test -p split-router --lib
+```
