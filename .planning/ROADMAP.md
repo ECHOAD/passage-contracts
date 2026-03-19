@@ -65,9 +65,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Implement proposal lifecycle and executable action surface
-- [ ] 03-02: Implement token-weighted voting, delegation, and threshold rules
-- [ ] 03-03: Add scoped execution and operational safeguards for PASG-only governance
+- [ ] 03-01-PLAN.md - Build the separate PASG governance contract and governance-owned parameter surface
+- [ ] 03-02-PLAN.md - Add deposited voting power, delegation, quorum, and lock enforcement
+- [ ] 03-03-PLAN.md - Add scoped multisig handoff, corrected docs, and governance guardrails
 
 ### Phase 4: PASG Staking & Rewards
 **Goal**: Add PASG staking, 21-day unbonding, emission logic, and the path toward fee-backed rewards.
