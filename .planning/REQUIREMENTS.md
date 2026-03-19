@@ -25,9 +25,9 @@
 
 ### Staking
 
-- [x] **STAK-01**: PASG holder can delegate and undelegate stake to one or more Passage validators through the chain-native staking flow, with the expected 21-day unbonding period when that remains the chain-level staking rule.
-- [x] **STAK-02**: Delegated PASG participates in validator fee sharing and PASG token rewards defined by the chain/token program, without assuming a separate default CosmWasm emission vault.
-- [x] **STAK-03**: Delegation balances, validator assignments, undelegation state, and reward-state transitions are queryable and testable through chain-native or documented adapter surfaces without manual bookkeeping.
+- [ ] **STAK-01**: PASG holder can delegate and undelegate stake to one or more Passage validators through the chain-native staking flow, with the expected 21-day unbonding period when that remains the chain-level staking rule.
+- [ ] **STAK-02**: Delegated PASG participates in validator fee sharing and PASG token rewards defined by the chain/token program, without assuming a separate default CosmWasm emission vault.
+- [ ] **STAK-03**: Delegation balances, validator assignments, undelegation state, and reward-state transitions are queryable and testable through chain-native or documented adapter surfaces without manual bookkeeping.
 
 ### NFT Assets & Creator Monetization
 
@@ -80,9 +80,9 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | GOV-01 | Phase 3 | Complete |
 | GOV-02 | Phase 3 | Complete |
 | GOV-03 | Phase 3 | Complete |
-| STAK-01 | Phase 4 | Complete |
-| STAK-02 | Phase 4 | Complete |
-| STAK-03 | Phase 4 | Complete |
+| STAK-01 | Phase 4 | Pending |
+| STAK-02 | Phase 4 | Pending |
+| STAK-03 | Phase 4 | Pending |
 | NFT-01 | Phase 5 | Pending |
 | NFT-02 | Phase 5 | Pending |
 | NFT-03 | Phase 5 | Pending |
@@ -101,8 +101,7 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 4 completion*
-
+*Last updated: 2026-03-19 after Phase 4 intent correction*
 
 
 
