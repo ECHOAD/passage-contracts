@@ -70,12 +70,12 @@ Plans:
 - [x] 03-03-PLAN.md - Add scoped multisig handoff, corrected docs, and governance guardrails
 
 ### Phase 4: PASG Validator Staking & Rewards
-**Goal**: Align PASG staking with native Passage validator delegation, chain-level unbonding, validator fee participation, and PASG rewards without inventing a duplicate CosmWasm staking vault by default.
+**Goal**: Align PASG staking with chain-native staking through native Passage validator delegation, chain-level unbonding, validator fee participation, and PASG rewards without inventing a duplicate CosmWasm staking vault by default.
 **Depends on**: Phase 3
 **Requirements**: [STAK-01, STAK-02, STAK-03]
 **Canonical refs**: [`../context/whitepaper-tokenomics.html`, `.planning/phases/04-pasg-staking-rewards/04-INTENT-CORRECTION.md`, `.planning/phases/04-pasg-staking-rewards/04-RESEARCH.md`, `.planning/codebase/ARCHITECTURE.md`]
 **Success Criteria** (what must be TRUE):
-  1. PASG holders can delegate to one or more Passage validators, initiate undelegation, and complete exit after the chain-level unbonding window.
+  1. PASG holders can delegate to one or more Passage validators, initiate undelegation, and complete exit after the chain-level unbonding window, including an expected 21-day wait when that remains the chain rule.
   2. Staking rewards reflect validator fee participation and PASG token rewards from the chain/token program rather than a default contract-local emission vault.
   3. Delegations, validator assignments, undelegation state, and reward surfaces can be queried and verified through chain-native or explicitly documented adapter surfaces without inventing a duplicate staking ledger.
 **Plans**: 3 plans

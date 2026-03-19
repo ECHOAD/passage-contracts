@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 4 should align PASG staking to the chain-native validator delegation model described in `../context/whitepaper-tokenomics.html`. PASG holders delegate native `upasg` to one or more Passage validators, validators receive a percentage of fees from delegated stake, and holders receive additional PASG rewards for participating in network security.
+Phase 4 should align PASG staking to the chain-native staking and native validator delegation model described in `../context/whitepaper-tokenomics.html`. PASG holders delegate native `upasg` to one or more Passage validators, validators receive a percentage of fees from delegated stake, and holders receive additional PASG rewards for participating in network security.
 
 Any 21-day unbonding expectation should be treated as a chain staking rule or validator-program rule, not as a default CosmWasm claim queue.
 
@@ -13,7 +13,7 @@ The local whitepaper is explicit about staking intent:
 - Validators receive a percentage of fees from delegated stake.
 - Delegators receive additional PASG token rewards.
 
-Implication: Phase 4 is about native staking/delegation surfaces and validator economics, not inventing a parallel staking vault.
+Implication: Phase 4 is about chain-native staking surfaces and validator economics, not a duplicate CosmWasm staking vault.
 
 ## Repo Reality
 
@@ -23,6 +23,20 @@ This repo already contains staking-domain contracts, but they are not the PASG t
 - `contracts/staking/vault-factory` deploys vault instances.
 
 These crates are useful brownfield context only. They must not define the default PASG staking shape.
+
+## Native Responsibility Map
+
+- Chain staking module and validator set: source of truth for delegation balances, undelegation entries, reward accrual, validator metadata, and the actual unbonding clock.
+- Wallets and services: initiate delegate, undelegate, and redelegate transactions; present validator-selection guidance; and query positions, undelegations, and rewards from chain-native surfaces.
+- This repo: documents the native action model, clarifies non-goals, and only adds a thin adapter if the chain-native flow leaves a real integration or observability gap.
+
+## Native Action Model
+
+- `delegate(upasg, validator)` delegates native PASG to a selected Passage validator.
+- `undelegate(upasg, validator, amount)` starts the chain-native unbonding flow and should be documented as waiting on chain rules rather than a repo-local queue.
+- `redelegate(upasg, src_validator, dst_validator, amount)` moves stake between Passage validators without inventing intermediate CosmWasm balances.
+- Query surfaces must cover delegations, undelegations, validator assignments, validator metadata, and rewards through the chain staking module or a documented adapter.
+- Validator selection should consider one or more Passage validators using chain-native identity, commission, uptime, and any governance or operator policy constraints.
 
 ## Research Priorities
 
@@ -53,6 +67,7 @@ Clarify which staking parameters are chain-governed, validator-program governed,
 - Rewards: validator fee share plus PASG rewards as defined by the chain/token program
 - Contract work: only minimal adapters, metadata, or policy surfaces if the native flow leaves a real gap
 - Non-goal: a standalone `pasg-staking` vault that keeps balances, unbond claims, and reward accumulators in CosmWasm storage
+- Non-goal phrasing to preserve: PASG staking is not a duplicate CosmWasm staking vault
 
 ## Do Not Assume
 

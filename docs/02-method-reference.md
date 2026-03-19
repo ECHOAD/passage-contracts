@@ -455,6 +455,27 @@ If the goal is a secondary sale, the minimum path is usually:
 3. `split-router`
 4. `marketplace-v3` or `auction-english`
 
+## PASG native staking model
+
+Architecture boundary:
+
+- PASG staking means chain-native staking through native validator delegation on Passage, not a duplicate CosmWasm staking vault.
+- The source of truth for delegation balances, undelegation entries, validator assignments, and reward state is the chain staking module plus the active validator set.
+- `contracts/staking/nft-vault` and `contracts/staking/stake-rewards` remain NFT staking contracts. They are not the default PASG validator staking target.
+
+Expected action surface:
+
+- `delegate(upasg, validator)`
+- `undelegate(upasg, validator, amount)`
+- `redelegate(upasg, src_validator, dst_validator, amount)`
+- queries for delegations, undelegations, validator assignments, validators, and rewards
+
+Operational notes:
+
+- Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a contract-local claim queue.
+- Validator selection belongs to wallet and service UX. Choose one or more Passage validators using validator identity, commission, uptime, and any Passage governance or operator policy guidance.
+- If a repo-local adapter ever appears, it should normalize metadata or observability around the chain-native staking flow rather than duplicate staking balances.
+
 ## `pasg-governance`
 
 Role:

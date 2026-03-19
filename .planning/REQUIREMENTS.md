@@ -25,7 +25,7 @@
 
 ### Staking
 
-- [ ] **STAK-01**: PASG holder can delegate and undelegate stake to one or more Passage validators through the chain-native staking flow, with the expected 21-day unbonding period.
+- [ ] **STAK-01**: PASG holder can delegate and undelegate stake to one or more Passage validators through the chain-native staking flow, with the expected 21-day unbonding period when that remains the chain-level staking rule.
 - [ ] **STAK-02**: Delegated PASG participates in validator fee sharing and PASG token rewards defined by the chain/token program, without assuming a separate default CosmWasm emission vault.
 - [ ] **STAK-03**: Delegation balances, validator assignments, undelegation state, and reward-state transitions are queryable and testable through chain-native or documented adapter surfaces without manual bookkeeping.
 

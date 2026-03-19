@@ -14,6 +14,16 @@ This workspace treats PASG as a native-denom utility surface, not as a separate 
 - Platform billing, subscription, Stripe orchestration, fiat conversion, and similar business logic stay off-chain.
 - If a wrapper or adapter is introduced later, it is compatibility-only and must forward to native `upasg` settlement.
 
+## PASG Staking Model
+
+PASG staking in this repo means chain-native staking through native validator delegation on Passage, not a duplicate CosmWasm staking vault.
+
+- Native action surface: `delegate(upasg, validator)`, `undelegate(upasg, validator, amount)`, `redelegate(upasg, src_validator, dst_validator, amount)`, plus queries for delegations, undelegations, validator assignments, validators, and rewards.
+- Source of truth: the Passage chain staking module and active validator set, not contract-local balances in this workspace.
+- Unbonding: any 21-day wait is a chain-level staking rule or validator-program dependency, not a repo-local claim queue.
+- Validator selection: wallets and services should choose one or more Passage validators using chain-native validator metadata, commission, uptime, and operator policy guidance rather than assuming a hardcoded validator inside a contract.
+- Non-target crates: `contracts/staking/nft-vault` and `contracts/staking/stake-rewards` are NFT staking primitives, not PASG validator staking contracts.
+
 ## Diagram
 
 ![Diagram Protocol](Passage%20Protocol%20-%20Contract%20Interactions%20-%20DIAGRAM.png)
@@ -51,3 +61,5 @@ When you need PASG semantics in this repo:
 2. Query `streaming-billing` via `PasgUtility` before duplicating denom or conversion assumptions elsewhere.
 3. Treat marketplace, minter, auction, and routing contracts as PASG consumers, not PASG policy sources.
 4. Keep service-owned billing and subscription rules off-chain even when settlement is verifiable on-chain.
+5. Treat PASG staking as chain-native staking and native validator delegation, not a repo-local staking vault.
+6. Treat `contracts/staking/nft-vault` and `contracts/staking/stake-rewards` as NFT staking contracts unless a later scoped adapter is explicitly documented.

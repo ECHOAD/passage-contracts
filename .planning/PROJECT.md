@@ -24,7 +24,7 @@ PASG must provide real on-chain utility for payments, governance, staking, and c
 
 - [ ] Deliver a PASG utility surface that supports payment utility, fee treatment, and token-level protocol integrations promised by product and whitepaper materials.
 - [ ] Replace admin-only governance with PASG-scoped on-chain governance for proposals, voting, delegation, quorum, execution, and SIG-compatible parameter control while preserving `multisig` as the admin-owner control plane.
-- [ ] Implement PASG validator staking and delegation with chain-native unbonding, validator fee participation, and PASG rewards, only adding contract adapters where the native flow requires them.
+- [ ] Implement PASG validator staking and delegation as chain-native staking through native validator delegation, with chain-native unbonding, validator fee participation, and PASG rewards, only adding contract adapters where the native flow requires them.
 - [ ] Complete and harden creator NFT/world/plugin/template monetization flows so royalties, splits, licensing, and asset ownership behave as documented.
 - [ ] Define a multi-economy framework so worlds can run their own token or point systems while still settling against PASG.
 - [ ] Standardize upgrade, migration, pause, and version-management strategy across long-lived contracts.
@@ -37,6 +37,7 @@ PASG must provide real on-chain utility for payments, governance, staking, and c
 - Search, discovery, analytics, recommendations, and content moderation - these are off-chain, high-throughput, or subjective systems
 - Avatar rendering, equipment composition runtime, and world-entry UX - these remain off-chain even when ownership and hashes are verified on-chain
 - PASG governance over general Passage platform operations - governance in this project is limited to PASG and protocol parameters, not all business workflows
+- A duplicate CosmWasm staking vault for PASG delegation - PASG staking is chain-native staking and native validator delegation by default, while repo-local staking contracts stay limited to NFT staking unless a later adapter is justified
 - Treating PASG as platform equity or embedding subscription/business-tier logic directly into token contracts - architecturally and legally out of bounds
 
 ## Context
@@ -80,8 +81,9 @@ Those documents reinforce several program-level truths:
 | Preserve strict on-chain/off-chain boundaries | Product architecture repeatedly states that contracts should provide economic guarantees while platform services provide UX and infrastructure | - Pending |
 | Use the existing repo as the foundation | The workspace already implements NFT commerce, routing, admin control, and staking primitives worth preserving and hardening | - Pending |
 | Scope governance to PASG/protocol parameters only | Prevents architecture creep, legal ambiguity, and accidental control over unrelated off-chain operations | - Pending |
-| Treat PASG staking as native validator delegation, not a default CosmWasm vault | The local whitepaper defines staking as delegating to Passage validators with validator fee participation and PASG rewards; existing contracts/staking/* are NFT staking primitives | 2026-03-19 intent correction recorded |
+| Treat PASG staking as native validator delegation and chain-native staking, not a duplicate CosmWasm staking vault | The local whitepaper defines staking as delegating to Passage validators with validator fee participation and PASG rewards; existing contracts/staking/* are NFT staking primitives | 2026-03-19 intent correction recorded |
 | Model world/asset monetization as hybrid | Product docs and current code both point to on-chain revenue rules invoked by off-chain services rather than fully autonomous billing | - Pending |
 
 ---
 *Last updated: 2026-03-19 after Phase 4 intent correction*
+

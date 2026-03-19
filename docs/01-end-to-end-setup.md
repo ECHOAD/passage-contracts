@@ -370,3 +370,12 @@ For exact JSON messages, also use:
 PASG governance is a separate layer from multisig.
 
 Use `pasg-governance` for PASG-holder voting and ratification, but keep `multisig` as the owner-admin executor for `registry`, `marketplace-v3`, `auction-english`, and similar protocol contracts. A passed PASG admin proposal should be read through `ratified_admin_action` and then mirrored into a normal `multisig.Propose` flow.
+
+## PASG staking note
+
+PASG staking follows chain-native staking through native validator delegation on Passage, not a duplicate CosmWasm staking vault.
+
+- Expected actions: delegate `upasg`, undelegate from a validator, redelegate between validators, and query delegations, undelegations, validator assignments, and rewards through chain-native surfaces.
+- Validator selection belongs to wallet or service UX. Use Passage validator metadata, commission, uptime, and policy guidance to choose one or more validators rather than assuming a single contract-owned validator.
+- Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a repo-local claim queue.
+- `contracts/staking/nft-vault`, `contracts/staking/stake-rewards`, and `contracts/staking/vault-factory` remain NFT staking primitives and factory tooling, not the default PASG staking path.
