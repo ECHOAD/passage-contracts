@@ -146,6 +146,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
+| 8. Documentacion completa bilingue de contratos en docs | 0/0 | Not started | - |
+| 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
 
 
 
@@ -162,10 +164,15 @@ Plans:
 
 ### Phase 9: marketplace-v3 registration, ownership validation, and admin approval redesign
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Remove the confusing mixed registration/config model from `marketplace-v3` and replace it with owner-validated requests plus admin-controlled approvals.
+**Requirements**: [QUAL-01]
 **Depends on:** Phase 8
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 9 to break down)
+- [x] 09-01-PLAN.md - Simplify marketplace config to global fee plus collection-scoped denom with mandatory registration
+- [x] 09-02-PLAN.md - Add owner validation plus request/approval flows for register and update
+- [x] 09-03-PLAN.md - Align queries, schema, and docs to the redesigned public surface
+
+
+

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed Phase 3 PASG Governance; Phase 4 is now ready to plan
-last_updated: "2026-03-19T16:30:48Z"
-last_activity: 2026-03-19 - Completed Phase 3 PASG Governance and moved focus to PASG Staking & Rewards
+stopped_at: Completed Phase 9 marketplace-v3 registration redesign; Phase 4 remains the next mainline phase to plan
+last_updated: "2026-03-19T19:10:00Z"
+last_activity: 2026-03-19 - Completed Phase 9 marketplace-v3 registration redesign and kept Phase 4 as mainline focus
 progress:
   total_phases: 9
-  completed_phases: 3
-  total_plans: 20
-  completed_plans: 9
-  percent: 40
+  completed_phases: 4
+  total_plans: 23
+  completed_plans: 12
+  percent: 52
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 Phase: 4 of 9 (PASG Staking & Rewards)
 Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-03-19 - Completed Phase 3 PASG Governance and moved focus to PASG Staking & Rewards
+Last activity: 2026-03-19 - Completed Phase 9 marketplace-v3 registration redesign and kept Phase 4 as mainline focus
 
-Progress: [####------] 40%
+Progress: [#####-----] 52%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 61 min
-- Total execution time: 9.2 hours
+- Total plans completed: 12
+- Average duration: 52 min
+- Total execution time: 10.4 hours
 
 **By Phase:**
 
@@ -46,10 +46,11 @@ Progress: [####------] 40%
 | 1. Protocol Hardening & Boundaries | 3 | 170 min | 57 min |
 | 2. PASG Utility Surface | 3 | 222 min | 74 min |
 | 3. PASG Governance | 3 | 160 min | 53 min |
+| 9. Marketplace-v3 Registration Redesign | 3 | 70 min | 23 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02, 02-03, 03-01, 03-02, 03-03
-- Trend: Stable
+- Last 5 plans: 03-02, 03-03, 09-01, 09-02, 09-03
+- Trend: Stable with faster scoped redesign work
 
 ## Accumulated Context
 
@@ -73,11 +74,13 @@ Recent decisions affecting current work:
 - [Phase 2]: minter-v2 schema outputs are checked in and split-router schema now exposes inspectable routing metadata
 - [Debug 2026-03-18]: `multisig` must remain the admin-owner control plane; PASG governance must be designed as a separate voting/proposal layer instead of replacing that contract
 - [Phase 3]: PASG governance now lives in `contracts/core/pasg-governance`, while `multisig` remains the owner-admin executor with typed handoff through `ratified_admin_action`
+- [Phase 9]: `marketplace-v3` now enforces mandatory collection registration, a marketplace-global fee, collection-scoped denoms, and owner-request/admin-approval flows
 
 ### Roadmap Evolution
 
 - Phase 8 added: Documentacion completa bilingue de contratos en docs
 - Phase 9 added: marketplace-v3 registration, ownership validation, and admin approval redesign
+- Phase 9 completed: marketplace-v3 registration redesign executed out of the mainline sequence
 
 ### Pending Todos
 
@@ -89,8 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19 16:30 UTC
-Stopped at: Completed Phase 3 PASG Governance
+Last session: 2026-03-19 19:10 UTC
+Stopped at: Completed Phase 9 marketplace-v3 registration redesign
 Resume file: .planning/ROADMAP.md
-
-
