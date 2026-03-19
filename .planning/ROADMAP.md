@@ -81,7 +81,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Define the native validator delegation model, validator selection rules, and required chain interfaces
+- [x] 04-01: Define the native validator delegation model, validator selection rules, and required chain interfaces
 - [ ] 04-02: Align reward, fee-participation, and query surfaces with the chain staking flow
 - [ ] 04-03: Document migration, dependencies, and any minimal adapter or contract work required by the native model
 
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
 | 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
 | 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
-| 4. PASG Validator Staking & Rewards | 0/3 | Not started | - |
+| 4. PASG Validator Staking & Rewards | 1/3 | In Progress | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
@@ -173,6 +173,7 @@ Plans:
 - [x] 09-01-PLAN.md - Simplify marketplace config to global fee plus collection-scoped denom with mandatory registration
 - [x] 09-02-PLAN.md - Add owner validation plus request/approval flows for register and update
 - [x] 09-03-PLAN.md - Align queries, schema, and docs to the redesigned public surface
+
 
 
 
