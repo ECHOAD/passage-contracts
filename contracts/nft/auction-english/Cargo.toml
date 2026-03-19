@@ -22,6 +22,7 @@ cw-utils = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+streaming-billing = { path = "../../core/streaming-billing", features = ["library"] }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

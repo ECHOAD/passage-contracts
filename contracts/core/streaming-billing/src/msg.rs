@@ -1,6 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 
+pub const CANONICAL_PASG_DENOM: &str = "upasg";
+pub const CANONICAL_PASG_UTILITY_QUERY_ROUTE: &str = "pasg_utility";
+
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: String,
@@ -13,7 +16,7 @@ pub struct InstantiateMsg {
     pub points_per_denom: Uint128, // e.g., 100 points = 1 PASG
 
     // Fiat integration
-    pub fiat_oracle: Option<String>, // Off-chain service that reports fiat → crypto conversions
+    pub fiat_oracle: Option<String>, // Off-chain service that reports fiat -> crypto conversions
     pub stripe_webhook_validator: Option<String>, // Contract that validates Stripe webhooks
 }
 
@@ -254,7 +257,7 @@ pub struct PurchaseRecord {
 #[cw_serde]
 pub enum PurchaseType {
     CryptoDirect,  // User deposited PASG directly
-    FiatConverted, // User paid with credit card → converted to PASG
+    FiatConverted, // User paid with credit card -> converted to PASG
 }
 
 #[cw_serde]

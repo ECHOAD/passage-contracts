@@ -14,10 +14,27 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::nonpayable;
+use streaming_billing::msg::{CANONICAL_PASG_DENOM, CANONICAL_PASG_UTILITY_QUERY_ROUTE};
 
 const CONTRACT_NAME: &str = "crates.io:passage-auction-english";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_MAX_TRADING_FEE_BPS: u64 = 1_000;
+
+fn add_pasg_payment_attributes(
+    response: Response,
+    settlement_denom: &str,
+    fee_flow: &str,
+) -> Response {
+    response
+        .add_attribute("pasg_utility_query", CANONICAL_PASG_UTILITY_QUERY_ROUTE)
+        .add_attribute("pasg_native_denom", CANONICAL_PASG_DENOM)
+        .add_attribute("pasg_settlement_denom", settlement_denom)
+        .add_attribute(
+            "pasg_uses_native_utility",
+            (settlement_denom == CANONICAL_PASG_DENOM).to_string(),
+        )
+        .add_attribute("pasg_fee_flow", fee_flow)
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -441,7 +458,12 @@ fn execute_place_bid(
 
     auctions().save(deps.storage, (collection_addr, token_id), &auction)?;
 
-    Ok(response.add_attribute("auction_end_time", final_end_time.to_string()))
+    let response = response.add_attribute("auction_end_time", final_end_time.to_string());
+    Ok(add_pasg_payment_attributes(
+        response,
+        &config.denom,
+        "auction_bid",
+    ))
 }
 
 fn execute_settle_auction(
@@ -542,7 +564,7 @@ fn execute_settle_auction(
         &high_bid.bidder,
     )?);
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "settle_auction")
         .add_attribute("collection", collection_addr)
@@ -552,7 +574,13 @@ fn execute_settle_auction(
         .add_attribute("sale_price", high_bid.coin.to_string())
         .add_attribute("trading_fee", trading_fee.to_string())
         .add_attribute("royalty", royalty_amount.to_string())
-        .add_attribute("seller_amount", seller_amount.to_string()))
+        .add_attribute("seller_amount", seller_amount.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &config.denom,
+        "auction_settlement",
+    ))
 }
 
 #[cfg(test)]

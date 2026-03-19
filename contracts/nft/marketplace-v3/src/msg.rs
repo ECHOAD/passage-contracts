@@ -4,6 +4,10 @@ use crate::state::{
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 
+pub const CANONICAL_PASG_NATIVE_DENOM: &str = streaming_billing::msg::CANONICAL_PASG_DENOM;
+pub const CANONICAL_PASG_UTILITY_QUERY: &str =
+    streaming_billing::msg::CANONICAL_PASG_UTILITY_QUERY_ROUTE;
+
 /// Migration message from marketplace-v2 to v3
 #[cw_serde]
 pub struct MigrateMsg {

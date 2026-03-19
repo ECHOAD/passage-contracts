@@ -176,6 +176,7 @@ dependencies = [
  "cw2 2.0.0",
  "schemars",
  "serde",
+ "streaming-billing",
  "thiserror",
 ]
 
@@ -1837,6 +1838,7 @@ dependencies = [
  "cw721 0.18.0",
  "schemars",
  "serde",
+ "streaming-billing",
  "thiserror",
 ]
 
@@ -1899,6 +1901,7 @@ dependencies = [
  "cw721-base 0.18.0",
  "schemars",
  "serde",
+ "streaming-billing",
  "thiserror",
 ]
 

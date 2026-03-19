@@ -145,6 +145,25 @@ pub fn execute(
     }
 }
 
+fn add_pasg_payment_attributes(
+    response: Response,
+    settlement_denom: &str,
+    fee_flow: &str,
+) -> Response {
+    response
+        .add_attribute(
+            "pasg_utility_query",
+            crate::msg::CANONICAL_PASG_UTILITY_QUERY,
+        )
+        .add_attribute("pasg_native_denom", crate::msg::CANONICAL_PASG_NATIVE_DENOM)
+        .add_attribute("pasg_settlement_denom", settlement_denom)
+        .add_attribute(
+            "pasg_uses_native_utility",
+            (settlement_denom == crate::msg::CANONICAL_PASG_NATIVE_DENOM).to_string(),
+        )
+        .add_attribute("pasg_fee_flow", fee_flow)
+}
+
 fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
@@ -571,14 +590,20 @@ fn execute_buy_now(
         sale_info.royalty,
     )?;
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "buy_now")
         .add_attribute("collection", collection_addr)
         .add_attribute("token_id", token_id)
         .add_attribute("buyer", info.sender)
         .add_attribute("seller", ask.seller)
-        .add_attribute("price", ask.price.to_string()))
+        .add_attribute("price", ask.price.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &ask.price.denom,
+        "marketplace_sale",
+    ))
 }
 
 fn execute_set_bid(
@@ -742,14 +767,20 @@ fn execute_accept_bid(
         sale_info.royalty,
     )?;
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "accept_bid")
         .add_attribute("collection", collection_addr)
         .add_attribute("token_id", token_id)
         .add_attribute("seller", info.sender)
         .add_attribute("bidder", bidder_addr)
-        .add_attribute("price", bid.price.to_string()))
+        .add_attribute("price", bid.price.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &bid.price.denom,
+        "marketplace_sale",
+    ))
 }
 
 fn execute_set_collection_bid(
@@ -910,14 +941,20 @@ fn execute_accept_collection_bid(
         sale_info.royalty,
     )?;
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "accept_collection_bid")
         .add_attribute("collection", collection_addr)
         .add_attribute("token_id", token_id)
         .add_attribute("seller", info.sender)
         .add_attribute("bidder", bidder_addr)
-        .add_attribute("price", col_bid.price.to_string()))
+        .add_attribute("price", col_bid.price.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &col_bid.price.denom,
+        "marketplace_sale",
+    ))
 }
 
 fn execute_sync_ask(
@@ -980,3 +1017,6 @@ fn execute_batch_sync_asks(
         .add_attribute("action", "batch_sync_asks")
         .add_attribute("count", ask_list.len().to_string()))
 }
+
+#[cfg(test)]
+mod tests;

@@ -2,6 +2,10 @@ use crate::state::{Config, MintStats, Pg721InstantiateMsg};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Timestamp};
 
+pub const CANONICAL_PASG_NATIVE_DENOM: &str = streaming_billing::msg::CANONICAL_PASG_DENOM;
+pub const CANONICAL_PASG_UTILITY_QUERY: &str =
+    streaming_billing::msg::CANONICAL_PASG_UTILITY_QUERY_ROUTE;
+
 /// Migration message from minter v1 to minter-v2
 #[cw_serde]
 pub struct MigrateMsg {

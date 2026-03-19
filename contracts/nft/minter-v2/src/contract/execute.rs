@@ -45,6 +45,24 @@ pub fn execute(
     }
 }
 
+fn add_pasg_payment_attributes(
+    response: Response,
+    settlement_denom: &str,
+    fee_flow: &str,
+) -> Response {
+    response
+        .add_attribute(
+            "pasg_utility_query",
+            crate::msg::CANONICAL_PASG_UTILITY_QUERY,
+        )
+        .add_attribute("pasg_native_denom", crate::msg::CANONICAL_PASG_NATIVE_DENOM)
+        .add_attribute("pasg_settlement_denom", settlement_denom)
+        .add_attribute(
+            "pasg_uses_native_utility",
+            (settlement_denom == crate::msg::CANONICAL_PASG_NATIVE_DENOM).to_string(),
+        )
+        .add_attribute("pasg_fee_flow", fee_flow)
+}
 fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let collection_nft_type = query_collection_nft_type(deps.as_ref(), &config)?;
@@ -80,13 +98,19 @@ fn execute_mint(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
 
     MINT_STATS.save(deps.storage, &stats)?;
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "mint")
         .add_attribute("token_id", token_id.to_string())
         .add_attribute("minter", info.sender)
         .add_attribute("price", mint_price.to_string())
-        .add_attribute("is_whitelist", is_whitelist.to_string()))
+        .add_attribute("is_whitelist", is_whitelist.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &mint_price.denom,
+        "mint_payment",
+    ))
 }
 
 fn execute_mint_to(
@@ -245,13 +269,19 @@ fn execute_batch_mint(
 
     let ids_str: Vec<String> = minted_ids.iter().map(|id| id.to_string()).collect();
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_messages(messages)
         .add_attribute("action", "batch_mint")
         .add_attribute("count", count.to_string())
         .add_attribute("token_ids", ids_str.join(","))
         .add_attribute("minter", info.sender)
-        .add_attribute("total_price", total_price.to_string()))
+        .add_attribute("total_price", total_price.to_string());
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &total_price.denom,
+        "mint_payment",
+    ))
 }
 
 fn execute_update_config(
@@ -370,11 +400,17 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
         amount: vec![balance.clone()],
     };
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_message(msg)
         .add_attribute("action", "withdraw")
         .add_attribute("amount", balance.to_string())
-        .add_attribute("recipient", info.sender))
+        .add_attribute("recipient", info.sender);
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &balance.denom,
+        "mint_withdrawal",
+    ))
 }
 
 fn execute_withdraw_to(
@@ -403,9 +439,18 @@ fn execute_withdraw_to(
         amount: vec![balance.clone()],
     };
 
-    Ok(Response::new()
+    let response = Response::new()
         .add_message(msg)
         .add_attribute("action", "withdraw_to")
         .add_attribute("amount", balance.to_string())
-        .add_attribute("recipient", recipient_addr))
+        .add_attribute("recipient", recipient_addr);
+
+    Ok(add_pasg_payment_attributes(
+        response,
+        &balance.denom,
+        "mint_withdrawal",
+    ))
 }
+
+#[cfg(test)]
+mod tests;
