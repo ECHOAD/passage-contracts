@@ -12,7 +12,7 @@ This roadmap starts from a brownfield CosmWasm workspace that already contains m
 
 - [x] **Phase 1: Protocol Hardening & Boundaries** - Close brownfield trust gaps and lock the on-chain/off-chain contract boundary.
 - [x] **Phase 2: PASG Utility Surface** - Make PASG usage explicit, queryable, and enforceable across supported protocol flows.
-- [ ] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics.
+- [x] **Phase 3: PASG Governance** - Replace admin-only control with PASG-scoped proposal and voting mechanics.
 - [ ] **Phase 4: PASG Staking & Rewards** - Add staking, unbonding, and emission logic aligned to the token program.
 - [ ] **Phase 5: Creator Asset Contracts & Monetization** - Finish the typed NFT and revenue-bearing asset model around creators and worlds.
 - [ ] **Phase 6: Multi-Economy Settlement** - Let worlds run local economies that still settle against PASG without bypassing utility.
@@ -64,9 +64,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Implement proposal lifecycle and executable action surface
-- [ ] 03-02: Implement token-weighted voting, delegation, and threshold rules
-- [ ] 03-03: Add scoped execution and operational safeguards for PASG-only governance
+- [x] 03-01: Implement proposal lifecycle and executable action surface
+- [x] 03-02: Implement token-weighted voting, delegation, and threshold rules
+- [x] 03-03: Add scoped execution and operational safeguards for PASG-only governance
 
 ### Phase 4: PASG Staking & Rewards
 **Goal**: Add PASG staking, 21-day unbonding, emission logic, and the path toward fee-backed rewards.
@@ -140,13 +140,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Protocol Hardening & Boundaries | 3/3 | Complete | 2026-03-18 |
 | 2. PASG Utility Surface | 3/3 | Complete | 2026-03-18 |
-| 3. PASG Governance | 0/3 | Not started | - |
+| 3. PASG Governance | 3/3 | Complete | 2026-03-19 |
 | 4. PASG Staking & Rewards | 0/3 | Not started | - |
 | 5. Creator Asset Contracts & Monetization | 0/3 | Not started | - |
 | 6. Multi-Economy Settlement | 0/3 | Not started | - |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
-
-
 
 ### Phase 8: Documentacion completa bilingue de contratos en docs
 

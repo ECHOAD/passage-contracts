@@ -19,9 +19,9 @@
 
 ### Governance
 
-- [ ] **GOV-01**: PASG holder can create protocol proposals, vote on them, and execute passed actions on-chain.
-- [ ] **GOV-02**: Governance enforces token-weighted voting, delegation, quorum, and majority rules on-chain.
-- [ ] **GOV-03**: Governance is limited to PASG and protocol parameters and cannot directly control general off-chain platform operations.
+- [x] **GOV-01**: PASG holder can create protocol proposals, vote on them, and execute passed actions on-chain.
+- [x] **GOV-02**: Governance enforces token-weighted voting, delegation, quorum, and majority rules on-chain.
+- [x] **GOV-03**: Governance is limited to PASG and protocol parameters and cannot directly control general off-chain platform operations.
 
 ### Staking
 
@@ -77,9 +77,9 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | PASG-01 | Phase 2 | Complete |
 | PASG-02 | Phase 2 | Complete |
 | PASG-03 | Phase 2 | Complete |
-| GOV-01 | Phase 3 | Pending |
-| GOV-02 | Phase 3 | Pending |
-| GOV-03 | Phase 3 | Pending |
+| GOV-01 | Phase 3 | Complete |
+| GOV-02 | Phase 3 | Complete |
+| GOV-03 | Phase 3 | Complete |
 | STAK-01 | Phase 4 | Pending |
 | STAK-02 | Phase 4 | Pending |
 | STAK-03 | Phase 4 | Pending |
@@ -101,6 +101,4 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-18 after Phase 2 completion*
-
-
+*Last updated: 2026-03-19 after Phase 3 completion*
