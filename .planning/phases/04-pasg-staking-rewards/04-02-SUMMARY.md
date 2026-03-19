@@ -39,3 +39,18 @@ Verification recorded for this plan:
 
 Notes:
 - `cargo test -p pasg-governance --lib` passed with existing `mock_info` deprecation warnings in tests; no functional failures remained.
+## Deviations from Plan
+
+None - the plan stayed within the intended native-staking boundary and only added the optional validator metadata surface that the docs now reference.
+
+## Auth Gates
+
+None.
+
+## Self-Check: PASSED
+
+- Found `.planning/phases/04-pasg-staking-rewards/04-02-SUMMARY.md`
+- Found commit `821230c`
+- Found commit `4918ddc`
+- Found commit `5b724be`
+
