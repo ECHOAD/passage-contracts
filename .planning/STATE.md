@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: in_progress
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-19T00:43:57Z"
+last_updated: "2026-03-19T01:14:39Z"
 last_activity: 2026-03-18 - Phase 2 completed; PASG utility docs, examples, and schema surfaces verified
 progress:
   total_phases: 7
@@ -77,8 +77,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- `cargo unit-test` and `cargo check --workspace` remain blocked by `ecosystem-factory`: missing `REQUESTS_BY_CREATOR` imports in `src/contract/execute.rs:188` and `src/contract/query.rs:84`.
-- `cargo check --workspace` remains additionally blocked by `minter-metadata-onchain`: `Pg721InstantiateMsg` initialization is missing `nft_type` in `src/contract.rs:102`.
 - Several active core contracts still have no migrate entrypoint, so future upgrades will require explicit redeploy-and-cutover planning.
 
 ## Session Continuity
