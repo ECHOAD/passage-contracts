@@ -39,6 +39,16 @@ pub enum ContractError {
     #[error("Token metadata extension `{found}` does not match collection nft_type `{expected}`")]
     NftTypeExtensionMismatch { expected: String, found: String },
 
+    #[error("Token metadata for `{nft_type}` requires a standardized Passage profile_id")]
+    MissingProfileId { nft_type: String },
+
+    #[error("Token metadata for `{nft_type}` must use standardized profile_id `{expected}`, found `{found}`")]
+    InvalidProfileId {
+        nft_type: String,
+        expected: String,
+        found: String,
+    },
+
     #[error("{0}")]
     Payment(#[from] PaymentError),
 

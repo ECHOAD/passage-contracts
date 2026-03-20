@@ -18,7 +18,10 @@ pub struct MigrateMsg {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Base URI for token metadata (e.g., "ipfs://...")
+    /// Base URI for token manifests (e.g., "ipfs://...").
+    ///
+    /// Runtime-heavy render details and compatibility matrices should stay in the manifest, while
+    /// the collection's typed NFT metadata remains a compact durable protocol surface.
     pub base_token_uri: String,
     /// Total number of tokens available
     pub num_tokens: u32,

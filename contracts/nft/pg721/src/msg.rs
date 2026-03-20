@@ -43,7 +43,9 @@ impl RoyaltyInfoResponse {
 #[serde(rename_all = "snake_case")]
 pub enum NftType {
     Component,
+    /// Cross-world compatible avatars use a standardized `profile_id`.
     Avatar,
+    /// Cross-world compatible companions use a standardized `profile_id`.
     Companion,
     World,
     Plugin,
@@ -71,6 +73,31 @@ impl fmt::Display for NftType {
     }
 }
 
+/// Minimal Passage-standard compatibility markers.
+///
+/// Detailed compatibility matrices, render payloads, and runtime manifests stay behind `token_uri`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PassageProfileId {
+    PassageAvatarV1,
+    PassageCompanionV1,
+}
+
+impl PassageProfileId {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::PassageAvatarV1 => "passage_avatar_v1",
+            Self::PassageCompanionV1 => "passage_companion_v1",
+        }
+    }
+}
+
+impl fmt::Display for PassageProfileId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RevenueShare {
     pub address: String,
@@ -80,8 +107,6 @@ pub struct RevenueShare {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct ComponentExtension {
     pub component_id: String,
-    pub compatible_skeletons: Vec<String>,
-    pub compatible_slots: Vec<String>,
     pub component_type: String,
     pub license: String,
 }
@@ -89,17 +114,13 @@ pub struct ComponentExtension {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct AvatarExtension {
     pub avatar_id: String,
-    pub skeleton_type: String,
-    pub slot_schema_uri: String,
-    pub equipment_state_uri: String,
-    pub equipment_hash: String,
+    pub profile_id: Option<PassageProfileId>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct CompanionExtension {
     pub companion_id: String,
-    pub level: u32,
-    pub experience: u64,
+    pub profile_id: Option<PassageProfileId>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
@@ -113,7 +134,6 @@ pub struct PluginExtension {
     pub plugin_id: String,
     pub plugin_type: String,
     pub license: String,
-    pub permissions_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
@@ -128,8 +148,6 @@ pub struct AchievementExtension {
 pub struct WorldTemplateExtension {
     pub template_id: String,
     pub category: String,
-    pub branding_uri: Option<String>,
-    pub customization_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -161,7 +179,11 @@ impl NftTypeExtension {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenMetadata {
     pub nft_type: NftType,
-    /// Type-specific Passage metadata.
+    /// Type-specific Passage metadata with only durable protocol semantics.
+    ///
+    /// Manifest-level categories like `Emote` and `Scene`, and dedicated-surface concerns like
+    /// `AccessPass`, stay behind `token_uri` or separate contracts instead of the active typed
+    /// metadata boundary.
     pub extension: Option<NftTypeExtension>,
 }
 

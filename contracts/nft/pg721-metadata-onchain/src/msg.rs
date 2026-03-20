@@ -11,6 +11,10 @@ pub struct Trait {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct Metadata {
+    /// Rich metadata-on-chain is explicitly non-default for metaverse assets.
+    ///
+    /// Active Passage collections should keep only durable protocol semantics in `extension` and
+    /// move runtime/render details behind `token_uri`.
     pub image: Option<String>,
     pub image_data: Option<String>,
     pub external_url: Option<String>,

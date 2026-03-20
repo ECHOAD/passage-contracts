@@ -10,8 +10,8 @@ use cw721::ContractInfoResponse;
 use url::Url;
 
 use crate::msg::{
-    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, QueryMsg, RoyaltyInfoResponse,
-    TokenMetadata,
+    CollectionInfoResponse, ExecuteMsg, Extension, InstantiateMsg, NftType, NftTypeExtension,
+    PassageProfileId, QueryMsg, RoyaltyInfoResponse, TokenMetadata,
 };
 use crate::state::{CollectionInfo, RoyaltyInfo, COLLECTION_INFO};
 
@@ -154,6 +154,53 @@ fn validate_token_metadata(
                 found: extension_type.to_string(),
             });
         }
+
+        validate_standard_profile_id(&collection_info.nft_type, extension)?;
+    } else if matches!(collection_info.nft_type, NftType::Avatar | NftType::Companion) {
+        return Err(ContractError::MissingProfileId {
+            nft_type: collection_info.nft_type.to_string(),
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_standard_profile_id(
+    nft_type: &NftType,
+    extension: &NftTypeExtension,
+) -> Result<(), ContractError> {
+    match (nft_type, extension) {
+        (NftType::Avatar, NftTypeExtension::Avatar(extension)) => validate_profile_id(
+            nft_type,
+            extension.profile_id.as_ref(),
+            &PassageProfileId::PassageAvatarV1,
+        ),
+        (NftType::Companion, NftTypeExtension::Companion(extension)) => validate_profile_id(
+            nft_type,
+            extension.profile_id.as_ref(),
+            &PassageProfileId::PassageCompanionV1,
+        ),
+        _ => Ok(()),
+    }
+}
+
+fn validate_profile_id(
+    nft_type: &NftType,
+    profile_id: Option<&PassageProfileId>,
+    expected: &PassageProfileId,
+) -> Result<(), ContractError> {
+    let Some(profile_id) = profile_id else {
+        return Err(ContractError::MissingProfileId {
+            nft_type: nft_type.to_string(),
+        });
+    };
+
+    if profile_id != expected {
+        return Err(ContractError::InvalidProfileId {
+            nft_type: nft_type.to_string(),
+            expected: expected.to_string(),
+            found: profile_id.to_string(),
+        });
     }
 
     Ok(())
