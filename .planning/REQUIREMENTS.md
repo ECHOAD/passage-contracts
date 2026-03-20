@@ -48,7 +48,7 @@
 
 ### Quality & Audit
 
-- [ ] **QUAL-01**: Critical economic contracts have deterministic tests for authorization, accounting, pagination/filter semantics, and reply flows.
+- [x] **QUAL-01**: Critical economic contracts have deterministic tests for authorization, accounting, pagination/filter semantics, and reply flows.
 - [ ] **QUAL-02**: In-scope contracts reach >95% branch coverage with fuzzing or invariants on economic logic.
 - [ ] **QUAL-03**: Audit-ready documentation, migration guides, and schema outputs match actual contract behavior.
 
@@ -96,7 +96,7 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | ECON-01 | Phase 6 | Complete |
 | ECON-02 | Phase 6 | Complete |
 | REV-02 | Phase 6 | Complete |
-| QUAL-01 | Phase 7 | Pending |
+| QUAL-01 | Phase 7 | Complete |
 | QUAL-02 | Phase 7 | Pending |
 | QUAL-03 | Phase 7 | Pending |
 | DOC-01 | Phase 8 | Complete |

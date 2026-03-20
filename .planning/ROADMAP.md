@@ -148,7 +148,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
 | 8. Documentacion completa bilingue de contratos en docs | 4/4 | Complete | 2026-03-19 |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
-| 10. remove native_assets from metadata-onchain and updatable nft surfaces | 3/3 | Complete    | 2026-03-20 |
+| 10. remove native_assets from metadata-onchain and updatable nft surfaces | 3/3 | Complete | 2026-03-20 |
+| 11. NFT metadata boundary hardening for metaverse asset semantics | 2/5 | In Progress | - |
 
 
 
@@ -163,7 +164,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
   2. The docs explain instantiation, actors, key messages, dependencies, and cross-contract relationships without inventing unsupported protocol behavior.
   3. Hypothetical business and technical examples make the major protocol flows understandable end to end.
   4. Explicit legacy contracts are documented as historical/reference material rather than recommended default integration targets.
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 - [x] 08-01: Build the bilingual documentation scaffold, indexes, relationship map, instantiate guides, and flow guides
@@ -211,5 +212,30 @@ Plans:
 - [ ] 10-01: Remove `native_assets` from active pg721 metadata message/state surfaces and shared compatibility structs
 - [ ] 10-02: Remove native-asset template and override mechanics from `minter-v2-metadata-onchain`
 - [ ] 10-03: Regenerate schemas and align tests/docs to the retired surface
+
+
+
+### Phase 11: NFT metadata boundary hardening for metaverse asset semantics
+
+**Goal:** Harden the Passage NFT metadata boundary so metaverse assets keep only durable protocol semantics on-chain, move runtime/render/detail-heavy metadata into manifests, and relocate mutable protocol-relevant facts into dedicated state surfaces instead of generic NFT metadata.
+**Requirements**: [NFT-02, NFT-03, REV-01, ARCH-01, QUAL-01]
+**Depends on:** Phase 10
+**Canonical refs**: [`.planning/phases/11-nft-metadata-boundary-hardening-for-metaverse-asset-semantics/11-CONTEXT.md`, `.planning/phases/11-nft-metadata-boundary-hardening-for-metaverse-asset-semantics/11-RESEARCH.md`, `../context/product/architecture/NFT_METADATA_DESIGN.md`, `../context/product/architecture/NFT_DESIGN_CORRECTIONS.md`, `contracts/nft/pg721/src/msg.rs`, `contracts/nft/pg721-updatable/src/msg.rs`, `contracts/nft/minter-v2/src/msg.rs`]
+**Success Criteria** (what must be TRUE):
+  1. Active typed NFT metadata surfaces only retain durable protocol semantics and stop advertising mutable gameplay or runtime-heavy fields as generic on-chain metadata.
+  2. Progression snapshots and durable plugin-to-world rights are modeled through explicit state surfaces instead of generic NFT metadata.
+  3. Passage-standard compatibility constants are documented and exposed as minimal interoperability markers without freezing Unreal/runtime detail on-chain.
+  4. Schemas, docs, and deterministic tests match the corrected metadata boundary and no longer describe stale assumptions.
+**Plans**: 5 plans
+
+Plans:
+- [ ] 11-01: Tighten active typed NFT metadata surfaces to durable on-chain semantics only
+- [x] 11-02: Introduce dedicated progression snapshot state outside generic NFT metadata
+- [ ] 11-03: Add explicit durable plugin-to-world assignment rights and tests
+- [ ] 11-04: Regenerate schemas and align contract-surface docs/examples to the corrected metadata boundary
+- [ ] 11-05: Publish bilingual composed-asset guides and mirrored Spanish references
+
+
+
 
 
