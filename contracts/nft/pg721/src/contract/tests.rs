@@ -1,8 +1,9 @@
 use super::*;
 
 use crate::msg::{
-    AchievementExtension, CollectionInfoMsg, ComponentExtension, NftType, NftTypeExtension,
-    PluginExtension, WorldTemplateExtension,
+    AchievementExtension, AvatarExtension, CollectionInfoMsg, CompanionExtension,
+    ComponentExtension, NftType, NftTypeExtension, PassageProfileId, PluginExtension,
+    WorldTemplateExtension,
 };
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, from_json, Attribute, Decimal};
@@ -132,8 +133,6 @@ fn mint_accepts_matching_passage_metadata() {
                 nft_type: NftType::Component,
                 extension: Some(NftTypeExtension::Component(ComponentExtension {
                     component_id: "helmet-1".to_string(),
-                    compatible_skeletons: vec!["humanoid".to_string()],
-                    compatible_slots: vec!["head".to_string()],
                     component_type: "helmet".to_string(),
                     license: "cc-by".to_string(),
                 })),
@@ -157,6 +156,99 @@ fn mint_accepts_matching_passage_metadata() {
 }
 
 #[test]
+fn mint_rejects_avatar_without_profile_id() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::Avatar, None);
+
+    let err = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "avatar-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/avatar-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Avatar,
+                extension: Some(NftTypeExtension::Avatar(AvatarExtension {
+                    avatar_id: "avatar-1".to_string(),
+                    profile_id: None,
+                })),
+            }),
+        }),
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        ContractError::MissingProfileId {
+            nft_type: "avatar".to_string(),
+        }
+        .to_string()
+    );
+}
+
+#[test]
+fn mint_accepts_avatar_with_standard_profile_id() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::Avatar, None);
+
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "avatar-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/avatar-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Avatar,
+                extension: Some(NftTypeExtension::Avatar(AvatarExtension {
+                    avatar_id: "avatar-1".to_string(),
+                    profile_id: Some(PassageProfileId::PassageAvatarV1),
+                })),
+            }),
+        }),
+    )
+    .unwrap();
+}
+
+#[test]
+fn mint_rejects_companion_with_avatar_profile_id() {
+    let mut deps = mock_dependencies();
+    setup_contract_with_type(deps.as_mut(), NftType::Companion, None);
+
+    let err = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("minter", &[]),
+        ExecuteMsg::Mint(cw721_base::MintMsg {
+            token_id: "companion-1".to_string(),
+            owner: "owner".to_string(),
+            token_uri: Some("ipfs://cid/companion-1".to_string()),
+            extension: Some(TokenMetadata {
+                nft_type: NftType::Companion,
+                extension: Some(NftTypeExtension::Companion(CompanionExtension {
+                    companion_id: "companion-1".to_string(),
+                    profile_id: Some(PassageProfileId::PassageAvatarV1),
+                })),
+            }),
+        }),
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        ContractError::InvalidProfileId {
+            nft_type: "companion".to_string(),
+            expected: PassageProfileId::PassageCompanionV1.to_string(),
+            found: PassageProfileId::PassageAvatarV1.to_string(),
+        }
+        .to_string()
+    );
+}
+
+#[test]
 fn mint_accepts_plugin_metadata() {
     let mut deps = mock_dependencies();
     setup_contract_with_type(deps.as_mut(), NftType::Plugin, None);
@@ -175,7 +267,6 @@ fn mint_accepts_plugin_metadata() {
                     plugin_id: "builder-tools".to_string(),
                     plugin_type: "world_editor".to_string(),
                     license: "commercial".to_string(),
-                    permissions_uri: Some("ipfs://cid/plugin-perms".to_string()),
                 })),
             }),
         }),
@@ -254,8 +345,6 @@ fn mint_accepts_world_template_metadata() {
                 extension: Some(NftTypeExtension::WorldTemplate(WorldTemplateExtension {
                     template_id: "cyberpunk-district".to_string(),
                     category: "cityscape".to_string(),
-                    branding_uri: Some("ipfs://cid/branding".to_string()),
-                    customization_uri: Some("ipfs://cid/customization".to_string()),
                 })),
             }),
         }),
