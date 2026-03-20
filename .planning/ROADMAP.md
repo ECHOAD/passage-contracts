@@ -193,3 +193,13 @@ Plans:
 
 
 
+
+### Phase 10: remove native_assets from metadata-onchain and updatable nft surfaces
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 9
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10 to break down)
