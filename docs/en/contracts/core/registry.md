@@ -28,7 +28,7 @@ Protocol admin, ecosystem admins, approved ecosystem members, creators, minters,
 
 - Receives canonical writes from `ecosystem-factory` and `collection-factory`.
 - Feeds permission and affiliation data into `marketplace-v3`, `auction-english`, and mint flows.
-- Stores collection-level NFT type and provenance information used across the protocol.
+- Stores collection-scoped NFT type and provenance information used across the protocol.
 
 ## Hypothetical example
 

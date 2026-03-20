@@ -10,7 +10,7 @@ Defines the canonical PASG utility interface and the bounded billing or local-ec
 
 ## Instantiation
 
-Instantiate with registry and billing-related links, operator/admin permissions, PASG assumptions, and any world-level billing configuration this service-owned contract surface requires.
+Instantiate with registry and billing-related links, operator/admin permissions, PASG assumptions, and any world-scoped billing configuration this service-owned contract surface requires.
 
 Real payload source of truth: `contracts/core/streaming-billing/src/msg.rs` and, when available, the crate `schema/` output.
 

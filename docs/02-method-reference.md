@@ -208,7 +208,7 @@ This repo uses an ecosystem-centric creator asset model:
 
 Role:
 
-- base NFT collection contract
+- base typed NFT collection contract for durable Passage asset semantics
 
 Instantiate:
 
@@ -265,7 +265,10 @@ Typed extension variants:
 
 Notes:
 
+- `token_uri` is the manifest pointer for rendering, compatibility details, and other runtime-facing metadata
+- `profile_id` is a minimal Passage compatibility marker, not a freeform runtime payload
 - `WorldExtension` carries `revenue_shares` for world revenue routing
+- avatar and companion progression does not live in generic NFT metadata
 - plugin, achievement, and world_template metadata stay compact and contract-facing
 - runtime and rendering metadata stay off-chain
 
@@ -284,6 +287,67 @@ Additional execute and query messages:
 - `UpdateTokenMetadata`
 - `FreezeTokenMetadata`
 - `FrozenTokenMetadata`
+
+Boundary notes:
+
+- `UpdateTokenMetadata` only changes `token_uri`; it does not mutate typed extension data
+- manifests behind `token_uri` hold rendering/runtime detail and expanded compatibility metadata
+- mutable state with protocol significance uses dedicated surfaces rather than generic NFT metadata
+
+## `asset-progression`
+
+Role:
+
+- dedicated state surface for world-scoped avatar and companion progression snapshots
+
+Instantiate:
+
+- `InstantiateMsg { admin }`
+
+Execute:
+
+- `SaveSnapshot`
+- `UpdateAdmin`
+
+Queries:
+
+- `Config`
+- `Snapshot`
+- `SnapshotsByAsset`
+- `SnapshotsByWorld`
+
+Notes:
+
+- progression is persisted at save points instead of being written into generic NFT metadata
+- the NFT remains the durable identity and ownership surface
+- gameplay formulas and rich runtime state remain world-defined and off-chain
+
+## `world-plugin-assignment`
+
+Role:
+
+- dedicated relationship surface for durable plugin-to-world assignment rights
+
+Instantiate:
+
+- `InstantiateMsg {}`
+
+Execute:
+
+- `Assign`
+- `Remove`
+
+Queries:
+
+- `Assignment`
+- `AssignmentsByWorld`
+- `AssignmentsByPlugin`
+
+Notes:
+
+- assignment rights remain queryable even if the plugin NFT is later sold
+- plugin deployment, binaries, runtime permissions, and installation mechanics stay off-chain
+- generic NFT metadata does not carry durable world-assignment state
 
 ## `split-router`
 
@@ -335,7 +399,7 @@ Queries:
 Role:
 
 - fixed-price sales, token bids, and collection bids
-- marketplace-level fee config with collection-scoped denoms and activation, while moderation comes from `registry`
+- marketplace-scoped fee config with collection-scoped denoms and activation, while moderation comes from `registry`
 
 Instantiate:
 
@@ -524,7 +588,7 @@ Expected action surface:
 Operational notes:
 
 - Validator fee participation and PASG rewards are outputs of the chain staking and token program. Wallets and services should read reward-state and undelegation status from chain-native staking and distribution queries rather than from a contract-local reward engine.
-- Any 21-day unbonding period is a chain-level staking rule or validator-program dependency, not a contract-local claim queue.
+- Any 21-day unbonding period is a chain-wide staking rule or validator-program dependency, not a contract-local claim queue.
 - Validator selection belongs to wallet and service UX. Choose one or more Passage validators using validator identity, commission, uptime, and any Passage governance or operator policy guidance.
 - Validator discovery, commission, uptime, delegations, undelegations, and rewards should be read from chain-native staking and distribution endpoints rather than from repo-local contract storage.
 

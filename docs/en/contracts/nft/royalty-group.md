@@ -27,7 +27,7 @@ Royalty recipients, collection or sale contracts that send royalties here, and t
 ## Relationships
 
 - Can sit behind marketplace or auction royalty payout.
-- Complements collection-level royalty configuration.
+- Complements collection-scoped royalty configuration.
 - Often works alongside split-router when more complex payout routing is needed.
 
 ## Hypothetical example
