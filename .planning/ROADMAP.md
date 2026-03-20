@@ -146,7 +146,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 5. Creator Asset Contracts & Monetization | 3/3 | Complete | 2026-03-19 |
 | 6. Multi-Economy Settlement | 3/3 | Complete | 2026-03-19 |
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
-| 8. Documentacion completa bilingue de contratos en docs | 0/4 | Planned | - |
+| 8. Documentacion completa bilingue de contratos en docs | 4/4 | Complete | 2026-03-19 |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
 
 
@@ -165,10 +165,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: Build the bilingual documentation scaffold, indexes, relationship map, instantiate guides, and flow guides
-- [ ] 08-02: Document the core contract family bilingually with one file per contract
-- [ ] 08-03: Document the NFT contract family bilingually with one file per contract
-- [ ] 08-04: Document relationship, staking, and explicit legacy contracts bilingually and close tracking artifacts
+- [x] 08-01: Build the bilingual documentation scaffold, indexes, relationship map, instantiate guides, and flow guides
+- [x] 08-02: Document the core contract family bilingually with one file per contract
+- [x] 08-03: Document the NFT contract family bilingually with one file per contract
+- [x] 08-04: Document relationship, staking, and explicit legacy contracts bilingually and close tracking artifacts
 
 
 ### Phase 9: marketplace-v3 registration, ownership validation, and admin approval redesign
@@ -182,6 +182,7 @@ Plans:
 - [x] 09-01-PLAN.md - Simplify marketplace config to global fee plus collection-scoped denom with mandatory registration
 - [x] 09-02-PLAN.md - Add owner validation plus request/approval flows for register and update
 - [x] 09-03-PLAN.md - Align queries, schema, and docs to the redesigned public surface
+
 
 
 

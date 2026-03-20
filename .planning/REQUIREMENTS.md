@@ -54,9 +54,9 @@
 
 ### Documentation
 
-- [ ] **DOC-01**: Every workspace contract has mirrored English and Spanish documentation that explains purpose, instantiation, key messages, actors, permissions, and dependencies.
-- [ ] **DOC-02**: Documentation includes cross-contract relationship guides and hypothetical business/technical examples that explain how the protocol works end to end.
-- [ ] **DOC-03**: Explicitly legacy or historical contracts are documented as reference material and clearly separated from the recommended current integration path.
+- [x] **DOC-01**: Every workspace contract has mirrored English and Spanish documentation that explains purpose, instantiation, key messages, actors, permissions, and dependencies.
+- [x] **DOC-02**: Documentation includes cross-contract relationship guides and hypothetical business/technical examples that explain how the protocol works end to end.
+- [x] **DOC-03**: Explicitly legacy or historical contracts are documented as reference material and clearly separated from the recommended current integration path.
 
 ## v2 Requirements
 
@@ -99,9 +99,9 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 | QUAL-01 | Phase 7 | Pending |
 | QUAL-02 | Phase 7 | Pending |
 | QUAL-03 | Phase 7 | Pending |
-| DOC-01 | Phase 8 | Pending |
-| DOC-02 | Phase 8 | Pending |
-| DOC-03 | Phase 8 | Pending |
+| DOC-01 | Phase 8 | Complete |
+| DOC-02 | Phase 8 | Complete |
+| DOC-03 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 26 total
@@ -111,6 +111,7 @@ None currently. The active program intentionally keeps all eight stakeholder-req
 ---
 *Requirements defined: 2026-03-17*
 *Last updated: 2026-03-19 after Phase 8 planning*
+
 
 
 
