@@ -148,6 +148,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
 | 8. Documentacion completa bilingue de contratos en docs | 4/4 | Complete | 2026-03-19 |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
+| 10. remove native_assets from metadata-onchain and updatable nft surfaces | 0/3 | Not started | - |
 
 
 
@@ -196,10 +197,18 @@ Plans:
 
 ### Phase 10: remove native_assets from metadata-onchain and updatable nft surfaces
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Retire the unused `native_assets` attachment model from active metadata-onchain and updatable NFT surfaces so Passage NFT typing stays focused on supported typed extensions and mint flows.
+**Requirements**: [NFT-02, QUAL-01]
 **Depends on:** Phase 9
-**Plans:** 0 plans
+**Canonical refs**: [`contracts/nft/pg721-updatable/src/msg.rs`, `contracts/nft/pg721-metadata-onchain/src/msg.rs`, `contracts/nft/minter-v2-metadata-onchain/src/msg.rs`, `contracts/nft/minter-v2-metadata-onchain/src/state.rs`, `contracts/nft/minter-v2-metadata-onchain/src/contract/helpers.rs`]
+**Success Criteria** (what must be TRUE):
+  1. Active Passage NFT metadata surfaces no longer expose `native_assets` or `NativeAsset` fields/types where they are not part of supported typed extension behavior.
+  2. `minter-v2-metadata-onchain` no longer stores template/override state or execute/query APIs for native asset attachments, while minting still emits valid metadata for the target collection contracts.
+  3. Schemas, tests, and docs no longer advertise native asset attachment support on those active surfaces.
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 10 to break down)
+- [ ] 10-01: Remove `native_assets` from active pg721 metadata message/state surfaces and shared compatibility structs
+- [ ] 10-02: Remove native-asset template and override mechanics from `minter-v2-metadata-onchain`
+- [ ] 10-03: Regenerate schemas and align tests/docs to the retired surface
+
