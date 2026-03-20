@@ -50,7 +50,7 @@ completed: 2026-03-20
 
 Task commit history was not recorded in this closeout-only turn because execution resumed after an interrupted implementation session.
 
-**Plan metadata:** pending
+**Plan metadata:** `b69eeb2`
 
 ## Files Created/Modified
 - `contracts/relationship/world-plugin-assignment/Cargo.toml` - workspace manifest for the new relationship contract crate.
