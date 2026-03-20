@@ -45,7 +45,6 @@ pub fn instantiate(
         registry,
         collector_address,
         metadata_mode: MetadataMode::OnChain,
-        native_asset_template: msg.native_asset_template.unwrap_or_default(),
         paused: false,
     };
 

@@ -21,6 +21,7 @@ Admin de la coleccion, minters, token holders y cualquier flujo que prefiera per
 ## Mensajes clave
 
 - Almacena el comportamiento de coleccion para NFTs con metadata on-chain.
+- Persiste metadata tipada on-chain sin el arreglo retirado de attachments.
 - Funciona con flujos de venta primaria y secundaria que necesitan esta variante de metadata.
 - Preserva las mismas relaciones amplias de registro y tradeability que otras variantes pg721.
 

@@ -138,7 +138,7 @@ pub(super) fn query_collection_nft_type(
 }
 
 pub(super) fn create_mint_msg(
-    storage: &dyn cosmwasm_std::Storage,
+    _storage: &dyn cosmwasm_std::Storage,
     config: &Config,
     nft_type: &NftType,
     token_id: u32,
@@ -146,25 +146,12 @@ pub(super) fn create_mint_msg(
 ) -> Result<CosmosMsg, ContractError> {
     let token_uri = format!("{}/{}", config.base_token_uri, token_id);
     let extension = if config.metadata_mode.uses_onchain_metadata() {
-        let native_assets = TOKEN_NATIVE_ASSET_OVERRIDES
-            .may_load(storage, token_id)?
-            .unwrap_or_else(|| config.native_asset_template.clone());
-
-        if native_assets.is_empty() {
-            None
-        } else {
-            Some(TokenMetadata {
-                nft_type: nft_type.clone(),
-                native_assets: Some(native_assets),
-                extension: None,
-            })
-        }
-    } else {
         Some(TokenMetadata {
             nft_type: nft_type.clone(),
-            native_assets: None,
             extension: None,
         })
+    } else {
+        None
     };
 
     let exec_msg = Pg721ExecuteMsg::Mint {

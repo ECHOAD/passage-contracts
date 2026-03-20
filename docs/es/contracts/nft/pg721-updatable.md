@@ -21,6 +21,7 @@ Admin de la coleccion, token holders, marketplaces, registry y cualquier flujo q
 ## Mensajes clave
 
 - Soporta la linea base de coleccion tipada con updates controlados de metadata.
+- Mantiene la metadata del token limitada a `nft_type` mas la extension tipada de Passage; ya no expone el arreglo retirado de attachments.
 - Mantiene el mismo modelo de clasificacion creator-asset que la coleccion base.
 - Sigue siendo compatible con registration y comercio secundario.
 

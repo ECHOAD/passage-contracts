@@ -21,6 +21,7 @@ Collection admin, minters, token holders, and any flow that prefers on-chain met
 ## Key messages
 
 - Stores collection behavior for metadata-onchain NFTs.
+- Persists typed on-chain metadata without the retired attachment array.
 - Works with primary and secondary sale flows that need this metadata flavor.
 - Preserves the same broader registration and tradeability relationships as other pg721 variants.
 

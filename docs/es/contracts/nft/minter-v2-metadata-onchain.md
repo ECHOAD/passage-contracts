@@ -21,6 +21,7 @@ Admin del drop, buyers, coleccion desplegada, registry y cualquier ruta de payou
 ## Mensajes clave
 
 - Ejecuta un flujo de mint estilo v2 con supuestos de metadata on-chain.
+- Emite solo metadata tipada reducida; ya no expone APIs de template ni overrides para native assets.
 - Conecta la capa de venta primaria con el contrato de coleccion.
 - Mantiene compatibilidad con el registro y trading posteriores.
 

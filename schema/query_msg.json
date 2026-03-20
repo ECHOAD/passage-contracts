@@ -3,167 +3,291 @@
   "title": "QueryMsg",
   "oneOf": [
     {
-      "description": "Get contract configuration",
       "type": "object",
       "required": [
-        "config"
+        "frozen_token_metadata"
       ],
       "properties": {
-        "config": {
-          "type": "object",
-          "additionalProperties": false
+        "frozen_token_metadata": {
+          "type": "object"
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Get number of tokens still available for minting",
       "type": "object",
       "required": [
-        "mintable_num_tokens"
+        "owner_of"
       ],
       "properties": {
-        "mintable_num_tokens": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Get minting start time",
-      "type": "object",
-      "required": [
-        "start_time"
-      ],
-      "properties": {
-        "start_time": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Get current mint price (considers whitelist pricing)",
-      "type": "object",
-      "required": [
-        "mint_price"
-      ],
-      "properties": {
-        "mint_price": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Get mint count for a specific address",
-      "type": "object",
-      "required": [
-        "mint_count"
-      ],
-      "properties": {
-        "mint_count": {
+        "owner_of": {
           "type": "object",
           "required": [
-            "address"
+            "token_id"
           ],
           "properties": {
-            "address": {
+            "include_expired": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "token_id": {
               "type": "string"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Check if address can mint",
       "type": "object",
       "required": [
-        "can_mint"
+        "approval"
       ],
       "properties": {
-        "can_mint": {
+        "approval": {
           "type": "object",
           "required": [
-            "address"
+            "spender",
+            "token_id"
           ],
           "properties": {
-            "address": {
+            "include_expired": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "spender": {
+              "type": "string"
+            },
+            "token_id": {
               "type": "string"
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Get minting statistics",
       "type": "object",
       "required": [
-        "mint_stats"
+        "approvals"
       ],
       "properties": {
-        "mint_stats": {
+        "approvals": {
           "type": "object",
-          "additionalProperties": false
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "include_expired": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Check if minting is active",
       "type": "object",
       "required": [
-        "is_minting_active"
+        "all_operators"
       ],
       "properties": {
-        "is_minting_active": {
+        "all_operators": {
           "type": "object",
-          "additionalProperties": false
+          "required": [
+            "owner"
+          ],
+          "properties": {
+            "include_expired": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "owner": {
+              "type": "string"
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Get default native asset template used for mint metadata.",
       "type": "object",
       "required": [
-        "native_asset_template"
+        "num_tokens"
       ],
       "properties": {
-        "native_asset_template": {
-          "type": "object",
-          "additionalProperties": false
+        "num_tokens": {
+          "type": "object"
         }
       },
       "additionalProperties": false
     },
     {
-      "description": "Get resolved native assets for a token ID (override or template).",
       "type": "object",
       "required": [
-        "token_native_assets"
+        "contract_info"
       ],
       "properties": {
-        "token_native_assets": {
+        "contract_info": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "nft_info"
+      ],
+      "properties": {
+        "nft_info": {
           "type": "object",
           "required": [
             "token_id"
           ],
           "properties": {
             "token_id": {
-              "type": "integer",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "all_nft_info"
+      ],
+      "properties": {
+        "all_nft_info": {
+          "type": "object",
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "include_expired": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "token_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "tokens"
+      ],
+      "properties": {
+        "tokens": {
+          "type": "object",
+          "required": [
+            "owner"
+          ],
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint32",
               "minimum": 0.0
+            },
+            "owner": {
+              "type": "string"
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
-          },
-          "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "all_tokens"
+      ],
+      "properties": {
+        "all_tokens": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "minter"
+      ],
+      "properties": {
+        "minter": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "collection_info"
+      ],
+      "properties": {
+        "collection_info": {
+          "type": "object"
         }
       },
       "additionalProperties": false

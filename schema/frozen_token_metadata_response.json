@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FrozenTokenMetadataResponse",
+  "type": "object",
+  "required": [
+    "frozen"
+  ],
+  "properties": {
+    "frozen": {
+      "type": "boolean"
+    }
+  }
+}

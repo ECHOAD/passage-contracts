@@ -49,7 +49,6 @@ fn mint_token(deps: DepsMut, token_id: &str, token_uri: Option<String>) {
         token_uri,
         extension: Some(TokenMetadata {
             nft_type: NftType::Component,
-            native_assets: None,
             extension: None,
         }),
     };
@@ -197,7 +196,6 @@ fn mint_rejects_mismatched_passage_metadata_type() {
             token_uri: Some("ipfs://cid/2.json".to_string()),
             extension: Some(TokenMetadata {
                 nft_type: NftType::Avatar,
-                native_assets: None,
                 extension: None,
             }),
         },
@@ -229,7 +227,6 @@ fn mint_accepts_plugin_metadata() {
             token_uri: Some("ipfs://cid/plugin-1".to_string()),
             extension: Some(TokenMetadata {
                 nft_type: NftType::Plugin,
-                native_assets: None,
                 extension: Some(NftTypeExtension::Plugin(PluginExtension {
                     plugin_id: "builder-tools".to_string(),
                     plugin_type: "world_editor".to_string(),
@@ -270,7 +267,6 @@ fn mint_accepts_achievement_metadata() {
             token_uri: Some("ipfs://cid/achievement-1".to_string()),
             extension: Some(TokenMetadata {
                 nft_type: NftType::Achievement,
-                native_assets: None,
                 extension: Some(NftTypeExtension::Achievement(AchievementExtension {
                     achievement_id: "season-one".to_string(),
                     achievement_type: "quest_completion".to_string(),
@@ -311,7 +307,6 @@ fn mint_accepts_world_template_metadata() {
             token_uri: Some("ipfs://cid/world-template-1".to_string()),
             extension: Some(TokenMetadata {
                 nft_type: NftType::WorldTemplate,
-                native_assets: None,
                 extension: Some(NftTypeExtension::WorldTemplate(WorldTemplateExtension {
                     template_id: "cyberpunk-district".to_string(),
                     category: "cityscape".to_string(),

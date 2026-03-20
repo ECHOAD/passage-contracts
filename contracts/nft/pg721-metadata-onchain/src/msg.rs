@@ -21,7 +21,6 @@ pub struct Metadata {
     pub animation_url: Option<String>,
     pub youtube_url: Option<String>,
     pub nft_type: Option<NftType>,
-    pub native_assets: Option<Vec<NativeAsset>>,
     pub extension: Option<NftTypeExtension>,
 }
 

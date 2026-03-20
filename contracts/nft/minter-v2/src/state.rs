@@ -16,17 +16,8 @@ pub enum NftType {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NativeAsset {
-    pub asset_id: String,
-    pub name: String,
-    pub image_url: String,
-    pub description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenMetadata {
     pub nft_type: NftType,
-    pub native_assets: Option<Vec<NativeAsset>>,
     pub extension: Option<cosmwasm_std::Empty>,
 }
 

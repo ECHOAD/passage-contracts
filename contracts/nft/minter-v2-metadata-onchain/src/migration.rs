@@ -60,7 +60,6 @@ pub struct ConfigV2Legacy {
     pub split_router: Option<Addr>,
     pub use_split_router: bool,
     pub metadata_mode: MetadataMode,
-    pub native_asset_template: Vec<crate::state::NativeAsset>,
     pub paused: bool,
 }
 
@@ -124,7 +123,6 @@ fn migrate_from_minter_v1(
         registry,
         collector_address: collector_address.clone(),
         metadata_mode: MetadataMode::OnChain,
-        native_asset_template: vec![],
         paused: false,
     };
     CONFIG.save(storage, &config_v2)?;
@@ -197,7 +195,6 @@ fn migrate_from_metadata_onchain(
         registry,
         collector_address: collector_address.clone(),
         metadata_mode: MetadataMode::OnChain,
-        native_asset_template: vec![],
         paused: false,
     };
     CONFIG.save(storage, &config_v2)?;
@@ -276,7 +273,6 @@ fn migrate_from_current_v2(
         registry: registry.or(legacy.registry),
         collector_address: collector_address.clone(),
         metadata_mode: MetadataMode::OnChain,
-        native_asset_template: legacy.native_asset_template,
         paused: legacy.paused,
     };
     CONFIG.save(storage, &config_v2)?;

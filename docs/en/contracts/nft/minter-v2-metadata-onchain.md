@@ -21,6 +21,7 @@ Drop admin, buyers, deployed collection, registry, and any payout route used in 
 ## Key messages
 
 - Runs a v2-style mint flow with on-chain metadata assumptions.
+- Emits reduced typed metadata only; it no longer exposes native-asset template or token-override APIs.
 - Bridges the primary-sale layer into the collection contract.
 - Keeps compatibility with later registration and trading flows.
 

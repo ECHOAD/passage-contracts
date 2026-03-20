@@ -21,6 +21,7 @@ Collection admin, token holders, marketplaces, registry, and any flow that needs
 ## Key messages
 
 - Supports the typed collection baseline with controlled metadata updates.
+- Keeps token metadata scoped to `nft_type` plus typed Passage extension data; it no longer advertises the retired attachment array.
 - Keeps the same creator-asset classification model as the base collection.
 - Remains compatible with registration and secondary-commerce flows.
 

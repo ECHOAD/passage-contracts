@@ -75,14 +75,6 @@ impl fmt::Display for NftType {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NativeAsset {
-    pub asset_id: String,
-    pub name: String,
-    pub image_url: String,
-    pub description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RevenueShare {
     pub address: String,
     pub share: Decimal,
@@ -172,8 +164,6 @@ impl NftTypeExtension {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenMetadata {
     pub nft_type: NftType,
-    /// Native dependents included with this NFT.
-    pub native_assets: Option<Vec<NativeAsset>>,
     /// Type-specific Passage metadata.
     pub extension: Option<NftTypeExtension>,
 }

@@ -39,9 +39,6 @@ pub enum ContractError {
     #[error("Invalid token ID: {token_id}")]
     InvalidTokenId { token_id: u32 },
 
-    #[error("Invalid native asset data: {reason}")]
-    InvalidNativeAsset { reason: String },
-
     #[error("Metadata mode is locked to OnChain in this contract")]
     MetadataModeLockedToOnChain {},
 

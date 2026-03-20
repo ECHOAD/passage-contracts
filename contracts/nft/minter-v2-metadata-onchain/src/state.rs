@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 pub enum MetadataMode {
     /// Only store token_uri on-chain. Full metadata is resolved off-chain.
     OffChain,
-    /// Store token_uri and optional native asset references on-chain.
+    /// Store token_uri and typed Passage metadata on-chain.
     OnChain,
 }
 
@@ -37,17 +37,8 @@ pub enum NftType {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NativeAsset {
-    pub asset_id: String,
-    pub name: String,
-    pub image_url: String,
-    pub description: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenMetadata {
     pub nft_type: NftType,
-    pub native_assets: Option<Vec<NativeAsset>>,
     pub extension: Option<Empty>,
 }
 
@@ -81,8 +72,6 @@ pub struct Config {
     pub collector_address: Option<Addr>,
     /// Metadata storage mode for minted tokens.
     pub metadata_mode: MetadataMode,
-    /// Default native dependents included on each minted NFT.
-    pub native_asset_template: Vec<NativeAsset>,
     /// Whether minting is paused
     pub paused: bool,
 }
@@ -94,11 +83,6 @@ pub const MINTER_ADDRS: Map<&Addr, u32> = Map::new("minter_addrs");
 
 /// Available token IDs for minting
 pub const MINTABLE_TOKEN_IDS: Map<u32, bool> = Map::new("mintable_ids");
-
-/// Optional token-specific native asset overrides.
-/// If present for a token_id, this replaces the default template at mint time.
-pub const TOKEN_NATIVE_ASSET_OVERRIDES: Map<u32, Vec<NativeAsset>> =
-    Map::new("native_asset_overrides");
 
 /// Counter for tracking total minted
 pub const MINTABLE_NUM_TOKENS: Item<u32> = Item::new("mintable_num_tokens");

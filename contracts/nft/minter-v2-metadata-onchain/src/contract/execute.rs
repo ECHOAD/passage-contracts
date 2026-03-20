@@ -46,16 +46,6 @@ pub fn execute(
         ExecuteMsg::RemoveWhitelist {} => execute_remove_whitelist(deps, info),
         ExecuteMsg::Withdraw {} => execute_withdraw(deps, env, info),
         ExecuteMsg::WithdrawTo { recipient } => execute_withdraw_to(deps, env, info, recipient),
-        ExecuteMsg::SetNativeAssetTemplate { native_assets } => {
-            execute_set_native_asset_template(deps, info, native_assets)
-        }
-        ExecuteMsg::SetTokenNativeAssetOverride {
-            token_id,
-            native_assets,
-        } => execute_set_token_native_asset_override(deps, info, token_id, native_assets),
-        ExecuteMsg::ClearTokenNativeAssetOverride { token_id } => {
-            execute_clear_token_native_asset_override(deps, info, token_id)
-        }
     }
 }
 
@@ -427,94 +417,6 @@ fn execute_remove_whitelist(deps: DepsMut, info: MessageInfo) -> Result<Response
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "remove_whitelist"))
-}
-
-fn validate_native_assets(native_assets: &[NativeAsset]) -> Result<(), ContractError> {
-    for asset in native_assets {
-        if asset.asset_id.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: "asset_id cannot be empty".to_string(),
-            });
-        }
-        if asset.name.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: format!("name cannot be empty for asset_id {}", asset.asset_id),
-            });
-        }
-        if asset.image_url.trim().is_empty() {
-            return Err(ContractError::InvalidNativeAsset {
-                reason: format!("image_url cannot be empty for asset_id {}", asset.asset_id),
-            });
-        }
-    }
-    Ok(())
-}
-
-fn execute_set_native_asset_template(
-    deps: DepsMut,
-    info: MessageInfo,
-    native_assets: Vec<NativeAsset>,
-) -> Result<Response, ContractError> {
-    let mut config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    validate_native_assets(&native_assets)?;
-    config.native_asset_template = native_assets;
-    CONFIG.save(deps.storage, &config)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "set_native_asset_template")
-        .add_attribute("count", config.native_asset_template.len().to_string()))
-}
-
-fn execute_set_token_native_asset_override(
-    deps: DepsMut,
-    info: MessageInfo,
-    token_id: u32,
-    native_assets: Vec<NativeAsset>,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if token_id == 0 || token_id > config.num_tokens {
-        return Err(ContractError::InvalidTokenId { token_id });
-    }
-
-    validate_native_assets(&native_assets)?;
-    TOKEN_NATIVE_ASSET_OVERRIDES.save(deps.storage, token_id, &native_assets)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "set_token_native_asset_override")
-        .add_attribute("token_id", token_id.to_string())
-        .add_attribute("count", native_assets.len().to_string()))
-}
-
-fn execute_clear_token_native_asset_override(
-    deps: DepsMut,
-    info: MessageInfo,
-    token_id: u32,
-) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
-    if config.admin != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    if token_id == 0 || token_id > config.num_tokens {
-        return Err(ContractError::InvalidTokenId { token_id });
-    }
-
-    TOKEN_NATIVE_ASSET_OVERRIDES.remove(deps.storage, token_id);
-
-    Ok(Response::new()
-        .add_attribute("action", "clear_token_native_asset_override")
-        .add_attribute("token_id", token_id.to_string()))
 }
 
 fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {

@@ -9,13 +9,11 @@ pub(super) use crate::migration::migrate_state;
 pub(super) use crate::msg::{
     CanMintResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, IsMintingActiveResponse,
     MigrateMsg, MintCountResponse, MintPriceResponse, MintStatsResponse, MintableNumTokensResponse,
-    NativeAssetTemplateResponse, QueryMsg, SplitExecuteMsg, StartTimeResponse,
-    TokenNativeAssetsResponse,
+    QueryMsg, SplitExecuteMsg, StartTimeResponse,
 };
 pub(super) use crate::state::{
-    Config, Extension, MetadataMode, MintStats, NativeAsset, TokenMetadata, CONFIG,
-    MINTABLE_NUM_TOKENS, MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
-    TOKEN_NATIVE_ASSET_OVERRIDES,
+    Config, Extension, MetadataMode, MintStats, TokenMetadata, CONFIG, MINTABLE_NUM_TOKENS,
+    MINTABLE_TOKEN_IDS, MINTER_ADDRS, MINT_STATS,
 };
 
 pub(super) const CONTRACT_NAME: &str = "crates.io:passage-minter-v2-metadata-onchain";

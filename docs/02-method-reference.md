@@ -455,7 +455,7 @@ Role:
 
 Instantiate:
 
-- `InstantiateMsg { base_token_uri, num_tokens, cw721_code_id, cw721_instantiate_msg, start_time, per_address_limit, unit_price, whitelist, registry, split_router, use_split_router, metadata_mode, native_asset_template }`
+- `InstantiateMsg { base_token_uri, num_tokens, cw721_code_id, cw721_instantiate_msg, start_time, per_address_limit, unit_price, whitelist, registry, split_router, use_split_router, metadata_mode }`
 
 Execute:
 
@@ -469,9 +469,6 @@ Execute:
 - `RemoveWhitelist`
 - `Withdraw`
 - `WithdrawTo`
-- `SetNativeAssetTemplate`
-- `SetTokenNativeAssetOverride`
-- `ClearTokenNativeAssetOverride`
 
 Operational notes:
 
@@ -491,8 +488,6 @@ Queries:
 - `CanMint`
 - `MintStats`
 - `IsMintingActive`
-- `NativeAssetTemplate`
-- `TokenNativeAssets`
 
 ## Contract relationships
 
