@@ -148,7 +148,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 7. Audit Readiness & Launch Hardening | 0/2 | Not started | - |
 | 8. Documentacion completa bilingue de contratos en docs | 4/4 | Complete | 2026-03-19 |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
-| 10. remove native_assets from metadata-onchain and updatable nft surfaces | 0/3 | Not started | - |
+| 10. remove native_assets from metadata-onchain and updatable nft surfaces | 3/3 | Complete    | 2026-03-20 |
 
 
 
@@ -211,4 +211,5 @@ Plans:
 - [ ] 10-01: Remove `native_assets` from active pg721 metadata message/state surfaces and shared compatibility structs
 - [ ] 10-02: Remove native-asset template and override mechanics from `minter-v2-metadata-onchain`
 - [ ] 10-03: Regenerate schemas and align tests/docs to the retired surface
+
 
