@@ -43,4 +43,3 @@ pub struct Config {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const SNAPSHOTS: Map<(Addr, String, String), SnapshotRecord> = Map::new("snapshots");
-pub const WORLD_SNAPSHOTS: Map<(String, Addr, String), bool> = Map::new("world_snapshots");
