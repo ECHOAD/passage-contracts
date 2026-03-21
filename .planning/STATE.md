@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-03-20T21:37:32.390Z"
-last_activity: 2026-03-20 - Completed Phase 11 plan 03 durable plugin assignment rights out of sequence while Phase 7 remains the current mainline focus
+stopped_at: Completed 11-05-PLAN.md
+last_updated: "2026-03-20T22:20:00.000Z"
+last_activity: 2026-03-20 - Completed Phase 11 metadata boundary hardening out of sequence while Phase 7 remains the current mainline focus
 progress:
   total_phases: 11
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 33
-  completed_plans: 31
+  completed_plans: 33
   percent: 94
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 7 of 11 (Audit Readiness & Launch Hardening mainline; Phase 11 executing out of sequence)
-Plan: 0 of 2 in current phase; Phase 11: 3 of 5 complete
-Status: Phase 11 plan 03 complete out of sequence; Phase 7 remains current mainline
-Last activity: 2026-03-20 - Completed Phase 11 plan 03 durable plugin assignment rights out of sequence while Phase 7 remains the current mainline focus
+Plan: 0 of 2 in current phase; Phase 11: 5 of 5 complete
+Status: Phase 11 complete out of sequence; Phase 7 remains current mainline
+Last activity: 2026-03-20 - Completed Phase 11 metadata boundary hardening out of sequence while Phase 7 remains the current mainline focus
 
 Progress: [#########-] 94%
 
@@ -50,9 +50,9 @@ Progress: [#########-] 94%
 | 9. Marketplace-v3 Registration Redesign | 3 | 70 min | 23 min |
 
 **Recent Trend:**
-- Last 5 plans: 09-02, 09-03, 11-01, 11-02, 11-03
-- Trend: Out-of-sequence NFT boundary hardening continues with durable plugin rights while Phase 7 remains the audit-readiness mainline
-| Phase 11 P03 | 66 | 1 tasks | 10 files |
+- Last 5 plans: 11-01, 11-02, 11-03, 11-04, 11-05
+- Trend: Phase 11 completed out of sequence as a full metadata-boundary hardening pass while Phase 7 remains the audit-readiness mainline
+| Phase 11 P05 | 18 | 1 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -85,6 +85,7 @@ Recent decisions affecting current work:
 - [Phase 11]: asset-progression authorizes snapshot writes using live cw721 ownership or approval checks plus pg721 asset-kind validation.
 - [Phase 11]: Progression snapshots now live in a dedicated asset-progression contract keyed by collection, token, and world rather than generic NFT metadata.
 - [Phase 11]: World-plugin assignment is modeled as a dedicated relationship contract keyed by plugin and world asset identity, with writes authorized from live cw721 ownership or approval state.
+- [Phase 11]: English and Spanish docs now present Passage assets as a composed user-facing model built from a base NFT plus dedicated state modules.
 
 ### Roadmap Evolution
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - Phase 10 planned: remove native_assets from metadata-onchain and updatable nft surfaces
 - Phase 10 completed: native_assets removed from active metadata-onchain and updatable NFT surfaces
 - Phase 11 added: NFT metadata boundary hardening for metaverse asset semantics
+- Phase 11 completed: NFT metadata boundary hardened with dedicated progression and plugin-rights surfaces plus bilingual composed-asset docs
 
 ### Pending Todos
 
@@ -108,8 +110,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T21:37:32.370Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-03-20T22:20:00.000Z
+Stopped at: Completed 11-05-PLAN.md
 Resume file: None
 
 

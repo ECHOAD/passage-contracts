@@ -27,5 +27,3 @@ thiserror.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
-cw721-base.workspace = true
-pg721.workspace = true

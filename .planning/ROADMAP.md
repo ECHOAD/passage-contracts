@@ -149,7 +149,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 8. Documentacion completa bilingue de contratos en docs | 4/4 | Complete | 2026-03-19 |
 | 9. marketplace-v3 registration, ownership validation, and admin approval redesign | 3/3 | Complete | 2026-03-19 |
 | 10. remove native_assets from metadata-onchain and updatable nft surfaces | 3/3 | Complete | 2026-03-20 |
-| 11. NFT metadata boundary hardening for metaverse asset semantics | 3/5 | In Progress | - |
+| 11. NFT metadata boundary hardening for metaverse asset semantics | 5/5 | Complete | 2026-03-20 |
 
 
 
@@ -232,8 +232,8 @@ Plans:
 - [x] 11-01: Tighten active typed NFT metadata surfaces to durable on-chain semantics only
 - [x] 11-02: Introduce dedicated progression snapshot state outside generic NFT metadata
 - [x] 11-03: Add explicit durable plugin-to-world assignment rights and tests
-- [ ] 11-04: Regenerate schemas and align contract-surface docs/examples to the corrected metadata boundary
-- [ ] 11-05: Publish bilingual composed-asset guides and mirrored Spanish references
+- [x] 11-04: Regenerate schemas and align contract-surface docs/examples to the corrected metadata boundary
+- [x] 11-05: Publish bilingual composed-asset guides and mirrored Spanish references
 
 
 
