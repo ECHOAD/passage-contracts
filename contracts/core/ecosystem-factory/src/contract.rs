@@ -4,7 +4,6 @@ pub(super) use cosmwasm_std::{
 };
 pub(super) use cw2::set_contract_version;
 pub(super) use cw_storage_plus::Bound;
-pub(super) use cw_utils::parse_instantiate_response_data;
 
 pub(super) use crate::error::ContractError;
 pub(super) use crate::msg::{

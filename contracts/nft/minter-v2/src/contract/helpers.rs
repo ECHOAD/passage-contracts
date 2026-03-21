@@ -338,7 +338,6 @@ pub(super) fn create_mint_msg(
         token_uri: Some(token_uri),
         extension: Some(TokenMetadata {
             nft_type: nft_type.clone(),
-            native_assets: None,
             extension: None,
         }),
     };
