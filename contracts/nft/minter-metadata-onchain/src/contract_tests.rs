@@ -181,7 +181,6 @@ fn upsert_metadata(
                 animation_url: None,
                 youtube_url: None,
                 nft_type: None,
-                native_assets: None,
                 extension: None,
             },
         })
