@@ -6,33 +6,33 @@ Actual
 
 ## Proposito
 
-Gestiona el flujo actual de minting en venta primaria y puede desplegar su propia coleccion para lanzamientos tipo drop.
+Gestiona el flujo actual de minting en venta primaria para una coleccion ya existente.
 
 ## Instanciacion
 
-Se instancia con parametros de despliegue de coleccion, configuracion de venta, controles admin/operator y cualquier dependencia de payout o registry que requiera el drop.
+Se instancia con la direccion de la coleccion objetivo, configuracion de venta, controles admin/operator y cualquier dependencia de payout o registry que requiera el drop.
 
 Fuente real de payload: `contracts/nft/minter-v2/src/msg.rs` y `schema/` cuando exista.
 
 ## Actores y permisos
 
-Admin del drop, creator, buyers, la coleccion desplegada, registry y rutas de payout.
+Admin del drop, creator, buyers, la coleccion existente, registry y rutas de payout.
 
 ## Mensajes clave
 
-- Despliega o gestiona una coleccion para ventas primarias por mint.
+- Gestiona una venta primaria por mint para una coleccion concreta.
 - Controla ventanas de mint y configuracion de venta.
 - Rutea revenue de venta primaria manteniendo compatibilidad con registry y marketplace despues.
 
 ## Relaciones
 
-- Normalmente apunta a `pg721` o a una variante relacionada de coleccion.
+- Apunta a una coleccion `pg721` o a una variante relacionada ya desplegada.
 - Puede enviar proceeds a rutas de split o payout aware de royalties.
 - La coleccion resultante aun debe ser visible para registry dentro del lifecycle general del protocolo.
 
 ## Ejemplo hipotetico
 
-Flujo hipotetico: un creator lanza un nuevo drop por `minter-v2`, buyers mintean en venta primaria y luego la coleccion entra en venta secundaria por marketplace-v3.
+Flujo hipotetico: un creator o admin de ecosistema primero registra una coleccion, autoriza un `minter-v2` para esa coleccion en `registry`, y luego los buyers mintean en venta primaria antes de que la coleccion entre en venta secundaria por marketplace-v3.
 
 ## Referencias
 

@@ -80,6 +80,34 @@ pub(super) fn validate_registry_requirements(
     config: &Config,
     minter_addr: &Addr,
 ) -> Result<(), ContractError> {
+    validate_collection_requirements(deps, config)?;
+
+    let Some(registry) = &config.registry else {
+        return Ok(());
+    };
+
+    let minter_auth: RegistryMinterAuthorizedResponse = deps
+        .querier
+        .query_wasm_smart(
+            registry.to_string(),
+            &RegistryQueryMsg::IsMinterAuthorized {
+                collection_address: config.cw721_address.to_string(),
+                minter_address: minter_addr.to_string(),
+            },
+        )
+        .map_err(|_| ContractError::MinterNotAuthorized {})?;
+
+    if !minter_auth.is_authorized {
+        return Err(ContractError::MinterNotAuthorized {});
+    }
+
+    Ok(())
+}
+
+pub(super) fn validate_collection_requirements(
+    deps: Deps,
+    config: &Config,
+) -> Result<(), ContractError> {
     let Some(registry) = &config.registry else {
         return Ok(());
     };
@@ -110,21 +138,6 @@ pub(super) fn validate_registry_requirements(
 
     if !mint_allowed.approved {
         return Err(ContractError::CollectionMintDisabled {});
-    }
-
-    let minter_auth: RegistryMinterAuthorizedResponse = deps
-        .querier
-        .query_wasm_smart(
-            registry.to_string(),
-            &RegistryQueryMsg::IsMinterAuthorized {
-                collection_address: config.cw721_address.to_string(),
-                minter_address: minter_addr.to_string(),
-            },
-        )
-        .map_err(|_| ContractError::MinterNotAuthorized {})?;
-
-    if !minter_auth.is_authorized {
-        return Err(ContractError::MinterNotAuthorized {});
     }
 
     Ok(())

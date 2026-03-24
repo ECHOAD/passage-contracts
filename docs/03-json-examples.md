@@ -529,7 +529,7 @@ The collection contract keeps existing on-chain. Only the ecosystem affiliation 
 
 ## 4. `pg721`
 
-`pg721` is usually deployed by `collection-factory` or `minter-v2`, but this is the instantiate shape.
+`pg721` is usually deployed by `collection-factory`, but this is the instantiate shape.
 
 ### Direct instantiate
 
@@ -1135,24 +1135,9 @@ After `place_bid` or `settle_auction`, inspect the response attributes `pasg_uti
 
 ```json
 {
+  "cw721_address": "passage1collection...",
   "base_token_uri": "ipfs://bafy.../metadata/",
   "num_tokens": 1000,
-  "cw721_code_id": 301,
-  "cw721_instantiate_msg": {
-    "name": "Genesis Drop",
-    "symbol": "GDROP",
-    "minter": "passage1mintercontract...",
-    "collection_info": {
-      "creator": "passage1creator...",
-      "description": "Primary drop for the ecosystem",
-      "image": "ipfs://bafy.../cover.png",
-      "external_link": "https://example.com/drop",
-      "royalty_info": {
-        "payment_address": "passage1royaltywallet...",
-        "share": "0.05"
-      }
-    }
-  },
   "start_time": "1773597600000000000",
   "per_address_limit": 3,
   "unit_price": {
@@ -1163,6 +1148,8 @@ After `place_bid` or `settle_auction`, inspect the response attributes `pasg_uti
   "registry": "passage1registry..."
 }
 ```
+
+Use an already deployed collection whose `minter` is the `minter-v2` contract address you intend to operate.
 
 ### Mint
 

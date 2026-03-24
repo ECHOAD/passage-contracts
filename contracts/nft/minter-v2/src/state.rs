@@ -28,10 +28,8 @@ pub type Extension = Option<TokenMetadata>;
 pub struct Config {
     /// Admin address with full control
     pub admin: Addr,
-    /// The pg721 NFT collection address
+    /// The existing pg721 NFT collection address this minter operates on
     pub cw721_address: Addr,
-    /// The pg721 code ID used for instantiation
-    pub cw721_code_id: u64,
     /// Base URI for token metadata
     pub base_token_uri: String,
     /// Total number of tokens available for minting
@@ -75,28 +73,3 @@ pub struct MintStats {
 }
 
 pub const MINT_STATS: Item<MintStats> = Item::new("mint_stats");
-
-/// Extension message for pg721 instantiation
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Pg721InstantiateMsg {
-    pub name: String,
-    pub symbol: String,
-    pub minter: String,
-    pub nft_type: NftType,
-    pub collection_info: CollectionInfo,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CollectionInfo {
-    pub creator: String,
-    pub description: String,
-    pub image: String,
-    pub external_link: Option<String>,
-    pub royalty_info: Option<RoyaltyInfo>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct RoyaltyInfo {
-    pub payment_address: String,
-    pub share: String, // Decimal as string
-}

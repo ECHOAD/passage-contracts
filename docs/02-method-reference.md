@@ -515,11 +515,11 @@ Queries:
 
 Role:
 
-- primary sale flow and deployment of its own `pg721`
+- primary sale flow for an already deployed `pg721`
 
 Instantiate:
 
-- `InstantiateMsg { base_token_uri, num_tokens, cw721_code_id, cw721_instantiate_msg, start_time, per_address_limit, unit_price, whitelist, registry, split_router, use_split_router, metadata_mode }`
+- `InstantiateMsg { cw721_address, base_token_uri, num_tokens, start_time, per_address_limit, unit_price, whitelist, registry }`
 
 Execute:
 
@@ -536,11 +536,12 @@ Execute:
 
 Operational notes:
 
-- `Mint` and `BatchMint` use `split-router` if enabled
+- `minter-v2` no longer deploys collections; it points at an existing `pg721`
 - if `registry` is configured, the minter requires:
   - the collection to exist in `registry`
+  - minting to be enabled for that collection in `registry`
   - the minter to be authorized through `AuthorizeMinter`
-- `Withdraw` only applies when `use_split_router = false`
+- the target collection must already expose a compatible `CollectionInfo {}` query surface
 
 Queries:
 
@@ -560,7 +561,7 @@ Most important practical relationships:
 - `collection-factory` depends on `registry`
 - `marketplace-v3` queries `pg721` and optionally `registry` and `split-router`
 - `auction-english` queries `pg721` and optionally `registry` and `split-router`
-- `minter-v2` deploys `pg721` and optionally uses `registry` and `split-router`
+- `minter-v2` operates an existing `pg721` and optionally uses `registry`
 - `split-router` can use `registry` for creator-side validation
 
 If the goal is a secondary sale, the minimum path is usually:

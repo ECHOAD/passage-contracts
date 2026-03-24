@@ -4,8 +4,7 @@
   "type": "object",
   "required": [
     "base_token_uri",
-    "cw721_code_id",
-    "cw721_instantiate_msg",
+    "cw721_address",
     "num_tokens",
     "per_address_limit",
     "start_time",
@@ -13,22 +12,12 @@
   ],
   "properties": {
     "base_token_uri": {
-      "description": "Base URI for token metadata (e.g., \"ipfs://...\")",
+      "description": "Base URI for token manifests (e.g., \"ipfs://...\").\n\nRuntime-heavy render details and compatibility matrices should stay in the manifest, while the collection's typed NFT metadata remains a compact durable protocol surface.",
       "type": "string"
     },
-    "cw721_code_id": {
-      "description": "Code ID for pg721 contract",
-      "type": "integer",
-      "format": "uint64",
-      "minimum": 0.0
-    },
-    "cw721_instantiate_msg": {
-      "description": "Instantiate message for pg721",
-      "allOf": [
-        {
-          "$ref": "#/definitions/Pg721InstantiateMsg"
-        }
-      ]
+    "cw721_address": {
+      "description": "Existing pg721 collection address. `minter-v2` no longer deploys collections.",
+      "type": "string"
     },
     "num_tokens": {
       "description": "Total number of tokens available",
@@ -86,99 +75,6 @@
           "$ref": "#/definitions/Uint128"
         },
         "denom": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "CollectionInfo": {
-      "type": "object",
-      "required": [
-        "creator",
-        "description",
-        "image"
-      ],
-      "properties": {
-        "creator": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "external_link": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "image": {
-          "type": "string"
-        },
-        "royalty_info": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RoyaltyInfo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "NftType": {
-      "type": "string",
-      "enum": [
-        "component",
-        "avatar",
-        "companion",
-        "world",
-        "plugin",
-        "achievement",
-        "world_template"
-      ]
-    },
-    "Pg721InstantiateMsg": {
-      "description": "Extension message for pg721 instantiation",
-      "type": "object",
-      "required": [
-        "collection_info",
-        "minter",
-        "name",
-        "nft_type",
-        "symbol"
-      ],
-      "properties": {
-        "collection_info": {
-          "$ref": "#/definitions/CollectionInfo"
-        },
-        "minter": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "nft_type": {
-          "$ref": "#/definitions/NftType"
-        },
-        "symbol": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "RoyaltyInfo": {
-      "type": "object",
-      "required": [
-        "payment_address",
-        "share"
-      ],
-      "properties": {
-        "payment_address": {
-          "type": "string"
-        },
-        "share": {
           "type": "string"
         }
       },

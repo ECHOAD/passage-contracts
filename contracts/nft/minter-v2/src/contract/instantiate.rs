@@ -5,11 +5,13 @@ use super::*;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let cw721_address = deps.api.addr_validate(&msg.cw721_address)?;
 
     // Validate whitelist if provided
     let whitelist = msg
@@ -22,11 +24,25 @@ pub fn instantiate(
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?;
 
-    // Create initial config (cw721_address will be set in reply)
+    // Ensure the target collection already exists and is pg721-compatible.
+    let provisional_config = Config {
+        admin: info.sender.clone(),
+        cw721_address: cw721_address.clone(),
+        base_token_uri: msg.base_token_uri.clone(),
+        num_tokens: msg.num_tokens,
+        unit_price: msg.unit_price.clone(),
+        per_address_limit: msg.per_address_limit,
+        start_time: msg.start_time,
+        whitelist: whitelist.clone(),
+        registry: registry.clone(),
+        paused: false,
+    };
+    let _ = super::helpers::query_collection_nft_type(deps.as_ref(), &provisional_config)?;
+    super::helpers::validate_collection_requirements(deps.as_ref(), &provisional_config)?;
+
     let config = Config {
         admin: info.sender.clone(),
-        cw721_address: Addr::unchecked(""), // Will be set in reply
-        cw721_code_id: msg.cw721_code_id,
+        cw721_address,
         base_token_uri: msg.base_token_uri,
         num_tokens: msg.num_tokens,
         unit_price: msg.unit_price,
@@ -46,56 +62,9 @@ pub fn instantiate(
         MINTABLE_TOKEN_IDS.save(deps.storage, i, &true)?;
     }
 
-    // Instantiate pg721 NFT contract
-    let cw721_instantiate_msg = WasmMsg::Instantiate {
-        admin: Some(info.sender.to_string()),
-        code_id: msg.cw721_code_id,
-        msg: to_json_binary(&msg.cw721_instantiate_msg)?,
-        funds: vec![],
-        label: format!("pg721-{}", env.block.height),
-    };
-
-    let submsg = SubMsg::reply_on_success(cw721_instantiate_msg, INSTANTIATE_CW721_REPLY_ID);
-
     Ok(Response::new()
-        .add_submessage(submsg)
         .add_attribute("action", "instantiate")
         .add_attribute("contract", "minter-v2")
-        .add_attribute("admin", info.sender))
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match msg.id {
-        INSTANTIATE_CW721_REPLY_ID => handle_cw721_instantiate_reply(deps, msg),
-        _ => Err(ContractError::InvalidInstantiateReplyData {}),
-    }
-}
-
-fn handle_cw721_instantiate_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
-    let res = msg
-        .result
-        .into_result()
-        .map_err(|_| ContractError::NftInstantiateFailed {})?;
-
-    // Find the contract address from instantiate events
-    let cw721_address = res
-        .events
-        .iter()
-        .find(|e| e.ty == "instantiate")
-        .and_then(|e| {
-            e.attributes
-                .iter()
-                .find(|a| a.key == "_contract_address")
-                .map(|a| a.value.clone())
-        })
-        .ok_or(ContractError::InvalidInstantiateReplyData {})?;
-
-    let mut config = CONFIG.load(deps.storage)?;
-    config.cw721_address = deps.api.addr_validate(&cw721_address)?;
-    CONFIG.save(deps.storage, &config)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "instantiate_cw721_reply")
-        .add_attribute("cw721_address", cw721_address))
+        .add_attribute("admin", info.sender)
+        .add_attribute("cw721_address", config.cw721_address))
 }

@@ -103,7 +103,6 @@ fn migrate_from_minter_v1(
     let config_v2 = Config {
         admin: config_v1.admin,
         cw721_address,
-        cw721_code_id: config_v1.cw721_code_id,
         base_token_uri: config_v1.base_token_uri,
         num_tokens: config_v1.num_tokens,
         unit_price: config_v1.unit_price.clone(),
@@ -171,7 +170,6 @@ fn migrate_from_metadata_onchain(
     let config_v2 = Config {
         admin: config_v1.admin,
         cw721_address,
-        cw721_code_id: config_v1.cw721_code_id,
         base_token_uri,
         num_tokens: config_v1.max_num_tokens,
         unit_price: config_v1.unit_price.clone(),
@@ -232,7 +230,6 @@ fn migrate_from_current_v2(
     let config_v2 = Config {
         admin: legacy.admin,
         cw721_address: legacy.cw721_address,
-        cw721_code_id: legacy.cw721_code_id,
         base_token_uri: legacy.base_token_uri,
         num_tokens: legacy.num_tokens,
         unit_price: legacy.unit_price,

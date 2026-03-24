@@ -1,4 +1,4 @@
-use crate::state::{Config, MintStats, Pg721InstantiateMsg};
+use crate::state::{Config, MintStats};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Timestamp};
 
@@ -18,6 +18,8 @@ pub struct MigrateMsg {
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// Existing pg721 collection address. `minter-v2` no longer deploys collections.
+    pub cw721_address: String,
     /// Base URI for token manifests (e.g., "ipfs://...").
     ///
     /// Runtime-heavy render details and compatibility matrices should stay in the manifest, while
@@ -25,10 +27,6 @@ pub struct InstantiateMsg {
     pub base_token_uri: String,
     /// Total number of tokens available
     pub num_tokens: u32,
-    /// Code ID for pg721 contract
-    pub cw721_code_id: u64,
-    /// Instantiate message for pg721
-    pub cw721_instantiate_msg: Pg721InstantiateMsg,
     /// Minting start time
     pub start_time: Timestamp,
     /// Maximum mints per address
@@ -122,7 +120,6 @@ pub struct ConfigResponse {
     pub num_tokens: u32,
     pub per_address_limit: u32,
     pub cw721_address: String,
-    pub cw721_code_id: u64,
     pub start_time: Timestamp,
     pub unit_price: Coin,
     pub whitelist: Option<String>,
@@ -138,7 +135,6 @@ impl From<Config> for ConfigResponse {
             num_tokens: config.num_tokens,
             per_address_limit: config.per_address_limit,
             cw721_address: config.cw721_address.to_string(),
-            cw721_code_id: config.cw721_code_id,
             start_time: config.start_time,
             unit_price: config.unit_price,
             whitelist: config.whitelist.map(|w| w.to_string()),

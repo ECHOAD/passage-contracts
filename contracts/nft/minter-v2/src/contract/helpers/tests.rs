@@ -76,7 +76,6 @@ fn sample_config() -> Config {
     Config {
         admin: Addr::unchecked("admin"),
         cw721_address: Addr::unchecked("collection"),
-        cw721_code_id: 1,
         base_token_uri: "ipfs://base".to_string(),
         num_tokens: 10,
         unit_price: Coin::new(100u128, "upasg"),

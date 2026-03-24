@@ -34,4 +34,4 @@ Use the new mirrored trees when you want contract-by-contract documentation, con
 - `split-router`: routes creator-side mint and royalty proceeds.
 - `marketplace-v3`: fixed-price secondary sales, bids, and collection bids.
 - `auction-english`: reserve-style NFT auctions.
-- `minter-v2`: optional primary sale flow; deploys its own `pg721`.
+- `minter-v2`: optional primary sale flow for an already deployed `pg721`.

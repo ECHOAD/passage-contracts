@@ -5,7 +5,7 @@
 - `ecosystem-factory` crea el flujo aprobado para nuevos ecosystems.
 - `registry` registra ecosystems, membresia y afiliacion canonica de colecciones.
 - `collection-factory` despliega colecciones `pg721*` dentro de un ecosystem y las registra.
-- `minter-v2*` tambien puede desplegar su propia coleccion y luego esa coleccion debe registrarse.
+- `minter-v2*` opera ventas primarias para una coleccion existente y debe estar autorizado para esa coleccion cuando `registry` se aplica.
 - `marketplace-v3` y `auction-english` dependen de la coleccion y de las reglas de `registry` para tradear.
 - `royalty-group` y `split-router` ayudan a distribuir revenue y royalties.
 - `multisig` sigue siendo el plano de ejecucion admin-owner.

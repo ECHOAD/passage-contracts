@@ -5,7 +5,7 @@
 - `ecosystem-factory` drives the approved workflow for new ecosystems.
 - `registry` records ecosystems, membership, and canonical collection affiliation.
 - `collection-factory` deploys `pg721*` collections inside an ecosystem and registers them.
-- `minter-v2*` can also deploy its own collection, which must then be registered.
+- `minter-v2*` runs primary sales for an existing collection and must be authorized for that collection when `registry` is enforced.
 - `marketplace-v3` and `auction-english` depend on collection state and `registry` trade rules.
 - `royalty-group` and `split-router` help distribute revenue and royalties.
 - `multisig` remains the admin-owner execution plane.

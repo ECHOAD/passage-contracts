@@ -111,7 +111,7 @@ Important points:
 
 - `minter` is the address that will be allowed to call `Mint` inside `pg721`.
 - If you want to mint manually, use a wallet or contract you control.
-- If you want a primary drop with `minter-v2`, do not use this path for that collection; `minter-v2` deploys its own `pg721`.
+- If you want a primary drop with `minter-v2`, create the collection first and set `minter` to the future `minter-v2` contract address used for that collection.
 
 What happens next:
 
@@ -351,21 +351,22 @@ Useful queries:
 
 ## 8. Optional primary sale path with `minter-v2`
 
-This path is different. `minter-v2` deploys its own `pg721` collection.
+This path is different. `minter-v2` operates an already deployed `pg721` collection.
 
 Recommended flow:
 
-1. Instantiate `minter-v2`.
-2. Wait for `reply` or query `Config {}` to obtain `cw721_address`.
-3. Register that collection in `registry` with `RegisterExistingCollection`.
+1. Create the `pg721` collection first through `collection-factory` or another approved path.
+2. Register that collection in `registry` if it is not already registered.
+3. Instantiate `minter-v2` pointing at the existing `cw721_address`.
 4. Authorize the minter with `AuthorizeMinter { collection_address, minter_address }`.
 5. Optionally save the runtime pointer with `UpdateCollection { minter: Some(...) }`.
 6. Create the `split-router` rule for that collection.
 7. Open minting with `start_time` and then use `Mint` or `BatchMint`.
 
-Without steps 3 and 4, `minter-v2` can be blocked if `registry` is configured, because it validates:
+Without steps 2 and 4, `minter-v2` can be blocked if `registry` is configured, because it validates:
 
 - that the collection exists in `registry`
+- that minting is enabled for that collection in `registry`
 - that the minter is authorized in `registry`
 
 ## 9. Minimum production checklist
